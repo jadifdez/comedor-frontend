@@ -91,13 +91,26 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
       const [padresResult, hijosResult, inscripcionesResult, bajasResult, solicitudesResult, inscripcionesPadreResult, invitacionesResult] = await Promise.all([
         supabase
           .from('padres')
-          .select('*')
+          .select(`
+            *,
+            exento_facturacion,
+            motivo_exencion,
+            fecha_inicio_exencion,
+            fecha_fin_exencion
+          `)
           .eq('activo', true)
           .order('nombre'),
 
         supabase
           .from('hijos')
-          .select(`*, grado:grados(*)`)
+          .select(`
+            *,
+            grado:grados(*),
+            exento_facturacion,
+            motivo_exencion,
+            fecha_inicio_exencion,
+            fecha_fin_exencion
+          `)
           .eq('activo', true)
           .order('nombre'),
 
@@ -283,6 +296,19 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             hijo.fecha_fin_exencion,
             primerDiaMes
           );
+
+          // Debug para verificar exención
+          if (hijo.nombre.toLowerCase().includes('borrame1')) {
+            console.log('DEBUG borrame1:', {
+              nombre: hijo.nombre,
+              exento_facturacion: hijo.exento_facturacion,
+              fecha_inicio_exencion: hijo.fecha_inicio_exencion,
+              fecha_fin_exencion: hijo.fecha_fin_exencion,
+              primerDiaMes,
+              estaExento,
+              totalImporteAntes: totalImporte
+            });
+          }
 
           // Si está exento, el importe es 0 (pero mantenemos el cálculo teórico)
           if (estaExento) {
