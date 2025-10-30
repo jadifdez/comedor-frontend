@@ -44,6 +44,14 @@ export interface Baja {
   tipo: 'hijo' | 'padre';
 }
 
+export interface Invitado {
+  id: string;
+  nombre: string;
+  curso?: string;
+  tipo: 'hijo' | 'padre' | 'externo';
+  motivo: string;
+}
+
 export interface DailyData {
   fecha: string;
   dia_semana: number;
@@ -56,6 +64,7 @@ export interface DailyData {
   total_bajas: number;
   total_neto: number;
   bajas: Baja[];
+  invitados: Invitado[];
   dietas_blandas: DietaBlanda[];
   menu_summary: MenuSummary[];
   sin_eleccion: DailyDiner[];
@@ -360,6 +369,14 @@ export function useDailyManagement(fecha: string) {
         tipo: b.hijo_id ? 'hijo' : 'padre'
       }));
 
+      const invitadosFormatted: Invitado[] = invitaciones.map(inv => ({
+        id: inv.id,
+        nombre: inv.hijo ? inv.hijo.nombre : inv.padre ? inv.padre.nombre : inv.nombre_completo || 'Desconocido',
+        curso: inv.hijo?.grado?.nombre,
+        tipo: inv.hijo_id ? 'hijo' : inv.padre_id ? 'padre' : 'externo',
+        motivo: inv.motivo || 'Sin motivo especificado'
+      }));
+
       const dailyData: DailyData = {
         fecha: selectedDate,
         dia_semana: diaSemana,
@@ -372,6 +389,7 @@ export function useDailyManagement(fecha: string) {
         total_bajas: bajas.length,
         total_neto: comensales.length,
         bajas: bajasFormatted,
+        invitados: invitadosFormatted,
         dietas_blandas: dietasBlandasFormatted,
         menu_summary: Array.from(menuSummaryMap.values()),
         sin_eleccion: sinEleccion,

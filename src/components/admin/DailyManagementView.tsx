@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, Utensils, Heart, Gift, XCircle, GraduationCap, Briefcase, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, Utensils, Heart, Gift, XCircle, GraduationCap, Briefcase, ChevronDown, ChevronUp, Clock, UserPlus } from 'lucide-react';
 import { useDailyManagement, DailyDiner } from '../../hooks/useDailyManagement';
 import { generateDailyPDF } from '../../utils/dailyPdfExport';
 
@@ -282,6 +282,52 @@ export function DailyManagementView() {
                         <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
                           {baja.tipo === 'hijo' ? 'Alumno' : 'Personal'}
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {data.invitados.length > 0 && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border-2 border-blue-300 p-6">
+              <button
+                onClick={() => toggleSection('invitados')}
+                className="w-full flex items-center justify-between mb-4"
+              >
+                <div className="flex items-center space-x-3">
+                  <UserPlus className="h-6 w-6 text-blue-600" />
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Invitados del Día ({data.invitados.length})
+                  </h2>
+                </div>
+                {expandedSections.has('invitados') ? (
+                  <ChevronUp className="h-5 w-5 text-gray-600" />
+                ) : (
+                  <ChevronDown className="h-5 w-5 text-gray-600" />
+                )}
+              </button>
+
+              {expandedSections.has('invitados') && (
+                <div className="space-y-2">
+                  {data.invitados.map((invitado) => (
+                    <div key={invitado.id} className="bg-white rounded-lg p-4 border border-blue-200">
+                      <div className="flex items-center justify-between mb-2">
+                        <div>
+                          <p className="font-semibold text-gray-900">{invitado.nombre}</p>
+                          {invitado.curso && (
+                            <p className="text-sm text-gray-600">{invitado.curso}</p>
+                          )}
+                        </div>
+                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                          {invitado.tipo === 'hijo' ? 'Alumno' : invitado.tipo === 'padre' ? 'Personal' : 'Externo'}
+                        </div>
+                      </div>
+                      <div className="bg-blue-50 rounded-lg p-2 mt-2">
+                        <p className="text-xs text-gray-700">
+                          <span className="font-semibold">Motivo:</span> {invitado.motivo}
+                        </p>
                       </div>
                     </div>
                   ))}
