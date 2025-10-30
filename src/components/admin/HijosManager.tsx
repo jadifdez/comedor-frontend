@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, Hijo, Padre, Grado, InscripcionComedor } from '../../lib/supabase';
-import { UserCheck, Plus, CreditCard as Edit, Trash2, User, GraduationCap, Check, X, Search, AlertTriangle, Utensils, Calendar } from 'lucide-react';
+import { UserCheck, Plus, CreditCard as Edit, Trash2, User, GraduationCap, Check, X, Search, AlertTriangle, Utensils, Calendar, FileText } from 'lucide-react';
 import { useConfiguracionPrecios } from '../../hooks/useConfiguracionPrecios';
+import { exportParentContactsPDF } from '../../utils/parentContactsPdfExport';
 
 export function HijosManager() {
   const { getPrecioPorDias } = useConfiguracionPrecios();
@@ -326,6 +327,15 @@ export function HijosManager() {
     return matchesSearch && matchesGrado && matchesInscripcion;
   });
 
+  const handleExportParentContacts = async () => {
+    try {
+      await exportParentContactsPDF(hijos);
+    } catch (error) {
+      console.error('Error al exportar PDF:', error);
+      alert('Error al generar el PDF. Por favor, intenta de nuevo.');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -341,17 +351,27 @@ export function HijosManager() {
           <UserCheck className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Alumnos</h2>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditingHijo(null);
-            setFormData({ nombre: '', padre_id: '', grado_id: '', activo: true });
-          }}
-          className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Nuevo Alumno</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleExportParentContacts}
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+            title="Exportar lista de contactos de padres por grado"
+          >
+            <FileText className="h-4 w-4" />
+            <span>Exportar Contactos</span>
+          </button>
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setEditingHijo(null);
+              setFormData({ nombre: '', padre_id: '', grado_id: '', activo: true });
+            }}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Nuevo Alumno</span>
+          </button>
+        </div>
       </div>
 
       {/* Buscador y filtros */}
