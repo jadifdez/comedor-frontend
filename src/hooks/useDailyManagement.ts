@@ -37,6 +37,13 @@ export interface DietaBlanda {
   fecha_dieta_blanda: string;
 }
 
+export interface Baja {
+  id: string;
+  nombre: string;
+  curso?: string;
+  tipo: 'hijo' | 'padre';
+}
+
 export interface DailyData {
   fecha: string;
   dia_semana: number;
@@ -48,6 +55,7 @@ export interface DailyData {
   total_invitaciones: number;
   total_bajas: number;
   total_neto: number;
+  bajas: Baja[];
   dietas_blandas: DietaBlanda[];
   menu_summary: MenuSummary[];
   sin_eleccion: DailyDiner[];
@@ -70,6 +78,10 @@ export function useDailyManagement(fecha: string) {
 
       const date = new Date(selectedDate + 'T00:00:00');
       const diaSemana = date.getDay();
+
+      // Convertir fecha ISO (2025-10-22) a formato español (22/10/2025) para búsqueda de bajas
+      const [year, month, day] = selectedDate.split('-');
+      const fechaEspanol = `${day}/${month}/${year}`;
 
       const [
         inscripcionesResult,
@@ -111,9 +123,10 @@ export function useDailyManagement(fecha: string) {
           .from('comedor_bajas')
           .select(`
             *,
-            hijo_details:hijos(nombre, grado:grados(nombre))
+            hijo_details:hijos(nombre, grado:grados(nombre)),
+            padre:padres(nombre)
           `)
-          .contains('dias', [selectedDate]),
+          .contains('dias', [fechaEspanol]),
 
         supabase
           .from('invitaciones_comedor')
@@ -340,6 +353,13 @@ export function useDailyManagement(fecha: string) {
           fecha_dieta_blanda: d.fecha_dieta_blanda
         }));
 
+      const bajasFormatted: Baja[] = bajas.map(b => ({
+        id: b.id,
+        nombre: b.hijo_details?.nombre || (b as any).padre?.nombre || b.hijo || 'Desconocido',
+        curso: b.hijo_details?.grado?.nombre,
+        tipo: b.hijo_id ? 'hijo' : 'padre'
+      }));
+
       const dailyData: DailyData = {
         fecha: selectedDate,
         dia_semana: diaSemana,
@@ -351,6 +371,7 @@ export function useDailyManagement(fecha: string) {
         total_invitaciones: comensales.filter(c => c.es_invitacion).length,
         total_bajas: bajas.length,
         total_neto: comensales.length,
+        bajas: bajasFormatted,
         dietas_blandas: dietasBlandasFormatted,
         menu_summary: Array.from(menuSummaryMap.values()),
         sin_eleccion: sinEleccion,
