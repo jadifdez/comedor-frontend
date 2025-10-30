@@ -325,6 +325,22 @@ export function DailyManagementView() {
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Información Importante</h3>
                   <div className="space-y-3">
+                    {data.comensales.filter(c => c.restricciones.length > 0).length > 0 && (
+                      <div className="p-3 bg-red-50 border-2 border-red-300 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <AlertCircle className="h-5 w-5 text-red-600" />
+                          <span className="font-semibold text-gray-900">Restricciones Dietéticas ({data.comensales.filter(c => c.restricciones.length > 0).length})</span>
+                        </div>
+                        <div className="space-y-1">
+                          {data.comensales.filter(c => c.restricciones.length > 0).map((comensal) => (
+                            <div key={comensal.id} className="text-sm">
+                              <span className="font-medium text-gray-900">{comensal.nombre}</span>
+                              <span className="text-red-700 font-bold"> - {comensal.restricciones.join(', ')}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     {data.dietas_blandas.length > 0 && (
                       <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
                         <div className="flex items-center space-x-2 mb-2">
@@ -576,6 +592,11 @@ export function DailyManagementView() {
                               {personal.es_invitacion && (
                                 <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">
                                   Invitado
+                                </span>
+                              )}
+                              {personal.restricciones.length > 0 && (
+                                <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">
+                                  {personal.restricciones.join(', ')}
                                 </span>
                               )}
                             </div>
