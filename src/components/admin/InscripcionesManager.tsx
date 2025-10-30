@@ -60,7 +60,6 @@ export default function InscripcionesManager() {
   const [formData, setFormData] = useState({
     persona_id: '',
     dias_semana: [] as number[],
-    precio_diario: '',
     activo: true,
     fecha_inicio: new Date().toISOString().split('T')[0],
     fecha_fin: ''
@@ -159,7 +158,6 @@ export default function InscripcionesManager() {
     setFormData({
       persona_id: '',
       dias_semana: [],
-      precio_diario: '',
       activo: true,
       fecha_inicio: new Date().toISOString().split('T')[0],
       fecha_fin: ''
@@ -174,7 +172,6 @@ export default function InscripcionesManager() {
     setFormData({
       persona_id,
       dias_semana: inscripcion.dias_semana,
-      precio_diario: inscripcion.precio_diario.toString(),
       activo: inscripcion.activo,
       fecha_inicio: inscripcion.fecha_inicio,
       fecha_fin: inscripcion.fecha_fin || ''
@@ -209,14 +206,14 @@ export default function InscripcionesManager() {
     e.preventDefault();
     setErrorMessage('');
 
-    if (!formData.persona_id || formData.dias_semana.length === 0 || !formData.precio_diario) {
+    if (!formData.persona_id || formData.dias_semana.length === 0) {
       setErrorMessage('Por favor completa todos los campos obligatorios');
       return;
     }
 
+    // El precio_diario se calculará automáticamente mediante triggers en la base de datos
     const inscripcionData = {
       dias_semana: formData.dias_semana,
-      precio_diario: parseFloat(formData.precio_diario),
       activo: formData.activo,
       fecha_inicio: formData.fecha_inicio,
       fecha_fin: formData.fecha_fin || null
@@ -431,20 +428,6 @@ export default function InscripcionesManager() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Precio Diario (€) *
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={formData.precio_diario}
-                      onChange={(e) => setFormData({ ...formData, precio_diario: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
                       Estado
                     </label>
                     <select
@@ -455,6 +438,7 @@ export default function InscripcionesManager() {
                       <option value="true">Activa</option>
                       <option value="false">Inactiva</option>
                     </select>
+                    <p className="text-xs text-gray-500 mt-1">El precio se calcula automáticamente según descuentos aplicables</p>
                   </div>
                 </div>
 
