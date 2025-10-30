@@ -185,8 +185,8 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         const infoPadre = infoDescuentosPorPadre.get(padre.id)!;
 
         for (const hijo of hijosDelPadre) {
-          // Buscar la inscripción que aplica para este mes (activa O desactivada durante el mes)
-          const inscripcionActiva = inscripciones.find(i => i.hijo_id === hijo.id);
+          // Obtener TODAS las inscripciones del hijo (activas O desactivadas durante el mes)
+          const inscripcionesHijo = inscripciones.filter(i => i.hijo_id === hijo.id);
 
           const esHijoDePersonal = infoPadre.esPersonal;
           const posicionHijo = infoPadre.inscripcionesOrdenadas.findIndex(i => i.hijo_id === hijo.id) + 1;
@@ -216,9 +216,11 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             if (solicitudPuntual) {
               diasPuntuales++;
 
-              // Los días puntuales usan el mismo precio que la inscripción activa
+              // Los días puntuales usan el mismo precio que la inscripción aplicable para ese día
+              // Buscar qué inscripción aplica para esta fecha específica
+              const inscripcionParaDia = inscripcionesHijo.find(i => estaEnRangoInscripcion(fecha, i));
               const precioPuntual = calcularPrecioPuntual(
-                inscripcionActiva?.precio_diario || null
+                inscripcionParaDia?.precio_diario || null
               );
 
               diasFacturables.push({
@@ -230,12 +232,14 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
               continue;
             }
 
-            if (inscripcionActiva && estaEnRangoInscripcion(fecha, inscripcionActiva)) {
+            // Buscar qué inscripción aplica para esta fecha específica
+            const inscripcionParaDia = inscripcionesHijo.find(i => estaEnRangoInscripcion(fecha, i));
+            if (inscripcionParaDia) {
               diasInscripcion++;
               diasFacturables.push({
                 fecha,
                 tipo: 'inscripcion',
-                precio: inscripcionActiva.precio_diario,
+                precio: inscripcionParaDia.precio_diario,
                 descripcion: 'Comida por inscripción'
               });
             }
@@ -266,9 +270,12 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             totalImporte = totalImporteSinDescuentoAsistencia * (1 - porcentajeDescuentoAsistencia80 / 100);
           }
 
+          // Para mostrar en el resumen, usar la primera inscripción o null
+          const inscripcionRepresentativa = inscripcionesHijo.length > 0 ? inscripcionesHijo[0] : null;
+
           hijosFacturacion.push({
             hijo,
-            inscripcion: inscripcionActiva || null,
+            inscripcion: inscripcionRepresentativa,
             diasFacturables,
             diasInscripcion,
             diasPuntuales,
@@ -288,8 +295,8 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         let padreComedor: PadreFacturacionDetalle | null = null;
 
         if (padre.es_personal) {
-          // Buscar la inscripción que aplica para este mes (activa O desactivada durante el mes)
-          const inscripcionActivaPadre = inscripcionesPadre.find(i => i.padre_id === padre.id);
+          // Obtener TODAS las inscripciones del padre (activas O desactivadas durante el mes)
+          const inscripcionesPadreDelPadre = inscripcionesPadre.filter(i => i.padre_id === padre.id);
           const bajasPadre = bajas.filter(b => b.padre_id === padre.id);
           const solicitudesPadre = solicitudes.filter(s => s.padre_id === padre.id);
 
@@ -313,8 +320,19 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             const solicitudPuntual = tieneSolicitudPuntual(fecha, solicitudesPadre);
             if (solicitudPuntual) {
               diasPuntuales++;
-              // Los días puntuales del padre usan el mismo precio que su inscripción
-              const precioPuntualPadre = inscripcionActivaPadre?.precio_diario || configuracionPrecios.precio_adulto;
+              // Los días puntuales del padre usan el mismo precio que la inscripción aplicable para ese día
+              // Buscar qué inscripción aplica para esta fecha específica
+              const inscripcionParaDia = inscripcionesPadreDelPadre.find(i => {
+                const fechaDate = new Date(fecha);
+                const diaSemana = fechaDate.getDay();
+                const fechaInicio = new Date(i.fecha_inicio);
+                const fechaFin = i.fecha_fin ? new Date(i.fecha_fin) : null;
+
+                return i.dias_semana.includes(diaSemana) &&
+                  fechaDate >= fechaInicio &&
+                  (!fechaFin || fechaDate <= fechaFin);
+              });
+              const precioPuntualPadre = inscripcionParaDia?.precio_diario || configuracionPrecios.precio_adulto;
 
               diasFacturables.push({
                 fecha,
@@ -325,25 +343,26 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
               continue;
             }
 
-            if (inscripcionActivaPadre) {
+            // Buscar qué inscripción aplica para esta fecha específica
+            const inscripcionParaDia = inscripcionesPadreDelPadre.find(i => {
               const fechaDate = new Date(fecha);
               const diaSemana = fechaDate.getDay();
-              const fechaInicio = new Date(inscripcionActivaPadre.fecha_inicio);
-              const fechaFin = inscripcionActivaPadre.fecha_fin ? new Date(inscripcionActivaPadre.fecha_fin) : null;
+              const fechaInicio = new Date(i.fecha_inicio);
+              const fechaFin = i.fecha_fin ? new Date(i.fecha_fin) : null;
 
-              if (
-                inscripcionActivaPadre.dias_semana.includes(diaSemana) &&
+              return i.dias_semana.includes(diaSemana) &&
                 fechaDate >= fechaInicio &&
-                (!fechaFin || fechaDate <= fechaFin)
-              ) {
-                diasInscripcion++;
-                diasFacturables.push({
-                  fecha,
-                  tipo: 'inscripcion',
-                  precio: inscripcionActivaPadre.precio_diario,
-                  descripcion: 'Comida por inscripción (Personal)'
-                });
-              }
+                (!fechaFin || fechaDate <= fechaFin);
+            });
+
+            if (inscripcionParaDia) {
+              diasInscripcion++;
+              diasFacturables.push({
+                fecha,
+                tipo: 'inscripcion',
+                precio: inscripcionParaDia.precio_diario,
+                descripcion: 'Comida por inscripción (Personal)'
+              });
             }
           }
 
@@ -373,8 +392,11 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
           }
 
           if (totalImporte > 0 || diasInvitacion > 0) {
+            // Para mostrar en el resumen, usar la primera inscripción o null
+            const inscripcionRepresentativaPadre = inscripcionesPadreDelPadre.length > 0 ? inscripcionesPadreDelPadre[0] : null;
+
             padreComedor = {
-              inscripcion: inscripcionActivaPadre || null,
+              inscripcion: inscripcionRepresentativaPadre,
               diasFacturables,
               diasInscripcion,
               diasPuntuales,
