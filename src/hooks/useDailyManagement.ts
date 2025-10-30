@@ -113,9 +113,7 @@ export function useDailyManagement(fecha: string) {
             )
           `)
           .eq('activo', true)
-          .contains('dias_semana', [diaSemana])
-          .lte('fecha_inicio', selectedDate)
-          .or(`fecha_fin.is.null,fecha_fin.gte.${selectedDate}`),
+          .contains('dias_semana', [diaSemana]),
 
         supabase
           .from('comedor_inscripciones_padres')
@@ -128,9 +126,7 @@ export function useDailyManagement(fecha: string) {
             )
           `)
           .eq('activo', true)
-          .contains('dias_semana', [diaSemana])
-          .lte('fecha_inicio', selectedDate)
-          .or(`fecha_fin.is.null,fecha_fin.gte.${selectedDate}`),
+          .contains('dias_semana', [diaSemana]),
 
         supabase
           .from('comedor_bajas')
@@ -194,14 +190,33 @@ export function useDailyManagement(fecha: string) {
       if (festivosResult.error) throw festivosResult.error;
       if (restriccionesResult.error) throw restriccionesResult.error;
 
-      const inscripciones = inscripcionesResult.data || [];
-      const inscripcionesPadre = inscripcionesPadreResult.data || [];
+      const inscripcionesRaw = inscripcionesResult.data || [];
+      const inscripcionesPadreRaw = inscripcionesPadreResult.data || [];
       const bajas = bajasResult.data || [];
       const invitaciones = invitacionesResult.data || [];
       const elecciones = eleccionesResult.data || [];
       const dietasBlandas = dietasBlandasResult.data || [];
       const festivo = festivosResult.data;
       const restriccionesData = restriccionesResult.data || [];
+
+      // Filtrar inscripciones por fecha
+      const inscripciones = inscripcionesRaw.filter(insc => {
+        const fechaInicio = new Date(insc.fecha_inicio);
+        const fechaFin = insc.fecha_fin ? new Date(insc.fecha_fin) : null;
+        const fechaSeleccionada = new Date(selectedDate);
+
+        return fechaInicio <= fechaSeleccionada &&
+               (!fechaFin || fechaFin >= fechaSeleccionada);
+      });
+
+      const inscripcionesPadre = inscripcionesPadreRaw.filter(insc => {
+        const fechaInicio = new Date(insc.fecha_inicio);
+        const fechaFin = insc.fecha_fin ? new Date(insc.fecha_fin) : null;
+        const fechaSeleccionada = new Date(selectedDate);
+
+        return fechaInicio <= fechaSeleccionada &&
+               (!fechaFin || fechaFin >= fechaSeleccionada);
+      });
 
       const restriccionesPorHijo = new Map<string, string[]>();
       restriccionesData.forEach((r: any) => {
