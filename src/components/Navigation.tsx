@@ -1,15 +1,15 @@
 import React from 'react';
-import { Plus, CalendarX, ChefHat, Heart, Utensils, Euro, Gift, AlertCircle } from 'lucide-react';
+import { Plus, CalendarX, ChefHat, Heart, Utensils, Euro, Gift, AlertCircle, User } from 'lucide-react';
 
 interface NavigationProps {
-  activeTab: 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones';
-  onTabChange: (tab: 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones') => void;
+  activeTab: 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil';
+  onTabChange: (tab: 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil') => void;
 }
 
 export function Navigation({ activeTab, onTabChange }: NavigationProps) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1 mb-8">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-8 gap-1">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-9 gap-1">
         <button
           onClick={() => onTabChange('inscripcion')}
           className={`
@@ -120,6 +120,20 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
         >
           <AlertCircle className="h-5 w-5" />
           <span className="text-xs text-center">Restricciones</span>
+        </button>
+
+        <button
+          onClick={() => onTabChange('perfil')}
+          className={`
+            flex flex-col items-center justify-center space-y-1 px-3 py-3 rounded-lg font-medium transition-all duration-200
+            ${activeTab === 'perfil'
+              ? 'bg-gray-900 text-white shadow-sm'
+              : 'text-gray-600 hover:text-gray-900 hover:bg-gray-50'
+            }
+          `}
+        >
+          <User className="h-5 w-5" />
+          <span className="text-xs text-center">Mi Perfil</span>
         </button>
       </div>
     </div>

@@ -17,6 +17,7 @@ import { EnfermedadesList } from './components/EnfermedadesList';
 import { FacturacionView } from './components/FacturacionView';
 import { InvitacionesView } from './components/InvitacionesView';
 import { RestriccionesDieteticasHijo } from './components/RestriccionesDieteticasHijo';
+import { PerfilPadre } from './components/PerfilPadre';
 import { SuccessMessage } from './components/SuccessMessage';
 import { useInscripcionesComedor } from './hooks/useInscripcionesComedor';
 import { useInscripcionesPadres } from './hooks/useInscripcionesPadres';
@@ -31,7 +32,7 @@ import { formatDateForDisplay } from './utils/dateUtils';
 import ResetPassword from './pages/ResetPassword';
 
 function AppContent({ user }: { user: User }) {
-  const [activeTab, setActiveTab] = useState<'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'restricciones'>('inscripcion');
+  const [activeTab, setActiveTab] = useState<'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil'>('inscripcion');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
@@ -544,8 +545,12 @@ function AppContent({ user }: { user: User }) {
           </>
         ) : activeTab === 'facturacion' ? (
           <FacturacionView user={user} />
+        ) : activeTab === 'invitaciones' ? (
+          <InvitacionesView />
         ) : activeTab === 'restricciones' ? (
           <RestriccionesDieteticasHijo />
+        ) : activeTab === 'perfil' ? (
+          <PerfilPadre user={user} />
         ) : null}
       </div>
     </main>
