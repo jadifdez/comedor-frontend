@@ -619,6 +619,52 @@ export function DailyManagementView() {
                   )}
                 </div>
               )}
+
+              {/* Invitados */}
+              {data.invitados.length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <button
+                    onClick={() => toggleSection('invitados')}
+                    className="w-full flex items-center justify-between mb-4"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <UserPlus className="h-6 w-6 text-purple-600" />
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Invitados ({data.invitados.length})
+                      </h2>
+                    </div>
+                    {expandedSections.has('invitados') ? (
+                      <ChevronUp className="h-5 w-5 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-600" />
+                    )}
+                  </button>
+
+                  {expandedSections.has('invitados') && (
+                    <div className="space-y-2">
+                    {data.invitados.map((invitado) => (
+                      <div key={invitado.id} className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-gray-900">{invitado.nombre}</p>
+                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">
+                                Invitado
+                              </span>
+                            </div>
+                            {invitado.motivo && (
+                              <p className="text-sm text-gray-600">
+                                📝 {invitado.motivo}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </>
