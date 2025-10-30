@@ -113,7 +113,9 @@ export function useDailyManagement(fecha: string) {
             )
           `)
           .eq('activo', true)
-          .contains('dias_semana', [diaSemana]),
+          .contains('dias_semana', [diaSemana])
+          .lte('fecha_inicio', selectedDate)
+          .or(`fecha_fin.is.null,fecha_fin.gte.${selectedDate}`),
 
         supabase
           .from('comedor_inscripciones_padres')
@@ -126,7 +128,9 @@ export function useDailyManagement(fecha: string) {
             )
           `)
           .eq('activo', true)
-          .contains('dias_semana', [diaSemana]),
+          .contains('dias_semana', [diaSemana])
+          .lte('fecha_inicio', selectedDate)
+          .or(`fecha_fin.is.null,fecha_fin.gte.${selectedDate}`),
 
         supabase
           .from('comedor_bajas')
