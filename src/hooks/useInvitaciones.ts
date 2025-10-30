@@ -147,21 +147,39 @@ export const useInvitaciones = () => {
 
 function generarFechasRecurrentes(diasSemana: number[], fechaInicio: string, fechaFin: string): string[] {
   const fechas: string[] = [];
-  const inicio = new Date(fechaInicio);
-  const fin = new Date(fechaFin);
 
-  diasSemana.forEach(diaSemana => {
+  // Parse dates properly to avoid timezone issues
+  const [startYear, startMonth, startDay] = fechaInicio.split('-').map(Number);
+  const [endYear, endMonth, endDay] = fechaFin.split('-').map(Number);
+
+  const inicio = new Date(startYear, startMonth - 1, startDay);
+  const fin = new Date(endYear, endMonth - 1, endDay);
+
+  // Sort days of week to process in order
+  const diasOrdenados = [...diasSemana].sort((a, b) => a - b);
+
+  diasOrdenados.forEach(diaSemana => {
+    // Start from the beginning date
     const current = new Date(inicio);
 
+    // Find the first occurrence of this day of week
     while (current.getDay() !== diaSemana) {
       current.setDate(current.getDate() + 1);
     }
 
+    // Generate all occurrences of this day until end date
     while (current <= fin) {
-      const fechaStr = current.toISOString().split('T')[0];
+      // Format date as YYYY-MM-DD
+      const year = current.getFullYear();
+      const month = String(current.getMonth() + 1).padStart(2, '0');
+      const day = String(current.getDate()).padStart(2, '0');
+      const fechaStr = `${year}-${month}-${day}`;
+
       if (!fechas.includes(fechaStr)) {
         fechas.push(fechaStr);
       }
+
+      // Move to next week
       current.setDate(current.getDate() + 7);
     }
   });
