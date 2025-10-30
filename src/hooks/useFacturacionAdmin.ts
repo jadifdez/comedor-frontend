@@ -9,7 +9,8 @@ import {
   obtenerConfiguracionPrecios,
   calcularPrecioPuntual,
   calcularDiasEsperadosInscripcion,
-  InscripcionComedorPadre
+  InscripcionComedorPadre,
+  estaExentoEnFecha
 } from '../utils/facturacionCalculos';
 import type { Invitacion } from './useInvitaciones';
 
@@ -36,6 +37,8 @@ export interface HijoFacturacionDetalle {
   tieneDescuentoAsistencia80?: boolean;
   porcentajeDescuentoAsistencia80?: number;
   porcentajeAsistencia?: number;
+  estaExento: boolean;
+  motivoExencion?: string;
 }
 
 export interface PadreFacturacionDetalle {
@@ -50,6 +53,8 @@ export interface PadreFacturacionDetalle {
   tieneDescuentoAsistencia80?: boolean;
   porcentajeDescuentoAsistencia80?: number;
   porcentajeAsistencia?: number;
+  estaExento: boolean;
+  motivoExencion?: string;
 }
 
 export interface FacturacionPadre {
@@ -270,6 +275,20 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             totalImporte = totalImporteSinDescuentoAsistencia * (1 - porcentajeDescuentoAsistencia80 / 100);
           }
 
+          // Verificar exención: si está exento en CUALQUIER día del mes, queda exento TODO el mes
+          const primerDiaMes = diasLaborables[0] || fechaInicioMes;
+          const estaExento = estaExentoEnFecha(
+            hijo.exento_facturacion || false,
+            hijo.fecha_inicio_exencion,
+            hijo.fecha_fin_exencion,
+            primerDiaMes
+          );
+
+          // Si está exento, el importe es 0 (pero mantenemos el cálculo teórico)
+          if (estaExento) {
+            totalImporte = 0;
+          }
+
           // Para mostrar en el resumen, usar la primera inscripción o null
           const inscripcionRepresentativa = inscripcionesHijo.length > 0 ? inscripcionesHijo[0] : null;
 
@@ -282,13 +301,15 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             diasBaja,
             diasInvitacion,
             totalImporte,
-            totalImporteSinDescuento: tieneDescuentoAsistencia80 ? totalImporteSinDescuentoAsistencia : undefined,
+            totalImporteSinDescuento: tieneDescuentoAsistencia80 || estaExento ? totalImporteSinDescuentoAsistencia : undefined,
             esHijoDePersonal,
             tieneDescuentoFamiliaNumerosa,
             porcentajeDescuento: tieneDescuentoFamiliaNumerosa ? configuracionPrecios.descuento_tercer_hijo : 0,
             tieneDescuentoAsistencia80,
             porcentajeDescuentoAsistencia80,
-            porcentajeAsistencia
+            porcentajeAsistencia,
+            estaExento,
+            motivoExencion: estaExento ? hijo.motivo_exencion : undefined
           });
         }
 
@@ -391,7 +412,21 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             totalImporte = totalImporteSinDescuentoAsistencia * (1 - porcentajeDescuentoAsistencia80 / 100);
           }
 
-          if (totalImporte > 0 || diasInvitacion > 0) {
+          // Verificar exención del padre: si está exento en CUALQUIER día del mes, queda exento TODO el mes
+          const primerDiaMes = diasLaborables[0] || fechaInicioMes;
+          const estaExentoPadre = estaExentoEnFecha(
+            padre.exento_facturacion || false,
+            padre.fecha_inicio_exencion,
+            padre.fecha_fin_exencion,
+            primerDiaMes
+          );
+
+          // Si está exento, el importe es 0 (pero mantenemos el cálculo teórico)
+          if (estaExentoPadre) {
+            totalImporte = 0;
+          }
+
+          if (totalImporte > 0 || diasInvitacion > 0 || estaExentoPadre) {
             // Para mostrar en el resumen, usar la primera inscripción o null
             const inscripcionRepresentativaPadre = inscripcionesPadreDelPadre.length > 0 ? inscripcionesPadreDelPadre[0] : null;
 
@@ -403,10 +438,12 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
               diasBaja,
               diasInvitacion,
               totalImporte,
-              totalImporteSinDescuento: tieneDescuentoAsistencia80 ? totalImporteSinDescuentoAsistencia : undefined,
+              totalImporteSinDescuento: tieneDescuentoAsistencia80 || estaExentoPadre ? totalImporteSinDescuentoAsistencia : undefined,
               tieneDescuentoAsistencia80,
               porcentajeDescuentoAsistencia80,
-              porcentajeAsistencia
+              porcentajeAsistencia,
+              estaExento: estaExentoPadre,
+              motivoExencion: estaExentoPadre ? padre.motivo_exencion : undefined
             };
           }
         }

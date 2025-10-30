@@ -99,8 +99,14 @@ export function exportarFacturacionAExcel({ mesSeleccionado, facturacion }: Exce
     familiaData.push(['Total días:', famFacturacion.totalDias]);
     familiaData.push([]);
 
-    if (famFacturacion.padreComedor && famFacturacion.padreComedor.totalImporte > 0) {
+    if (famFacturacion.padreComedor && (famFacturacion.padreComedor.totalImporte > 0 || famFacturacion.padreComedor.estaExento)) {
       familiaData.push(['COMEDOR DEL PADRE/MADRE (PERSONAL DEL COLEGIO)']);
+      if (famFacturacion.padreComedor.estaExento) {
+        familiaData.push(['EXENTO DE FACTURACIÓN:', 'SÍ']);
+        if (famFacturacion.padreComedor.motivoExencion) {
+          familiaData.push(['Motivo Exención:', famFacturacion.padreComedor.motivoExencion]);
+        }
+      }
       familiaData.push([]);
       familiaData.push([
         'Días Inscripción',
@@ -152,6 +158,13 @@ export function exportarFacturacionAExcel({ mesSeleccionado, facturacion }: Exce
 
       if (hijoData.esHijoDePersonal) {
         familiaData.push(['Tipo:', 'Hijo de Personal del Colegio']);
+      }
+
+      if (hijoData.estaExento) {
+        familiaData.push(['EXENTO DE FACTURACIÓN:', 'SÍ']);
+        if (hijoData.motivoExencion) {
+          familiaData.push(['Motivo Exención:', hijoData.motivoExencion]);
+        }
       }
 
       if (hijoData.tieneDescuentoFamiliaNumerosa) {
@@ -218,6 +231,63 @@ export function exportarFacturacionAExcel({ mesSeleccionado, facturacion }: Exce
     const nombreHoja = `${index + 1}. ${famFacturacion.padre.nombre.substring(0, 25)}`;
     XLSX.utils.book_append_sheet(workbook, wsFamilia, nombreHoja);
   });
+
+  // Hoja de exenciones activas
+  const exencionesData: any[][] = [];
+  exencionesData.push(['EXENCIONES DE FACTURACIÓN ACTIVAS']);
+  exencionesData.push(['Mes:', mesNombre]);
+  exencionesData.push([]);
+  exencionesData.push(['Tipo', 'Nombre', 'Familia', 'Motivo', 'Importe Teórico', 'Importe Exento']);
+
+  let totalImporteExento = 0;
+
+  facturacion.forEach(fam => {
+    // Exenciones de hijos
+    fam.hijos.forEach(hijo => {
+      if (hijo.estaExento) {
+        const importeTeorico = hijo.totalImporteSinDescuento || 0;
+        totalImporteExento += importeTeorico;
+        exencionesData.push([
+          'Alumno',
+          hijo.hijo.nombre,
+          fam.padre.nombre,
+          hijo.motivoExencion || 'No especificado',
+          importeTeorico.toFixed(2) + ' €',
+          importeTeorico.toFixed(2) + ' €'
+        ]);
+      }
+    });
+
+    // Exención del padre
+    if (fam.padreComedor?.estaExento) {
+      const importeTeorico = fam.padreComedor.totalImporteSinDescuento || 0;
+      totalImporteExento += importeTeorico;
+      exencionesData.push([
+        'Padre/Madre (Personal)',
+        fam.padre.nombre,
+        fam.padre.nombre,
+        fam.padreComedor.motivoExencion || 'No especificado',
+        importeTeorico.toFixed(2) + ' €',
+        importeTeorico.toFixed(2) + ' €'
+      ]);
+    }
+  });
+
+  if (exencionesData.length > 4) {
+    exencionesData.push([]);
+    exencionesData.push(['TOTAL IMPORTE EXENTO:', '', '', '', '', totalImporteExento.toFixed(2) + ' €']);
+
+    const wsExenciones = XLSX.utils.aoa_to_sheet(exencionesData);
+    wsExenciones['!cols'] = [
+      { wch: 20 },
+      { wch: 30 },
+      { wch: 30 },
+      { wch: 40 },
+      { wch: 15 },
+      { wch: 15 }
+    ];
+    XLSX.utils.book_append_sheet(workbook, wsExenciones, 'Exenciones');
+  }
 
   const fechaActual = new Date().toISOString().split('T')[0];
   const nombreArchivo = `Facturacion_${mesNombre.replace(' ', '_')}_${fechaActual}.xlsx`;

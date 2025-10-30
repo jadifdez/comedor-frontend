@@ -16,7 +16,8 @@ import {
   AlertTriangle,
   Key,
   Utensils,
-  Send
+  Send,
+  Shield
 } from 'lucide-react';
 import { InscribirProfesorModal } from './InscribirProfesorModal';
 import { useInscripcionesPadresAdmin, InscripcionPadreAdmin } from '../../hooks/useInscripcionesPadresAdmin';
@@ -54,7 +55,11 @@ export function PadresManager() {
     nombre: '',
     telefono: '',
     activo: true,
-    es_personal: false
+    es_personal: false,
+    exento_facturacion: false,
+    motivo_exencion: '',
+    fecha_inicio_exencion: '',
+    fecha_fin_exencion: ''
   });
 
   const [showInscribirModal, setShowInscribirModal] = useState(false);
@@ -127,7 +132,7 @@ export function PadresManager() {
         const { error } = await supabase.from('padres').insert([formData]);
         if (error) throw error;
       }
-      setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: false });
+      setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: false, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
       setShowForm(false);
       setEditingPadre(null);
       loadPadres();
@@ -143,7 +148,11 @@ export function PadresManager() {
       nombre: padre.nombre,
       telefono: padre.telefono || '',
       activo: padre.activo,
-      es_personal: padre.es_personal || false
+      es_personal: padre.es_personal || false,
+      exento_facturacion: padre.exento_facturacion || false,
+      motivo_exencion: padre.motivo_exencion || '',
+      fecha_inicio_exencion: padre.fecha_inicio_exencion || '',
+      fecha_fin_exencion: padre.fecha_fin_exencion || ''
     });
     setShowForm(true);
   };
@@ -337,7 +346,7 @@ Equipo del Comedor`
           onClick={() => {
             setShowForm(true);
             setEditingPadre(null);
-            setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: false });
+            setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: false, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
           }}
           className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
         >
@@ -416,6 +425,76 @@ Equipo del Comedor`
                 Personal del colegio
               </label>
             </div>
+
+            {/* Sección de Exención de Facturación */}
+            <div className="md:col-span-2 border-t border-gray-200 pt-4 mt-2">
+              <div className="flex items-center space-x-2 mb-4">
+                <Shield className="h-5 w-5 text-blue-600" />
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-900">Exención de Facturación Propia</h4>
+                  <p className="text-xs text-gray-500">Solo aplica a la inscripción del padre al comedor (si existe)</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="exento_facturacion"
+                    checked={formData.exento_facturacion}
+                    onChange={(e) => setFormData(prev => ({ ...prev, exento_facturacion: e.target.checked }))}
+                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <label htmlFor="exento_facturacion" className="text-sm font-medium text-gray-700">
+                    Exento de facturación (100%)
+                  </label>
+                </div>
+
+                {formData.exento_facturacion && (
+                  <>
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Motivo de exención <span className="text-red-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.motivo_exencion}
+                        onChange={(e) => setFormData(prev => ({ ...prev, motivo_exencion: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Ej: Personal directivo, Caso especial, etc."
+                        required={formData.exento_facturacion}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha inicio exención (opcional)
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.fecha_inicio_exencion}
+                        onChange={(e) => setFormData(prev => ({ ...prev, fecha_inicio_exencion: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Si no se especifica, la exención es permanente</p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Fecha fin exención (opcional)
+                      </label>
+                      <input
+                        type="date"
+                        value={formData.fecha_fin_exencion}
+                        onChange={(e) => setFormData(prev => ({ ...prev, fecha_fin_exencion: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        min={formData.fecha_inicio_exencion || undefined}
+                      />
+                      <p className="text-xs text-gray-500 mt-1">Si no se especifica, la exención es permanente</p>
+                    </div>
+                  </>
+                )}
+              </div>
+            </div>
+
             <div className="md:col-span-2 flex space-x-3">
               <button
                 type="submit"
@@ -447,6 +526,7 @@ Equipo del Comedor`
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Padre</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hijos</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exención</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Acciones</th>
               </tr>
@@ -467,6 +547,12 @@ Equipo del Comedor`
                           {padre.es_personal && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 flex-shrink-0">
                               Personal
+                            </span>
+                          )}
+                          {padre.exento_facturacion && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 flex-shrink-0" title={padre.motivo_exencion || 'Exento'}>
+                              <Shield className="h-3 w-3 mr-1" />
+                              EXENTO
                             </span>
                           )}
                         </div>
@@ -490,6 +576,23 @@ Equipo del Comedor`
                           {hijosCount[padre.id] || 0} {hijosCount[padre.id] === 1 ? 'hijo' : 'hijos'}
                         </span>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {padre.exento_facturacion ? (
+                        <div className="text-sm">
+                          <div className="flex items-center text-green-700 font-medium">
+                            <Shield className="h-4 w-4 mr-1" />
+                            Exento
+                          </div>
+                          {padre.motivo_exencion && (
+                            <div className="text-xs text-gray-500 mt-0.5" title={padre.motivo_exencion}>
+                              {padre.motivo_exencion.length > 20 ? padre.motivo_exencion.substring(0, 20) + '...' : padre.motivo_exencion}
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-400">-</span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button

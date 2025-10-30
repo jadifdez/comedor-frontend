@@ -16,6 +16,10 @@ export interface Padre {
   telefono?: string;
   activo: boolean;
   es_personal: boolean;
+  exento_facturacion: boolean;
+  motivo_exencion?: string;
+  fecha_inicio_exencion?: string;
+  fecha_fin_exencion?: string;
   created_at: string;
 }
 
@@ -25,6 +29,10 @@ export interface Hijo {
   grado_id: string;
   padre_id: string;
   activo: boolean;
+  exento_facturacion: boolean;
+  motivo_exencion?: string;
+  fecha_inicio_exencion?: string;
+  fecha_fin_exencion?: string;
   created_at: string;
   grado?: Grado; // Para joins
 }

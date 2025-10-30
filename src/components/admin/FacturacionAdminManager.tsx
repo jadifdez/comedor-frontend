@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Euro, Calendar, User, Search, AlertCircle, Eye, ChevronDown, ChevronUp, Award, Users, XCircle, Download, FileSpreadsheet, CheckCircle } from 'lucide-react';
+import { Euro, Calendar, User, Search, AlertCircle, Eye, ChevronDown, ChevronUp, Award, Users, XCircle, Download, FileSpreadsheet, CheckCircle, Shield } from 'lucide-react';
 import { useFacturacionAdmin, HijoFacturacionDetalle } from '../../hooks/useFacturacionAdmin';
 import { exportarFacturacionAExcel } from '../../utils/excelExport';
 
@@ -247,12 +247,18 @@ export function FacturacionAdminManager() {
 
                     <div className="flex items-center space-x-4 text-sm text-gray-600">
                       <p>
-                        <strong>Hijos con servicio:</strong> {facturacionPadre.hijos.filter(h => h.totalImporte > 0).length}
+                        <strong>Hijos con servicio:</strong> {facturacionPadre.hijos.filter(h => h.totalImporte > 0 || h.estaExento).length}
                       </p>
                       {facturacionPadre.padreComedor && (
                         <span className="flex items-center space-x-1 text-blue-600">
                           <Users className="h-4 w-4" />
                           <span>Incluye comedor del padre/madre</span>
+                        </span>
+                      )}
+                      {(facturacionPadre.hijos.some(h => h.estaExento) || facturacionPadre.padreComedor?.estaExento) && (
+                        <span className="flex items-center space-x-1 text-green-700">
+                          <Shield className="h-4 w-4" />
+                          <span>Con exención de facturación</span>
                         </span>
                       )}
                       {facturacionPadre.hijos.some(h => h.tieneDescuentoFamiliaNumerosa) && (
@@ -355,13 +361,20 @@ export function FacturacionAdminManager() {
                                   <span>-{hijoData.porcentajeDescuentoAsistencia80}% (80%)</span>
                                 </span>
                               )}
+                              {hijoData.estaExento && (
+                                <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium" title={hijoData.motivoExencion}>
+                                  <Shield className="h-3 w-3" />
+                                  <span>EXENTO</span>
+                                </span>
+                              )}
                             </div>
                             <div className="flex items-center space-x-2">
                               <div className="text-right">
-                                <p className="font-bold text-green-600">
+                                <p className={`font-bold ${hijoData.estaExento ? 'text-green-700' : 'text-green-600'}`}>
                                   {hijoData.totalImporte.toFixed(2)}€
+                                  {hijoData.estaExento && ' (EXENTO)'}
                                 </p>
-                                {hijoData.tieneDescuentoAsistencia80 && hijoData.totalImporteSinDescuento && (
+                                {(hijoData.tieneDescuentoAsistencia80 || hijoData.estaExento) && hijoData.totalImporteSinDescuento && (
                                   <p className="text-xs text-gray-500 line-through">
                                     {hijoData.totalImporteSinDescuento.toFixed(2)}€
                                   </p>

@@ -1,4 +1,4 @@
-import { supabase, InscripcionComedor, BajaComedor, SolicitudComida } from '../lib/supabase';
+import { supabase, InscripcionComedor, BajaComedor, SolicitudComida, Hijo, Padre } from '../lib/supabase';
 import type { Invitacion } from '../hooks/useInvitaciones';
 
 export interface InscripcionComedorPadre {
@@ -40,6 +40,37 @@ export async function getDiasLaborablesMes(year: number, month: number): Promise
   }
 
   return diasLaborables;
+}
+
+export function estaExentoEnFecha(
+  exento: boolean,
+  fechaInicio: string | undefined,
+  fechaFin: string | undefined,
+  fechaConsulta: string
+): boolean {
+  if (!exento) return false;
+
+  // Sin rango de fechas, la exención es permanente
+  if (!fechaInicio && !fechaFin) return true;
+
+  const consulta = new Date(fechaConsulta);
+
+  // Solo fecha inicio
+  if (fechaInicio && !fechaFin) {
+    return consulta >= new Date(fechaInicio);
+  }
+
+  // Solo fecha fin
+  if (!fechaInicio && fechaFin) {
+    return consulta <= new Date(fechaFin);
+  }
+
+  // Ambas fechas
+  if (fechaInicio && fechaFin) {
+    return consulta >= new Date(fechaInicio) && consulta <= new Date(fechaFin);
+  }
+
+  return false;
 }
 
 export function estaEnRangoInscripcion(
