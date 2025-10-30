@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle } from 'lucide-react';
+import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle, Gift, User } from 'lucide-react';
 
-type TabType = 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'restricciones';
+type TabType = 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil';
 
 interface ParentHeaderProps {
   activeTab: TabType;
@@ -133,11 +133,31 @@ export function ParentHeader({ activeTab, onTabChange }: ParentHeaderProps) {
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleMenuItemClick('invitaciones')}
+                  className={getMenuItemClass('invitaciones')}
+                >
+                  <Gift className="h-5 w-5" />
+                  <span className="text-sm">Invitaciones</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleMenuItemClick('restricciones')}
                   className={getMenuItemClass('restricciones')}
                 >
                   <AlertCircle className="h-5 w-5" />
                   <span className="text-sm">Restricciones dietéticas</span>
+                </button>
+
+                <div className="px-4 py-2 border-b border-t border-gray-200 mt-2">
+                  <h3 className="text-sm font-semibold text-gray-900">Cuenta</h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleMenuItemClick('perfil')}
+                  className={getMenuItemClass('perfil')}
+                >
+                  <User className="h-5 w-5" />
+                  <span className="text-sm">Mi Perfil</span>
                 </button>
               </div>
             )}
