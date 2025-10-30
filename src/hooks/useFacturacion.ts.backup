@@ -1,0 +1,421 @@
+import { useState, useEffect } from 'react';
+import { supabase, InscripcionComedor, InscripcionComedorPadre, BajaComedor, SolicitudComida, DiaFestivo, Hijo, Padre } from '../lib/supabase';
+import { User } from '@supabase/supabase-js';
+
+export interface DiaFacturable {
+  fecha: string; // YYYY-MM-DD
+  tipo: 'inscripcion' | 'puntual';
+  precio: number;
+  descripcion: string;
+}
+
+export interface PersonaFacturable {
+  id: string;
+  nombre: string;
+  detalle?: string;
+  tipo: 'hijo' | 'padre';
+}
+
+export interface FacturacionHijo {
+  hijo: Hijo;
+  persona?: PersonaFacturable;
+  inscripcion: InscripcionComedor | InscripcionComedorPadre | null;
+  diasFacturables: DiaFacturable[];
+  totalDias: number;
+  totalImporte: number;
+  desglose: {
+    diasInscripcion: number;
+    diasPuntuales: number;
+    diasBaja: number;
+    diasFestivos: number;
+  };
+}
+
+export interface ResumenFacturacion {
+  mesSeleccionado: string;
+  hijosFacturacion: FacturacionHijo[];
+  totalGeneral: number;
+  totalDias: number;
+}
+
+export function useFacturacion(user: User) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mesSeleccionado, setMesSeleccionado] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+
+  // Función para obtener todos los días laborables de un mes
+  const getDiasLaborablesMes = async (year: number, month: number): Promise<string[]> => {
+    const diasLaborables: string[] = [];
+    const diasEnMes = new Date(year, month, 0).getDate();
+    
+    // Cargar días festivos del mes
+    const { data: diasFestivos, error } = await supabase
+      .from('dias_festivos')
+      .select('fecha')
+      .eq('activo', true)
+      .gte('fecha', `${year}-${String(month).padStart(2, '0')}-01`)
+      .lt('fecha', `${year}-${String(month + 1).padStart(2, '0')}-01`);
+
+    if (error) {
+      console.error('Error loading días festivos:', error);
+    }
+
+    const festivosSet = new Set(diasFestivos?.map(d => d.fecha) || []);
+
+    for (let dia = 1; dia <= diasEnMes; dia++) {
+      const fecha = new Date(year, month - 1, dia);
+      const diaSemana = fecha.getDay(); // 0=domingo, 6=sábado
+      const fechaStr = `${year}-${String(month).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
+      
+      // Solo días laborables (lunes a viernes) que no sean festivos
+      if (diaSemana >= 1 && diaSemana <= 5 && !festivosSet.has(fechaStr)) {
+        diasLaborables.push(fechaStr);
+      }
+    }
+
+    return diasLaborables;
+  };
+
+  // Función para verificar si una fecha está en el rango de inscripción
+  const estaEnRangoInscripcion = (fecha: string, inscripcion: InscripcionComedor): boolean => {
+    if (!inscripcion.activo) return false;
+    
+    const fechaDate = new Date(fecha);
+    const diaSemana = fechaDate.getDay();
+    
+    // Verificar si el día de la semana está incluido en la inscripción
+    if (!inscripcion.dias_semana.includes(diaSemana)) return false;
+    
+    // Verificar rango de fechas
+    const fechaInicio = new Date(inscripcion.fecha_inicio);
+    const fechaFin = inscripcion.fecha_fin ? new Date(inscripcion.fecha_fin) : null;
+    
+    return fechaDate >= fechaInicio && (!fechaFin || fechaDate <= fechaFin);
+  };
+
+  // Función para verificar si hay baja para una fecha específica
+  const tieneBaja = (fecha: string, bajas: BajaComedor[]): boolean => {
+    const fechaFormateada = new Date(fecha).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
+    return bajas.some(baja => baja.dias.includes(fechaFormateada));
+  };
+
+  // Función para verificar si hay solicitud puntual para una fecha específica
+  const tieneSolicitudPuntual = (fecha: string, solicitudes: SolicitudComida[]): SolicitudComida | null => {
+    const fechaFormateada = new Date(fecha).toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    
+    return solicitudes.find(solicitud => 
+      solicitud.fecha === fechaFormateada && solicitud.estado === 'aprobada'
+    ) || null;
+  };
+
+  // Función principal para calcular la facturación
+  const calcularFacturacion = async (mes: string): Promise<ResumenFacturacion> => {
+    const [year, month] = mes.split('-').map(Number);
+
+    // Calcular el último día del mes
+    const ultimoDiaMes = new Date(year, month, 0).getDate();
+    const fechaInicioMes = `${year}-${String(month).padStart(2, '0')}-01`;
+    const fechaFinMes = `${year}-${String(month).padStart(2, '0')}-${String(ultimoDiaMes).padStart(2, '0')}`;
+
+    try {
+      // Cargar todos los datos necesarios
+      const [hijosResult, inscripcionesResult, bajasResult, solicitudesResult, padreResult, inscripcionesPadreResult] = await Promise.all([
+        supabase
+          .from('hijos')
+          .select(`*, grado:grados(*)`)
+          .eq('activo', true)
+          .order('nombre'),
+
+        supabase
+          .from('comedor_inscripciones')
+          .select('*')
+          .or(`fecha_inicio.lte.${fechaFinMes},fecha_fin.gte.${fechaInicioMes},fecha_fin.is.null`),
+
+        supabase
+          .from('comedor_bajas')
+          .select('*')
+          .order('fecha_creacion'),
+
+        supabase
+          .from('comedor_altaspuntuales')
+          .select('*')
+          .eq('estado', 'aprobada')
+          .order('fecha_creacion'),
+
+        supabase
+          .from('padres')
+          .select('*')
+          .maybeSingle(),
+
+        supabase
+          .from('comedor_inscripciones_padres')
+          .select('*')
+          .or(`fecha_inicio.lte.${fechaFinMes},fecha_fin.gte.${fechaInicioMes},fecha_fin.is.null`)
+      ]);
+
+      if (hijosResult.error) throw hijosResult.error;
+      if (inscripcionesResult.error) throw inscripcionesResult.error;
+      if (bajasResult.error) throw bajasResult.error;
+      if (solicitudesResult.error) throw solicitudesResult.error;
+      if (padreResult.error) throw padreResult.error;
+      if (inscripcionesPadreResult.error) throw inscripcionesPadreResult.error;
+
+      const hijos = hijosResult.data || [];
+      const inscripciones = inscripcionesResult.data || [];
+      const bajas = bajasResult.data || [];
+      const solicitudes = solicitudesResult.data || [];
+      const padre = padreResult.data;
+      const inscripcionesPadre = inscripcionesPadreResult.data || [];
+
+      // Obtener días laborables del mes
+      const diasLaborables = await getDiasLaborablesMes(year, month);
+
+      const hijosFacturacion: FacturacionHijo[] = [];
+
+      // Obtener el precio para hijos de personal
+      const { data: configPrecioHijoPersonal } = await supabase
+        .from('configuracion_precios')
+        .select('precio_hijo_personal')
+        .eq('activo', true)
+        .maybeSingle();
+
+      const precioHijoPersonal = configPrecioHijoPersonal?.precio_hijo_personal || 4.00;
+
+      // Procesar facturación para hijos
+      for (const hijo of hijos) {
+        const inscripcionActiva = inscripciones.find(i =>
+          i.hijo_id === hijo.id && i.activo
+        );
+
+        // Verificar si el hijo es de un padre personal del colegio
+        const { data: padreHijo } = await supabase
+          .from('padres')
+          .select('es_personal')
+          .eq('id', hijo.padre_id)
+          .maybeSingle();
+
+        const esHijoDePersonal = padreHijo?.es_personal || false;
+
+        const bajasHijo = bajas.filter(b => b.hijo_id === hijo.id);
+        const solicitudesHijo = solicitudes.filter(s => s.hijo_id === hijo.id);
+
+        const diasFacturables: DiaFacturable[] = [];
+        let diasInscripcion = 0;
+        let diasPuntuales = 0;
+        let diasBaja = 0;
+        let diasFestivos = 0;
+
+        for (const fecha of diasLaborables) {
+          const fechaDate = new Date(fecha);
+
+          // Verificar si tiene baja para este día
+          if (tieneBaja(fecha, bajasHijo)) {
+            diasBaja++;
+            continue;
+          }
+
+          // Verificar si tiene solicitud puntual aprobada
+          const solicitudPuntual = tieneSolicitudPuntual(fecha, solicitudesHijo);
+          if (solicitudPuntual) {
+            diasPuntuales++;
+
+            // Para hijos de personal, usar precio fijo por día. Para otros, usar precio configurado
+            let precioPuntual: number;
+            if (esHijoDePersonal) {
+              precioPuntual = precioHijoPersonal;
+            } else {
+              const { data: configPrecio } = await supabase
+                .from('configuracion_precios')
+                .select('precio')
+                .eq('activo', true)
+                .lte('dias_min', 3)
+                .gte('dias_max', 1)
+                .maybeSingle();
+              precioPuntual = configPrecio?.precio || 9.15;
+            }
+
+            diasFacturables.push({
+              fecha,
+              tipo: 'puntual',
+              precio: precioPuntual,
+              descripcion: 'Comida puntual solicitada'
+            });
+            continue;
+          }
+
+          // Verificar si está en rango de inscripción
+          if (inscripcionActiva && estaEnRangoInscripcion(fecha, inscripcionActiva)) {
+            diasInscripcion++;
+            // Usar el precio_diario de la inscripción, que ya tiene aplicados descuentos (personal + familia numerosa)
+            diasFacturables.push({
+              fecha,
+              tipo: 'inscripcion',
+              precio: inscripcionActiva.precio_diario,
+              descripcion: 'Comida por inscripción'
+            });
+          }
+        }
+
+        // Calcular el importe total sumando el precio de cada día facturable
+        const totalImporte = diasFacturables.reduce((sum, dia) => sum + dia.precio, 0);
+
+        hijosFacturacion.push({
+          hijo,
+          inscripcion: inscripcionActiva || null,
+          diasFacturables,
+          totalDias: diasFacturables.length,
+          totalImporte,
+          desglose: {
+            diasInscripcion,
+            diasPuntuales,
+            diasBaja,
+            diasFestivos: 0
+          }
+        });
+      }
+
+      // Procesar facturación para el padre (si es personal del colegio)
+      if (padre && padre.es_personal && inscripcionesPadre.length > 0) {
+        const inscripcionActivaPadre = inscripcionesPadre.find(i => i.activo);
+        const bajasPadre = bajas.filter(b => b.padre_id === padre.id);
+        const solicitudesPadre = solicitudes.filter(s => s.padre_id === padre.id);
+
+        const diasFacturables: DiaFacturable[] = [];
+        let diasInscripcion = 0;
+        let diasPuntuales = 0;
+        let diasBaja = 0;
+
+        for (const fecha of diasLaborables) {
+          // Verificar si tiene baja para este día
+          if (tieneBaja(fecha, bajasPadre)) {
+            diasBaja++;
+            continue;
+          }
+
+          // Verificar si tiene solicitud puntual aprobada
+          const solicitudPuntual = tieneSolicitudPuntual(fecha, solicitudesPadre);
+          if (solicitudPuntual) {
+            diasPuntuales++;
+            const { data: configPrecio } = await supabase
+              .from('configuracion_precios')
+              .select('precio_adulto')
+              .eq('activo', true)
+              .lte('dias_min', 3)
+              .gte('dias_max', 1)
+              .maybeSingle();
+
+            diasFacturables.push({
+              fecha,
+              tipo: 'puntual',
+              precio: configPrecio?.precio_adulto || 9.15,
+              descripcion: 'Comida puntual solicitada (Personal del colegio)'
+            });
+            continue;
+          }
+
+          // Verificar si está en rango de inscripción (para padre)
+          if (inscripcionActivaPadre) {
+            const fechaDate = new Date(fecha);
+            const diaSemana = fechaDate.getDay();
+            const fechaInicio = new Date(inscripcionActivaPadre.fecha_inicio);
+            const fechaFin = inscripcionActivaPadre.fecha_fin ? new Date(inscripcionActivaPadre.fecha_fin) : null;
+
+            if (
+              inscripcionActivaPadre.dias_semana.includes(diaSemana) &&
+              fechaDate >= fechaInicio &&
+              (!fechaFin || fechaDate <= fechaFin)
+            ) {
+              diasInscripcion++;
+              diasFacturables.push({
+                fecha,
+                tipo: 'inscripcion',
+                precio: inscripcionActivaPadre.precio_diario,
+                descripcion: 'Comida por inscripción'
+              });
+            }
+          }
+        }
+
+        const totalImporte = diasFacturables.reduce((sum, dia) => sum + dia.precio, 0);
+
+        // Crear un objeto "hijo" ficticio para el padre
+        hijosFacturacion.unshift({
+          hijo: {
+            id: padre.id,
+            nombre: padre.nombre,
+            grado: { id: '', nombre: 'Personal del colegio', activo: true }
+          } as Hijo,
+          persona: {
+            id: padre.id,
+            nombre: padre.nombre,
+            detalle: 'Personal del colegio',
+            tipo: 'padre'
+          },
+          inscripcion: inscripcionActivaPadre || null,
+          diasFacturables,
+          totalDias: diasFacturables.length,
+          totalImporte,
+          desglose: {
+            diasInscripcion,
+            diasPuntuales,
+            diasBaja,
+            diasFestivos: 0
+          }
+        });
+      }
+
+      const totalGeneral = hijosFacturacion.reduce((sum, hijo) => sum + hijo.totalImporte, 0);
+      const totalDias = hijosFacturacion.reduce((sum, hijo) => sum + hijo.totalDias, 0);
+
+      return {
+        mesSeleccionado: mes,
+        hijosFacturacion,
+        totalGeneral,
+        totalDias
+      };
+
+    } catch (err: any) {
+      throw new Error(`Error calculando facturación: ${err.message}`);
+    }
+  };
+
+  const [facturacion, setFacturacion] = useState<ResumenFacturacion | null>(null);
+
+  const loadFacturacion = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const resultado = await calcularFacturacion(mesSeleccionado);
+      setFacturacion(resultado);
+    } catch (err: any) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadFacturacion();
+  }, [mesSeleccionado, user.id]);
+
+  return {
+    facturacion,
+    loading,
+    error,
+    mesSeleccionado,
+    setMesSeleccionado,
+    refetch: loadFacturacion
+  };
+}
