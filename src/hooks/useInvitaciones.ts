@@ -32,7 +32,7 @@ export interface InvitacionFormData {
   nombre_completo?: string;
   motivo: string;
   es_recurrente?: boolean;
-  dia_semana?: number;
+  dias_semana?: number[];
   fecha_inicio?: string;
   fecha_fin?: string;
 }
@@ -79,9 +79,9 @@ export const useInvitaciones = () => {
 
       let fechasParaInsertar: string[] = [];
 
-      if (formData.es_recurrente && formData.dia_semana && formData.fecha_inicio && formData.fecha_fin) {
+      if (formData.es_recurrente && formData.dias_semana && formData.dias_semana.length > 0 && formData.fecha_inicio && formData.fecha_fin) {
         fechasParaInsertar = generarFechasRecurrentes(
-          formData.dia_semana,
+          formData.dias_semana,
           formData.fecha_inicio,
           formData.fecha_fin
         );
@@ -145,23 +145,28 @@ export const useInvitaciones = () => {
   };
 };
 
-function generarFechasRecurrentes(diaSemana: number, fechaInicio: string, fechaFin: string): string[] {
+function generarFechasRecurrentes(diasSemana: number[], fechaInicio: string, fechaFin: string): string[] {
   const fechas: string[] = [];
   const inicio = new Date(fechaInicio);
   const fin = new Date(fechaFin);
 
-  const current = new Date(inicio);
+  diasSemana.forEach(diaSemana => {
+    const current = new Date(inicio);
 
-  while (current.getDay() !== diaSemana) {
-    current.setDate(current.getDate() + 1);
-  }
+    while (current.getDay() !== diaSemana) {
+      current.setDate(current.getDate() + 1);
+    }
 
-  while (current <= fin) {
-    fechas.push(current.toISOString().split('T')[0]);
-    current.setDate(current.getDate() + 7);
-  }
+    while (current <= fin) {
+      const fechaStr = current.toISOString().split('T')[0];
+      if (!fechas.includes(fechaStr)) {
+        fechas.push(fechaStr);
+      }
+      current.setDate(current.getDate() + 7);
+    }
+  });
 
-  return fechas;
+  return fechas.sort();
 }
 
 export const useInvitacionesUsuario = () => {
