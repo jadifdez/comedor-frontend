@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, Utensils, Heart, XCircle, GraduationCap, Briefcase, ChefHat, List, BarChart3, UserPlus } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, Utensils, Heart, XCircle, GraduationCap, Briefcase, ChefHat, List, BarChart3, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
 import { useDailyManagement, DailyDiner } from '../../hooks/useDailyManagement';
 import { generateDailyPDF } from '../../utils/dailyPdfExport';
 
@@ -8,6 +8,7 @@ type ViewMode = 'resumen' | 'cocina' | 'listado';
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('resumen');
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['alumnos']));
 
   const formatDateISO = (date: Date) => {
     return date.toISOString().split('T')[0];
@@ -59,6 +60,18 @@ export function DailyManagementView() {
   const handleDownloadPDF = () => {
     if (!data) return;
     generateDailyPDF(data, selectedDate);
+  };
+
+  const toggleSection = (section: string) => {
+    setExpandedSections(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(section)) {
+        newSet.delete(section);
+      } else {
+        newSet.add(section);
+      }
+      return newSet;
+    });
   };
 
   const groupByGrado = (comensales: DailyDiner[]) => {
@@ -466,14 +479,25 @@ export function DailyManagementView() {
             <div className="space-y-6">
               {/* Alumnos por curso */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <div className="flex items-center space-x-3 mb-4">
-                  <GraduationCap className="h-6 w-6 text-blue-600" />
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Alumnos ({data.comensales.filter(c => c.tipo === 'hijo').length})
-                  </h2>
-                </div>
+                <button
+                  onClick={() => toggleSection('alumnos')}
+                  className="w-full flex items-center justify-between mb-4"
+                >
+                  <div className="flex items-center space-x-3">
+                    <GraduationCap className="h-6 w-6 text-blue-600" />
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Alumnos ({data.comensales.filter(c => c.tipo === 'hijo').length})
+                    </h2>
+                  </div>
+                  {expandedSections.has('alumnos') ? (
+                    <ChevronUp className="h-5 w-5 text-gray-600" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-600" />
+                  )}
+                </button>
 
-                <div className="space-y-4">
+                {expandedSections.has('alumnos') && (
+                  <div className="space-y-4">
                   {groupByGrado(data.comensales.filter(c => c.tipo === 'hijo')).map(([grado, alumnos]) => (
                     <div key={grado} className="border border-gray-200 rounded-lg overflow-hidden">
                       <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
@@ -517,19 +541,32 @@ export function DailyManagementView() {
                       </div>
                     </div>
                   ))}
-                </div>
+                  </div>
+                )}
               </div>
 
               {/* Personal */}
               {data.comensales.filter(c => c.tipo === 'padre').length > 0 && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <Briefcase className="h-6 w-6 text-teal-600" />
-                    <h2 className="text-xl font-bold text-gray-900">
-                      Personal del Colegio ({data.comensales.filter(c => c.tipo === 'padre').length})
-                    </h2>
-                  </div>
-                  <div className="space-y-2">
+                  <button
+                    onClick={() => toggleSection('personal')}
+                    className="w-full flex items-center justify-between mb-4"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <Briefcase className="h-6 w-6 text-teal-600" />
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Personal del Colegio ({data.comensales.filter(c => c.tipo === 'padre').length})
+                      </h2>
+                    </div>
+                    {expandedSections.has('personal') ? (
+                      <ChevronUp className="h-5 w-5 text-gray-600" />
+                    ) : (
+                      <ChevronDown className="h-5 w-5 text-gray-600" />
+                    )}
+                  </button>
+
+                  {expandedSections.has('personal') && (
+                    <div className="space-y-2">
                     {data.comensales.filter(c => c.tipo === 'padre').map((personal) => (
                       <div key={personal.id} className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50">
                         <div className="flex items-start justify-between">
@@ -557,7 +594,8 @@ export function DailyManagementView() {
                         </div>
                       </div>
                     ))}
-                  </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
