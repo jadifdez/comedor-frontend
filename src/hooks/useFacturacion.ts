@@ -11,7 +11,8 @@ import {
   obtenerInfoDescuentoHijo,
   calcularPrecioPuntual,
   calcularDiasEsperadosInscripcion,
-  InscripcionComedorPadre
+  InscripcionComedorPadre,
+  estaExentoEnFecha
 } from '../utils/facturacionCalculos';
 import type { Invitacion } from './useInvitaciones';
 
@@ -54,6 +55,8 @@ export interface FacturacionHijo {
   posicionHijo?: number;
   totalInscripcionesPadre?: number;
   ahorroTotalDescuentos?: number;
+  estaExento?: boolean;
+  motivoExencion?: string;
 }
 
 export interface ResumenFacturacion {
@@ -88,7 +91,14 @@ export function useFacturacion(user: User) {
       const [hijosResult, inscripcionesResult, bajasResult, solicitudesResult, padreResult, inscripcionesPadreResult, invitacionesResult] = await Promise.all([
         supabase
           .from('hijos')
-          .select(`*, grado:grados(*)`)
+          .select(`
+            *,
+            grado:grados(*),
+            exento_facturacion,
+            motivo_exencion,
+            fecha_inicio_exencion,
+            fecha_fin_exencion
+          `)
           .eq('activo', true)
           .order('nombre'),
 
@@ -288,6 +298,20 @@ export function useFacturacion(user: User) {
           totalImporte = totalImporteSinDescuentoAsistencia * (1 - porcentajeDescuentoAsistencia80 / 100);
         }
 
+        // Verificar exención: si está exento en CUALQUIER día del mes, queda exento TODO el mes
+        const primerDiaMes = diasLaborables[0] || fechaInicioMes;
+        const estaExento = estaExentoEnFecha(
+          hijo.exento_facturacion || false,
+          hijo.fecha_inicio_exencion,
+          hijo.fecha_fin_exencion,
+          primerDiaMes
+        );
+
+        // Si está exento, el importe es 0 (pero mantenemos el cálculo teórico)
+        if (estaExento) {
+          totalImporte = 0;
+        }
+
         const ahorroTotalDescuentos = precioBaseSinDescuentos - totalImporte;
 
         hijosFacturacion.push({
@@ -296,7 +320,7 @@ export function useFacturacion(user: User) {
           diasFacturables,
           totalDias: diasFacturables.length,
           totalImporte,
-          totalImporteSinDescuento: tieneDescuentoAsistencia80 ? totalImporteSinDescuentoAsistencia : undefined,
+          totalImporteSinDescuento: tieneDescuentoAsistencia80 || estaExento ? totalImporteSinDescuentoAsistencia : undefined,
           precioBaseSinDescuentos,
           desglose: {
             diasInscripcion,
@@ -313,7 +337,9 @@ export function useFacturacion(user: User) {
           porcentajeAsistencia,
           posicionHijo,
           totalInscripcionesPadre,
-          ahorroTotalDescuentos
+          ahorroTotalDescuentos,
+          estaExento,
+          motivoExencion: estaExento ? hijo.motivo_exencion : undefined
         });
       }
 
@@ -465,6 +491,20 @@ export function useFacturacion(user: User) {
           totalImporte = totalImporteSinDescuentoAsistencia * (1 - porcentajeDescuentoAsistencia80 / 100);
         }
 
+        // Verificar exención del padre: si está exento en CUALQUIER día del mes, queda exento TODO el mes
+        const primerDiaMesPadre = diasLaborables[0] || fechaInicioMes;
+        const estaExentoPadre = estaExentoEnFecha(
+          padre.exento_facturacion || false,
+          padre.fecha_inicio_exencion,
+          padre.fecha_fin_exencion,
+          primerDiaMesPadre
+        );
+
+        // Si está exento, el importe es 0 (pero mantenemos el cálculo teórico)
+        if (estaExentoPadre) {
+          totalImporte = 0;
+        }
+
         const ahorroTotalDescuentos = precioBaseSinDescuentos - totalImporte;
 
         // Para mostrar en el resumen, usar la primera inscripción o null
@@ -487,7 +527,7 @@ export function useFacturacion(user: User) {
           diasFacturables,
           totalDias: diasFacturables.length,
           totalImporte,
-          totalImporteSinDescuento: tieneDescuentoAsistencia80 ? totalImporteSinDescuentoAsistencia : undefined,
+          totalImporteSinDescuento: tieneDescuentoAsistencia80 || estaExentoPadre ? totalImporteSinDescuentoAsistencia : undefined,
           precioBaseSinDescuentos,
           desglose: {
             diasInscripcion,
@@ -499,7 +539,9 @@ export function useFacturacion(user: User) {
           tieneDescuentoAsistencia80,
           porcentajeDescuentoAsistencia80,
           porcentajeAsistencia,
-          ahorroTotalDescuentos
+          ahorroTotalDescuentos,
+          estaExento: estaExentoPadre,
+          motivoExencion: estaExentoPadre ? padre.motivo_exencion : undefined
         });
       }
 

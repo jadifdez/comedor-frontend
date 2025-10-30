@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Euro, Calendar, User, FileText, AlertCircle, CheckCircle, XCircle, TrendingDown, Gift, Users, Award, Info, HelpCircle, Percent, ChevronDown, ChevronUp } from 'lucide-react';
+import { Euro, Calendar, User, FileText, AlertCircle, CheckCircle, XCircle, TrendingDown, Gift, Users, Award, Info, HelpCircle, Percent, ChevronDown, ChevronUp, Shield } from 'lucide-react';
 import { useFacturacion } from '../hooks/useFacturacion';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -478,6 +478,12 @@ export function FacturacionView({ user }: FacturacionViewProps) {
                 <span className="text-sm text-gray-600">
                   ({hijoFacturacion.hijo.grado?.nombre})
                 </span>
+                {hijoFacturacion.estaExento && (
+                  <span className="inline-flex items-center px-2 py-1 bg-green-100 text-green-700 rounded-md text-xs font-medium" title={hijoFacturacion.motivoExencion}>
+                    <Shield className="h-3 w-3 mr-1" />
+                    EXENTO
+                  </span>
+                )}
               </div>
 
               <div className="w-full grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-4">
@@ -593,7 +599,7 @@ export function FacturacionView({ user }: FacturacionViewProps) {
                                   <span className="text-sm font-medium">-{((hijoFacturacion.precioBaseSinDescuentos || 0) * (hijoFacturacion.inscripcion.descuento_aplicado / 100)).toFixed(2)}€</span>
                                 </div>
                               )}
-                              {hijoFacturacion.tieneDescuentoAsistencia80 && (
+                              {hijoFacturacion.tieneDescuentoAsistencia80 && !hijoFacturacion.estaExento && (
                                 <>
                                   <div className="flex justify-between items-center border-t pt-2">
                                     <span className="text-sm text-gray-700">Subtotal:</span>
@@ -608,9 +614,32 @@ export function FacturacionView({ user }: FacturacionViewProps) {
                                   </div>
                                 </>
                               )}
+                              {hijoFacturacion.estaExento && (
+                                <>
+                                  <div className="flex justify-between items-center border-t pt-2">
+                                    <span className="text-sm text-gray-700">Importe teórico:</span>
+                                    <span className="text-sm font-medium text-gray-500 line-through">{hijoFacturacion.totalImporteSinDescuento?.toFixed(2)}€</span>
+                                  </div>
+                                  <div className="flex justify-between items-center text-green-700 bg-green-50 rounded px-2 py-1">
+                                    <span className="text-sm font-medium flex items-center space-x-1">
+                                      <Shield className="h-4 w-4" />
+                                      <span>Exención de facturación (100%):</span>
+                                    </span>
+                                    <span className="text-sm font-bold">-{hijoFacturacion.totalImporteSinDescuento?.toFixed(2)}€</span>
+                                  </div>
+                                  {hijoFacturacion.motivoExencion && (
+                                    <div className="text-xs text-gray-600 italic mt-1">
+                                      Motivo: {hijoFacturacion.motivoExencion}
+                                    </div>
+                                  )}
+                                </>
+                              )}
                               <div className="flex justify-between items-center border-t-2 border-blue-300 pt-2 mt-2">
                                 <span className="text-base font-semibold text-gray-900">Total a facturar:</span>
-                                <span className="text-lg font-bold text-blue-600">{hijoFacturacion.totalImporte.toFixed(2)}€</span>
+                                <span className={`text-lg font-bold ${hijoFacturacion.estaExento ? 'text-green-600' : 'text-blue-600'}`}>
+                                  {hijoFacturacion.totalImporte.toFixed(2)}€
+                                  {hijoFacturacion.estaExento && ' (EXENTO)'}
+                                </span>
                               </div>
                               <div className="flex justify-between items-center bg-green-100 rounded px-2 py-1">
                                 <span className="text-sm font-medium text-green-800">Ahorro total:</span>

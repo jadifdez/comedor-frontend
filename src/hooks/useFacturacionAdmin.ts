@@ -297,19 +297,6 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             primerDiaMes
           );
 
-          // Debug para verificar exención
-          if (hijo.nombre.toLowerCase().includes('borrame1')) {
-            console.log('DEBUG borrame1:', {
-              nombre: hijo.nombre,
-              exento_facturacion: hijo.exento_facturacion,
-              fecha_inicio_exencion: hijo.fecha_inicio_exencion,
-              fecha_fin_exencion: hijo.fecha_fin_exencion,
-              primerDiaMes,
-              estaExento,
-              totalImporteAntes: totalImporte
-            });
-          }
-
           // Si está exento, el importe es 0 (pero mantenemos el cálculo teórico)
           if (estaExento) {
             totalImporte = 0;
