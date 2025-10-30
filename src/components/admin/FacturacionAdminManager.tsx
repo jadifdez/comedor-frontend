@@ -298,7 +298,7 @@ export function FacturacionAdminManager() {
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <h5 className="font-medium text-gray-900 mb-3">Detalle por persona</h5>
                     <div className="space-y-3">
-                      {facturacionPadre.padreComedor && facturacionPadre.padreComedor.totalImporte > 0 && (
+                      {facturacionPadre.padreComedor && (facturacionPadre.padreComedor.totalImporte > 0 || facturacionPadre.padreComedor.estaExento) && (
                         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-2">
@@ -306,11 +306,23 @@ export function FacturacionAdminManager() {
                               <h6 className="font-medium text-gray-900">
                                 {facturacionPadre.padre.nombre} (Personal del colegio)
                               </h6>
+                              {facturacionPadre.padreComedor.estaExento && (
+                                <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium" title={facturacionPadre.padreComedor.motivoExencion}>
+                                  <Shield className="h-3 w-3" />
+                                  <span>EXENTO</span>
+                                </span>
+                              )}
                             </div>
                             <div className="text-right">
-                              <p className="font-bold text-blue-600">
+                              <p className={`font-bold ${facturacionPadre.padreComedor.estaExento ? 'text-green-700' : 'text-blue-600'}`}>
                                 {facturacionPadre.padreComedor.totalImporte.toFixed(2)}€
+                                {facturacionPadre.padreComedor.estaExento && ' (EXENTO)'}
                               </p>
+                              {facturacionPadre.padreComedor.estaExento && facturacionPadre.padreComedor.totalImporteSinDescuento && (
+                                <p className="text-xs text-gray-500 line-through">
+                                  {facturacionPadre.padreComedor.totalImporteSinDescuento.toFixed(2)}€
+                                </p>
+                              )}
                               <p className="text-sm text-gray-600">
                                 {facturacionPadre.padreComedor.diasFacturables.length} días
                               </p>

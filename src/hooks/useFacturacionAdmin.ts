@@ -456,7 +456,14 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         const totalDiasPadre = padreComedor ? padreComedor.diasFacturables.length : 0;
         const totalDias = totalDiasHijos + totalDiasPadre;
 
-        if (totalGeneral > 0) {
+        // Incluir familia si:
+        // - Tiene importe a pagar (totalGeneral > 0), O
+        // - Tiene hijos exentos, O
+        // - El padre está exento
+        const tieneHijosExentos = hijosFacturacion.some(h => h.estaExento);
+        const tienePadreExento = padreComedor?.estaExento || false;
+
+        if (totalGeneral > 0 || tieneHijosExentos || tienePadreExento) {
           facturacionPadres.push({
             padre,
             hijos: hijosFacturacion,
