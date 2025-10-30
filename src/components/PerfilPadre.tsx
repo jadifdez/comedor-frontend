@@ -108,7 +108,10 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
         })
         .eq('id', padreData.id);
 
-      if (updateError) throw updateError;
+      if (updateError) {
+        console.error('Error al actualizar padres:', updateError);
+        throw new Error(`No se pudo actualizar el perfil: ${updateError.message}`);
+      }
 
       // Si el email cambió, actualizar también en auth.users
       if (emailChanged) {
@@ -135,9 +138,12 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
         }, 3000);
       } else {
         setSuccess('Perfil actualizado correctamente');
+        console.log('Perfil actualizado, recargando datos...');
         await loadPadreData();
+        console.log('Datos recargados');
       }
     } catch (err: any) {
+      console.error('Error completo:', err);
       setError(err.message || 'Error al actualizar el perfil');
     } finally {
       setSaving(false);
