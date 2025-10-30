@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, Utensils, Heart, Gift, XCircle, GraduationCap, Briefcase, ChevronDown, ChevronUp, Clock, UserPlus } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, Utensils, Heart, XCircle, GraduationCap, Briefcase, ChefHat, List, BarChart3, UserPlus } from 'lucide-react';
 import { useDailyManagement, DailyDiner } from '../../hooks/useDailyManagement';
 import { generateDailyPDF } from '../../utils/dailyPdfExport';
 
+type ViewMode = 'resumen' | 'cocina' | 'listado';
+
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['alumnos', 'dietas']));
+  const [viewMode, setViewMode] = useState<ViewMode>('resumen');
 
   const formatDateISO = (date: Date) => {
     return date.toISOString().split('T')[0];
@@ -59,18 +61,6 @@ export function DailyManagementView() {
     generateDailyPDF(data, selectedDate);
   };
 
-  const toggleSection = (section: string) => {
-    setExpandedSections(prev => {
-      const newSet = new Set(prev);
-      if (newSet.has(section)) {
-        newSet.delete(section);
-      } else {
-        newSet.add(section);
-      }
-      return newSet;
-    });
-  };
-
   const groupByGrado = (comensales: DailyDiner[]) => {
     const grouped = new Map<string, DailyDiner[]>();
     comensales.forEach(c => {
@@ -85,10 +75,11 @@ export function DailyManagementView() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
           <Calendar className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-900">Gestión Diaria del Comedor</h1>
+          <h1 className="text-3xl font-bold text-gray-900">Parte Diario del Comedor</h1>
         </div>
         <button
           onClick={handleDownloadPDF}
@@ -96,10 +87,11 @@ export function DailyManagementView() {
           className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
         >
           <Download className="h-5 w-5" />
-          <span>Descargar Parte Diario PDF</span>
+          <span>Descargar PDF</span>
         </button>
       </div>
 
+      {/* Date Selector */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -146,27 +138,23 @@ export function DailyManagementView() {
           </div>
 
           <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-gray-900 capitalize">{formatDate(selectedDate)}</p>
-                {isWeekend(selectedDate) && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <AlertCircle className="h-5 w-5 text-amber-600" />
-                    <span className="text-sm font-medium text-amber-700">
-                      Fin de semana - No hay servicio de comedor
-                    </span>
-                  </div>
-                )}
-                {data?.es_festivo && (
-                  <div className="flex items-center space-x-2 mt-2">
-                    <AlertCircle className="h-5 w-5 text-red-600" />
-                    <span className="text-sm font-medium text-red-700">
-                      Día festivo: {data.nombre_festivo}
-                    </span>
-                  </div>
-                )}
+            <p className="text-2xl font-bold text-gray-900 capitalize">{formatDate(selectedDate)}</p>
+            {isWeekend(selectedDate) && (
+              <div className="flex items-center space-x-2 mt-2">
+                <AlertCircle className="h-5 w-5 text-amber-600" />
+                <span className="text-sm font-medium text-amber-700">
+                  Fin de semana - No hay servicio de comedor
+                </span>
               </div>
-            </div>
+            )}
+            {data?.es_festivo && (
+              <div className="flex items-center space-x-2 mt-2">
+                <AlertCircle className="h-5 w-5 text-red-600" />
+                <span className="text-sm font-medium text-red-700">
+                  Día festivo: {data.nombre_festivo}
+                </span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -191,414 +179,385 @@ export function DailyManagementView() {
 
       {!loading && data && !isWeekend(selectedDate) && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-blue-100 rounded-lg">
-                  <Users className="h-6 w-6 text-blue-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Total Comensales</p>
-                  <p className="text-3xl font-bold text-gray-900">{data.total_neto}</p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {data.total_inscritos} inscritos + {data.total_invitaciones} invitados
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-green-100 rounded-lg">
-                  <Utensils className="h-6 w-6 text-green-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Menús Elegidos</p>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {data.comensales.filter(c => c.tiene_eleccion).length}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">
-                    {data.menu_rancho.length} Rancho (por defecto)
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-amber-100 rounded-lg">
-                  <Heart className="h-6 w-6 text-amber-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Dietas Blandas</p>
-                  <p className="text-3xl font-bold text-gray-900">{data.dietas_blandas.length}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <div className="flex items-center space-x-3">
-                <div className="p-3 bg-red-100 rounded-lg">
-                  <XCircle className="h-6 w-6 text-red-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-600">Bajas</p>
-                  <p className="text-3xl font-bold text-gray-900">{data.total_bajas}</p>
-                </div>
-              </div>
+          {/* View Mode Tabs */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-2">
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setViewMode('resumen')}
+                className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  viewMode === 'resumen'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <BarChart3 className="h-5 w-5" />
+                <span>Resumen</span>
+              </button>
+              <button
+                onClick={() => setViewMode('cocina')}
+                className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  viewMode === 'cocina'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <ChefHat className="h-5 w-5" />
+                <span>Vista Cocina</span>
+              </button>
+              <button
+                onClick={() => setViewMode('listado')}
+                className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-colors ${
+                  viewMode === 'listado'
+                    ? 'bg-blue-600 text-white'
+                    : 'text-gray-600 hover:bg-gray-100'
+                }`}
+              >
+                <List className="h-5 w-5" />
+                <span>Listado Completo</span>
+              </button>
             </div>
           </div>
 
-          {data.bajas.length > 0 && (
-            <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl shadow-sm border-2 border-red-300 p-6">
-              <button
-                onClick={() => toggleSection('bajas')}
-                className="w-full flex items-center justify-between mb-4"
-              >
-                <div className="flex items-center space-x-3">
-                  <XCircle className="h-6 w-6 text-red-600" />
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Bajas del Día ({data.bajas.length})
-                  </h2>
+          {/* Vista Resumen */}
+          {viewMode === 'resumen' && (
+            <div className="space-y-6">
+              {/* Estadísticas principales */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-blue-100 rounded-lg">
+                      <Users className="h-6 w-6 text-blue-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Total Comensales</p>
+                      <p className="text-3xl font-bold text-gray-900">{data.total_neto}</p>
+                    </div>
+                  </div>
                 </div>
-                {expandedSections.has('bajas') ? (
-                  <ChevronUp className="h-5 w-5 text-gray-600" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-600" />
-                )}
-              </button>
 
-              {expandedSections.has('bajas') && (
-                <div className="space-y-2">
-                  {data.bajas.map((baja) => (
-                    <div key={baja.id} className="bg-white rounded-lg p-4 border border-red-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-gray-900">{baja.nombre}</p>
-                          {baja.curso && (
-                            <p className="text-sm text-gray-600">{baja.curso}</p>
-                          )}
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-green-100 rounded-lg">
+                      <Utensils className="h-6 w-6 text-green-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Con Elección</p>
+                      <p className="text-3xl font-bold text-gray-900">
+                        {data.comensales.filter(c => c.tiene_eleccion).length}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-amber-100 rounded-lg">
+                      <Heart className="h-6 w-6 text-amber-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Dietas Blandas</p>
+                      <p className="text-3xl font-bold text-gray-900">{data.dietas_blandas.length}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center space-x-3">
+                    <div className="p-3 bg-red-100 rounded-lg">
+                      <XCircle className="h-6 w-6 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-600">Bajas</p>
+                      <p className="text-3xl font-bold text-gray-900">{data.total_bajas}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desglose */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Desglose por Tipo</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <GraduationCap className="h-5 w-5 text-blue-600" />
+                        <span className="font-medium text-gray-900">Alumnos Inscritos</span>
+                      </div>
+                      <span className="text-xl font-bold text-gray-900">
+                        {data.comensales.filter(c => c.tipo === 'hijo' && c.es_inscripcion).length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-teal-50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <Briefcase className="h-5 w-5 text-teal-600" />
+                        <span className="font-medium text-gray-900">Personal Inscrito</span>
+                      </div>
+                      <span className="text-xl font-bold text-gray-900">
+                        {data.comensales.filter(c => c.tipo === 'padre' && c.es_inscripcion).length}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-purple-50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        <UserPlus className="h-5 w-5 text-purple-600" />
+                        <span className="font-medium text-gray-900">Invitados</span>
+                      </div>
+                      <span className="text-xl font-bold text-gray-900">
+                        {data.invitados.length}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4">Información Importante</h3>
+                  <div className="space-y-3">
+                    {data.dietas_blandas.length > 0 && (
+                      <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <Heart className="h-5 w-5 text-amber-600" />
+                          <span className="font-semibold text-gray-900">Dietas Blandas ({data.dietas_blandas.length})</span>
                         </div>
-                        <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full text-sm font-medium">
-                          {baja.tipo === 'hijo' ? 'Alumno' : 'Personal'}
+                        <div className="text-sm text-gray-700">
+                          {data.dietas_blandas.map(d => d.nombre).join(', ')}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )}
+                    {data.bajas.length > 0 && (
+                      <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <XCircle className="h-5 w-5 text-red-600" />
+                          <span className="font-semibold text-gray-900">Bajas del Día ({data.bajas.length})</span>
+                        </div>
+                        <div className="text-sm text-gray-700">
+                          {data.bajas.map(b => b.nombre).join(', ')}
+                        </div>
+                      </div>
+                    )}
+                    {data.invitados.length > 0 && (
+                      <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
+                        <div className="flex items-center space-x-2 mb-2">
+                          <UserPlus className="h-5 w-5 text-purple-600" />
+                          <span className="font-semibold text-gray-900">Invitados ({data.invitados.length})</span>
+                        </div>
+                        <div className="space-y-1">
+                          {data.invitados.map(inv => (
+                            <div key={inv.id} className="text-sm text-gray-700">
+                              <span className="font-medium">{inv.nombre}</span>
+                              {inv.motivo && <span className="text-gray-500"> - {inv.motivo}</span>}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
+              </div>
             </div>
           )}
 
-          {data.invitados.length > 0 && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl shadow-sm border-2 border-blue-300 p-6">
-              <button
-                onClick={() => toggleSection('invitados')}
-                className="w-full flex items-center justify-between mb-4"
-              >
-                <div className="flex items-center space-x-3">
-                  <UserPlus className="h-6 w-6 text-blue-600" />
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Invitados del Día ({data.invitados.length})
-                  </h2>
+          {/* Vista Cocina */}
+          {viewMode === 'cocina' && (
+            <div className="space-y-6">
+              {/* Resumen de menús para preparar */}
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl shadow-sm border-2 border-green-300 p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <ChefHat className="h-8 w-8 text-green-600" />
+                  <h2 className="text-2xl font-bold text-gray-900">Raciones a Preparar</h2>
                 </div>
-                {expandedSections.has('invitados') ? (
-                  <ChevronUp className="h-5 w-5 text-gray-600" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-600" />
-                )}
-              </button>
 
-              {expandedSections.has('invitados') && (
-                <div className="space-y-2">
-                  {data.invitados.map((invitado) => (
-                    <div key={invitado.id} className="bg-white rounded-lg p-4 border border-blue-200">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {data.menu_summary.length > 0 ? (
+                    data.menu_summary.map((menu, idx) => (
+                      <div key={idx} className="bg-white rounded-lg p-4 border-2 border-green-200">
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex-1">
+                            <p className="font-bold text-lg text-gray-900">{menu.opcion_principal}</p>
+                            <p className="text-gray-700">+ {menu.opcion_guarnicion}</p>
+                          </div>
+                          <div className="bg-green-600 text-white px-4 py-2 rounded-full text-xl font-bold">
+                            {menu.cantidad}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="col-span-2 text-center text-gray-500 py-4">
+                      No hay elecciones de menú registradas
+                    </div>
+                  )}
+
+                  {data.menu_rancho.length > 0 && (
+                    <div className="bg-blue-100 rounded-lg p-4 border-2 border-blue-300">
                       <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="font-semibold text-gray-900">{invitado.nombre}</p>
-                          {invitado.curso && (
-                            <p className="text-sm text-gray-600">{invitado.curso}</p>
-                          )}
+                        <div className="flex-1">
+                          <p className="font-bold text-lg text-gray-900">Menú Rancho</p>
+                          <p className="text-sm text-gray-600">(Asignación automática)</p>
                         </div>
-                        <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
-                          {invitado.tipo === 'hijo' ? 'Alumno' : invitado.tipo === 'padre' ? 'Personal' : 'Externo'}
+                        <div className="bg-blue-600 text-white px-4 py-2 rounded-full text-xl font-bold">
+                          {data.menu_rancho.length}
                         </div>
-                      </div>
-                      <div className="bg-blue-50 rounded-lg p-2 mt-2">
-                        <p className="text-xs text-gray-700">
-                          <span className="font-semibold">Motivo:</span> {invitado.motivo}
-                        </p>
                       </div>
                     </div>
-                  ))}
+                  )}
                 </div>
-              )}
-            </div>
-          )}
+              </div>
 
-          {data.dietas_blandas.length > 0 && (
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl shadow-sm border-2 border-amber-300 p-6">
-              <button
-                onClick={() => toggleSection('dietas')}
-                className="w-full flex items-center justify-between mb-4"
-              >
-                <div className="flex items-center space-x-3">
-                  <Heart className="h-6 w-6 text-amber-600" />
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Dietas Blandas - Preparación Especial ({data.dietas_blandas.length})
-                  </h2>
-                </div>
-                {expandedSections.has('dietas') ? (
-                  <ChevronUp className="h-5 w-5 text-gray-600" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-600" />
-                )}
-              </button>
-
-              {expandedSections.has('dietas') && (
-                <div className="space-y-2">
-                  {data.dietas_blandas.map((dieta) => (
-                    <div key={dieta.id} className="bg-white rounded-lg p-4 border border-amber-200">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-semibold text-gray-900">{dieta.nombre}</p>
-                          {dieta.curso && (
-                            <p className="text-sm text-gray-600">{dieta.curso}</p>
-                          )}
-                        </div>
-                        <div className="bg-amber-100 text-amber-800 px-3 py-1 rounded-full text-sm font-medium">
+              {/* Dietas blandas */}
+              {data.dietas_blandas.length > 0 && (
+                <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl shadow-sm border-2 border-amber-300 p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Heart className="h-8 w-8 text-amber-600" />
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Dietas Blandas - Preparación Especial ({data.dietas_blandas.length})
+                    </h2>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {data.dietas_blandas.map((dieta) => (
+                      <div key={dieta.id} className="bg-white rounded-lg p-4 border-2 border-amber-200">
+                        <p className="font-bold text-gray-900 text-lg">{dieta.nombre}</p>
+                        {dieta.curso && (
+                          <p className="text-sm text-gray-600">{dieta.curso}</p>
+                        )}
+                        <div className="mt-2 bg-amber-100 text-amber-800 px-2 py-1 rounded text-xs font-medium inline-block">
                           {dieta.tipo === 'hijo' ? 'Alumno' : 'Personal'}
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Restricciones dietéticas */}
+              {data.comensales.filter(c => c.restricciones.length > 0).length > 0 && (
+                <div className="bg-gradient-to-r from-red-50 to-pink-50 rounded-xl shadow-sm border-2 border-red-300 p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <AlertCircle className="h-8 w-8 text-red-600" />
+                    <h2 className="text-2xl font-bold text-gray-900">
+                      Restricciones Dietéticas - IMPORTANTE
+                    </h2>
+                  </div>
+                  <div className="space-y-2">
+                    {data.comensales.filter(c => c.restricciones.length > 0).map((comensal) => (
+                      <div key={comensal.id} className="bg-white rounded-lg p-4 border-2 border-red-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-bold text-lg text-gray-900">{comensal.nombre}</p>
+                            {comensal.curso && (
+                              <p className="text-sm text-gray-600">{comensal.curso}</p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold">
+                              {comensal.restricciones.join(', ')}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
           )}
 
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <button
-              onClick={() => toggleSection('menu')}
-              className="w-full flex items-center justify-between mb-4"
-            >
-              <div className="flex items-center space-x-3">
-                <Utensils className="h-6 w-6 text-green-600" />
-                <h2 className="text-xl font-bold text-gray-900">Resumen de Menús</h2>
-              </div>
-              {expandedSections.has('menu') ? (
-                <ChevronUp className="h-5 w-5 text-gray-600" />
-              ) : (
-                <ChevronDown className="h-5 w-5 text-gray-600" />
-              )}
-            </button>
+          {/* Vista Listado Completo */}
+          {viewMode === 'listado' && (
+            <div className="space-y-6">
+              {/* Alumnos por curso */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <div className="flex items-center space-x-3 mb-4">
+                  <GraduationCap className="h-6 w-6 text-blue-600" />
+                  <h2 className="text-xl font-bold text-gray-900">
+                    Alumnos ({data.comensales.filter(c => c.tipo === 'hijo').length})
+                  </h2>
+                </div>
 
-            {expandedSections.has('menu') && (
-              <div className="space-y-4">
-                {data.menu_summary.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Elecciones de Menú</h3>
-                    <div className="space-y-2">
-                      {data.menu_summary.map((menu, idx) => (
-                        <div key={idx} className="flex items-center justify-between bg-gray-50 rounded-lg p-3">
-                          <div>
-                            <p className="font-medium text-gray-900">
-                              {menu.opcion_principal} + {menu.opcion_guarnicion}
-                            </p>
-                          </div>
-                          <div className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm font-bold">
-                            {menu.cantidad} personas
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {data.menu_rancho.length > 0 && (
-                  <div>
-                    <h3 className="font-semibold text-gray-900 mb-2">Menú Rancho (Asignación Automática)</h3>
-                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="text-gray-700">
-                          Alumnos sin elección de menú (se asigna Rancho por defecto)
-                        </p>
-                        <div className="bg-blue-600 text-white px-3 py-1 rounded-full text-sm font-bold">
-                          {data.menu_rancho.length} raciones
-                        </div>
+                <div className="space-y-4">
+                  {groupByGrado(data.comensales.filter(c => c.tipo === 'hijo')).map(([grado, alumnos]) => (
+                    <div key={grado} className="border border-gray-200 rounded-lg overflow-hidden">
+                      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
+                        <h3 className="font-semibold text-gray-900">
+                          {grado} ({alumnos.length})
+                        </h3>
                       </div>
-                      <div className="text-sm text-gray-600 mt-2">
-                        {data.menu_rancho.map(c => c.nombre).join(', ')}
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-            <button
-              onClick={() => toggleSection('alumnos')}
-              className="w-full flex items-center justify-between mb-4"
-            >
-              <div className="flex items-center space-x-3">
-                <GraduationCap className="h-6 w-6 text-blue-600" />
-                <h2 className="text-xl font-bold text-gray-900">
-                  Alumnos ({data.comensales.filter(c => c.tipo === 'hijo').length})
-                </h2>
-              </div>
-              {expandedSections.has('alumnos') ? (
-                <ChevronUp className="h-5 w-5 text-gray-600" />
-              ) : (
-                <ChevronDown className="h-5 w-5 text-gray-600" />
-              )}
-            </button>
-
-            {expandedSections.has('alumnos') && (
-              <div className="space-y-4">
-                {groupByGrado(data.comensales.filter(c => c.tipo === 'hijo')).map(([grado, alumnos]) => (
-                  <div key={grado} className="border border-gray-200 rounded-lg overflow-hidden">
-                    <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                      <h3 className="font-semibold text-gray-900">
-                        {grado} ({alumnos.length} alumnos)
-                      </h3>
-                    </div>
-                    <div className="divide-y divide-gray-200">
-                      {alumnos.map((alumno) => (
-                        <div key={alumno.id} className="px-4 py-3 hover:bg-gray-50">
-                          <div className="flex items-center justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <p className="font-medium text-gray-900">{alumno.nombre}</p>
-                                {alumno.restricciones.length > 0 && (
-                                  <span className="text-sm font-semibold text-red-600">
-                                    ({alumno.restricciones.join(', ')})
-                                  </span>
+                      <div className="divide-y divide-gray-200">
+                        {alumnos.map((alumno) => (
+                          <div key={alumno.id} className="px-4 py-3 hover:bg-gray-50">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <p className="font-medium text-gray-900">{alumno.nombre}</p>
+                                  {alumno.es_invitacion && (
+                                    <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">
+                                      Invitado
+                                    </span>
+                                  )}
+                                  {alumno.restricciones.length > 0 && (
+                                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">
+                                      {alumno.restricciones.join(', ')}
+                                    </span>
+                                  )}
+                                </div>
+                                {alumno.tiene_dieta_blanda && (
+                                  <p className="text-sm text-amber-600 font-semibold">🍲 Dieta Blanda</p>
+                                )}
+                                {alumno.tiene_eleccion && (
+                                  <p className="text-sm text-gray-600">
+                                    🍽️ {alumno.opcion_principal} + {alumno.opcion_guarnicion}
+                                  </p>
+                                )}
+                                {!alumno.tiene_eleccion && !alumno.tiene_dieta_blanda && (
+                                  <p className="text-sm text-blue-600">🍽️ Menú Rancho</p>
                                 )}
                               </div>
-                              {alumno.tiene_eleccion && (
-                                <p className="text-sm text-gray-600">
-                                  {alumno.opcion_principal} + {alumno.opcion_guarnicion}
-                                </p>
-                              )}
-                              {!alumno.tiene_eleccion && !alumno.tiene_dieta_blanda && (
-                                <p className="text-sm text-blue-600 font-medium">Menú Rancho (por defecto)</p>
-                              )}
-                              {alumno.tiene_dieta_blanda && (
-                                <p className="text-sm text-amber-600 font-medium">Dieta Blanda</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Personal */}
+              {data.comensales.filter(c => c.tipo === 'padre').length > 0 && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <Briefcase className="h-6 w-6 text-teal-600" />
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Personal del Colegio ({data.comensales.filter(c => c.tipo === 'padre').length})
+                    </h2>
+                  </div>
+                  <div className="space-y-2">
+                    {data.comensales.filter(c => c.tipo === 'padre').map((personal) => (
+                      <div key={personal.id} className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <p className="font-medium text-gray-900">{personal.nombre}</p>
+                              {personal.es_invitacion && (
+                                <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">
+                                  Invitado
+                                </span>
                               )}
                             </div>
-                            {alumno.es_invitacion && (
-                              <div className="bg-pink-100 text-pink-700 px-2 py-1 rounded text-xs font-medium">
-                                Invitado
-                              </div>
+                            {personal.tiene_dieta_blanda && (
+                              <p className="text-sm text-amber-600 font-semibold">🍲 Dieta Blanda</p>
+                            )}
+                            {personal.tiene_eleccion && (
+                              <p className="text-sm text-gray-600">
+                                🍽️ {personal.opcion_principal} + {personal.opcion_guarnicion}
+                              </p>
+                            )}
+                            {!personal.tiene_eleccion && !personal.tiene_dieta_blanda && (
+                              <p className="text-sm text-blue-600">🍽️ Menú Rancho</p>
                             )}
                           </div>
                         </div>
-                      ))}
-                    </div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {data.comensales.filter(c => c.tipo === 'padre').length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <button
-                onClick={() => toggleSection('personal')}
-                className="w-full flex items-center justify-between mb-4"
-              >
-                <div className="flex items-center space-x-3">
-                  <Briefcase className="h-6 w-6 text-teal-600" />
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Personal del Colegio ({data.comensales.filter(c => c.tipo === 'padre').length})
-                  </h2>
-                </div>
-                {expandedSections.has('personal') ? (
-                  <ChevronUp className="h-5 w-5 text-gray-600" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-600" />
-                )}
-              </button>
-
-              {expandedSections.has('personal') && (
-                <div className="space-y-2">
-                  {data.comensales.filter(c => c.tipo === 'padre').map((personal) => (
-                    <div key={personal.id} className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900">{personal.nombre}</p>
-                          {personal.tiene_eleccion && (
-                            <p className="text-sm text-gray-600">
-                              {personal.opcion_principal} + {personal.opcion_guarnicion}
-                            </p>
-                          )}
-                          {!personal.tiene_eleccion && !personal.tiene_dieta_blanda && (
-                            <p className="text-sm text-blue-600 font-medium">Menú Rancho (por defecto)</p>
-                          )}
-                          {personal.tiene_dieta_blanda && (
-                            <p className="text-sm text-amber-600 font-medium">Dieta Blanda</p>
-                          )}
-                        </div>
-                        {personal.es_invitacion && (
-                          <div className="bg-pink-100 text-pink-700 px-2 py-1 rounded text-xs font-medium">
-                            Invitado
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-
-          {data.comensales.filter(c => c.es_invitacion).length > 0 && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <button
-                onClick={() => toggleSection('invitaciones')}
-                className="w-full flex items-center justify-between mb-4"
-              >
-                <div className="flex items-center space-x-3">
-                  <Gift className="h-6 w-6 text-pink-600" />
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Invitaciones del Día ({data.comensales.filter(c => c.es_invitacion).length})
-                  </h2>
-                </div>
-                {expandedSections.has('invitaciones') ? (
-                  <ChevronUp className="h-5 w-5 text-gray-600" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-600" />
-                )}
-              </button>
-
-              {expandedSections.has('invitaciones') && (
-                <div className="space-y-2">
-                  {data.comensales.filter(c => c.es_invitacion).map((invitado) => (
-                    <div key={invitado.id} className="bg-pink-50 border border-pink-200 rounded-lg px-4 py-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium text-gray-900">{invitado.nombre}</p>
-                          {invitado.curso && (
-                            <p className="text-sm text-gray-600">{invitado.curso}</p>
-                          )}
-                          {invitado.motivo_invitacion && (
-                            <p className="text-sm text-gray-500 italic">Motivo: {invitado.motivo_invitacion}</p>
-                          )}
-                          {invitado.tiene_eleccion && (
-                            <p className="text-sm text-gray-600">
-                              {invitado.opcion_principal} + {invitado.opcion_guarnicion}
-                            </p>
-                          )}
-                        </div>
-                        <div className="bg-pink-600 text-white px-2 py-1 rounded text-xs font-medium">
-                          {invitado.tipo === 'hijo' ? 'Alumno' : invitado.tipo === 'padre' ? 'Personal' : 'Externo'}
-                        </div>
-                      </div>
-                    </div>
-                  ))}
                 </div>
               )}
             </div>
