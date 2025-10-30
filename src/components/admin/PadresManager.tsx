@@ -133,11 +133,18 @@ export function PadresManager() {
     setIsSaving(true);
 
     try {
+      // Preparar datos: convertir strings vacías a null para fechas
+      const dataToSave = {
+        ...formData,
+        fecha_inicio_exencion: formData.fecha_inicio_exencion || null,
+        fecha_fin_exencion: formData.fecha_fin_exencion || null
+      };
+
       if (editingPadre) {
-        console.log('Actualizando padre:', editingPadre.id, 'con datos:', formData);
+        console.log('Actualizando padre:', editingPadre.id, 'con datos:', dataToSave);
         const { data, error } = await supabase
           .from('padres')
-          .update(formData)
+          .update(dataToSave)
           .eq('id', editingPadre.id)
           .select();
 
@@ -150,7 +157,7 @@ export function PadresManager() {
       } else {
         const { data, error } = await supabase
           .from('padres')
-          .insert([formData])
+          .insert([dataToSave])
           .select();
 
         if (error) {
