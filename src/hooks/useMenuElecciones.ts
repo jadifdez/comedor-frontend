@@ -100,8 +100,17 @@ export function useMenuElecciones(user: User, padre?: Padre | null, inscripcione
 
       console.log('[useMenuElecciones] Personas hijos finales:', personasHijos.length, personasHijos.map(p => p.nombre));
 
+      // Debug inscripciones padre
+      console.log('[useMenuElecciones] inscripcionesPadre:', inscripcionesPadre);
+      console.log('[useMenuElecciones] padre:', padre);
+      console.log('[useMenuElecciones] padre?.id:', padre?.id);
+      console.log('[useMenuElecciones] inscripciones activas:', inscripcionesPadre?.filter(i => i.activo));
+
       // Solo incluir al padre si tiene inscripciones activas
-      const personasPadre: OpcionUnificada[] = inscripcionesPadre && inscripcionesPadre.some(i => i.activo) && padre?.id
+      const tieneInscripcionActiva = inscripcionesPadre && inscripcionesPadre.some(i => i.activo);
+      console.log('[useMenuElecciones] tieneInscripcionActiva:', tieneInscripcionActiva);
+
+      const personasPadre: OpcionUnificada[] = tieneInscripcionActiva && padre?.id
         ? [{
             id: padre.id,
             nombre: padre.nombre || '',
@@ -110,7 +119,7 @@ export function useMenuElecciones(user: User, padre?: Padre | null, inscripcione
           }]
         : [];
 
-      console.log('[useMenuElecciones] Personas padre finales:', personasPadre.length);
+      console.log('[useMenuElecciones] Personas padre finales:', personasPadre.length, personasPadre);
 
       const todasPersonas = [...personasPadre, ...personasHijos];
       console.log('[useMenuElecciones] Total personas disponibles para elegir menú:', todasPersonas.length);
@@ -356,7 +365,7 @@ export function useMenuElecciones(user: User, padre?: Padre | null, inscripcione
       }
     };
     init();
-  }, [user.id]);
+  }, [user.id, padre?.id, inscripcionesPadre]);
 
   return {
     elecciones,
