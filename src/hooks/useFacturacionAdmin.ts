@@ -96,10 +96,12 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
           .eq('activo', true)
           .order('nombre'),
 
+        // IMPORTANTE: Incluir inscripciones activas Y desactivadas que estuvieron activas durante el mes
+        // Esto permite facturar proporcionalmente cuando una inscripción se desactiva a mitad de mes
         supabase
           .from('comedor_inscripciones')
           .select('*')
-          .or(`fecha_inicio.lte.${fechaFinMes},fecha_fin.gte.${fechaInicioMes},fecha_fin.is.null`),
+          .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
 
         supabase
           .from('comedor_bajas')
@@ -112,10 +114,11 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
           .eq('estado', 'aprobada')
           .order('fecha_creacion'),
 
+        // IMPORTANTE: Incluir inscripciones de padres activas Y desactivadas que estuvieron activas durante el mes
         supabase
           .from('comedor_inscripciones_padres')
           .select('*')
-          .or(`fecha_inicio.lte.${fechaFinMes},fecha_fin.gte.${fechaInicioMes},fecha_fin.is.null`),
+          .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
 
         supabase
           .from('invitaciones_comedor')
@@ -149,7 +152,8 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         const hijosDelPadre = hijos.filter(h => h.padre_id === padre.id);
         const idsHijos = hijosDelPadre.map(h => h.id);
 
-        const inscripcionesDelPadre = inscripciones.filter(i => idsHijos.includes(i.hijo_id) && i.activo);
+        // Incluir inscripciones activas y las que estuvieron activas durante el mes
+        const inscripcionesDelPadre = inscripciones.filter(i => idsHijos.includes(i.hijo_id));
 
         const inscripcionesOrdenadas = [...inscripcionesDelPadre].sort((a, b) => {
           const descuentoA = a.descuento_aplicado || 0;
@@ -181,9 +185,8 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         const infoPadre = infoDescuentosPorPadre.get(padre.id)!;
 
         for (const hijo of hijosDelPadre) {
-          const inscripcionActiva = inscripciones.find(i =>
-            i.hijo_id === hijo.id && i.activo
-          );
+          // Buscar la inscripción que aplica para este mes (activa O desactivada durante el mes)
+          const inscripcionActiva = inscripciones.find(i => i.hijo_id === hijo.id);
 
           const esHijoDePersonal = infoPadre.esPersonal;
           const posicionHijo = infoPadre.inscripcionesOrdenadas.findIndex(i => i.hijo_id === hijo.id) + 1;
@@ -285,7 +288,8 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         let padreComedor: PadreFacturacionDetalle | null = null;
 
         if (padre.es_personal) {
-          const inscripcionActivaPadre = inscripcionesPadre.find(i => i.padre_id === padre.id && i.activo);
+          // Buscar la inscripción que aplica para este mes (activa O desactivada durante el mes)
+          const inscripcionActivaPadre = inscripcionesPadre.find(i => i.padre_id === padre.id);
           const bajasPadre = bajas.filter(b => b.padre_id === padre.id);
           const solicitudesPadre = solicitudes.filter(s => s.padre_id === padre.id);
 

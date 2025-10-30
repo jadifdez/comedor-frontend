@@ -46,7 +46,9 @@ export function estaEnRangoInscripcion(
   fecha: string,
   inscripcion: InscripcionComedor | InscripcionComedorPadre
 ): boolean {
-  if (!inscripcion.activo) return false;
+  // IMPORTANTE: NO verificar si activo === true aquí
+  // Permitir que inscripciones desactivadas se facturen hasta su fecha_fin
+  // Esto permite facturación proporcional cuando se desactiva una inscripción a mitad de mes
 
   const fechaDate = new Date(fecha);
   const diaSemana = fechaDate.getDay();

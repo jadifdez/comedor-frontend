@@ -92,10 +92,12 @@ export function useFacturacion(user: User) {
           .eq('activo', true)
           .order('nombre'),
 
+        // IMPORTANTE: Incluir inscripciones activas Y desactivadas que estuvieron activas durante el mes
+        // Esto permite facturar proporcionalmente cuando una inscripción se desactiva a mitad de mes
         supabase
           .from('comedor_inscripciones')
           .select('*')
-          .or(`fecha_inicio.lte.${fechaFinMes},fecha_fin.gte.${fechaInicioMes},fecha_fin.is.null`),
+          .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
 
         supabase
           .from('comedor_bajas')
@@ -113,10 +115,11 @@ export function useFacturacion(user: User) {
           .select('*')
           .maybeSingle(),
 
+        // IMPORTANTE: Incluir inscripciones de padres activas Y desactivadas que estuvieron activas durante el mes
         supabase
           .from('comedor_inscripciones_padres')
           .select('*')
-          .or(`fecha_inicio.lte.${fechaFinMes},fecha_fin.gte.${fechaInicioMes},fecha_fin.is.null`),
+          .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
 
         supabase
           .from('invitaciones_comedor')
@@ -150,9 +153,8 @@ export function useFacturacion(user: User) {
 
       // Procesar facturación para hijos
       for (const hijo of hijos) {
-        const inscripcionActiva = inscripciones.find(i =>
-          i.hijo_id === hijo.id && i.activo
-        );
+        // Buscar la inscripción que aplica para este mes (activa O desactivada durante el mes)
+        const inscripcionActiva = inscripciones.find(i => i.hijo_id === hijo.id);
 
         const infoDescuento = await obtenerInfoDescuentoHijo(hijo.id, hijo.padre_id, inscripciones);
         const { esHijoDePersonal, tieneDescuentoFamiliaNumerosa, posicionHijo, totalInscripcionesPadre } = infoDescuento;
@@ -311,7 +313,8 @@ export function useFacturacion(user: User) {
 
       // Procesar facturación para el padre (si es personal del colegio)
       if (padre && padre.es_personal && inscripcionesPadre.length > 0) {
-        const inscripcionActivaPadre = inscripcionesPadre.find(i => i.activo);
+        // Buscar la inscripción que aplica para este mes (activa O desactivada durante el mes)
+        const inscripcionActivaPadre = inscripcionesPadre[0]; // Ya filtramos en la consulta
         const bajasPadre = bajas.filter(b => b.padre_id === padre.id);
         const solicitudesPadre = solicitudes.filter(s => s.padre_id === padre.id);
 
