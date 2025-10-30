@@ -50,6 +50,10 @@ export function PadresManager() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [emailResult, setEmailResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [formData, setFormData] = useState({
     email: '',
     nombre: '',
@@ -124,20 +128,65 @@ export function PadresManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError(null);
+    setSaveSuccess(null);
+    setIsSaving(true);
+
     try {
       if (editingPadre) {
-        const { error } = await supabase.from('padres').update(formData).eq('id', editingPadre.id);
-        if (error) throw error;
+        console.log('Actualizando padre:', editingPadre.id, 'con datos:', formData);
+        const { data, error } = await supabase
+          .from('padres')
+          .update(formData)
+          .eq('id', editingPadre.id)
+          .select();
+
+        if (error) {
+          console.error('Error de Supabase:', error);
+          throw error;
+        }
+        console.log('Padre actualizado exitosamente:', data);
+        setSaveSuccess('Padre actualizado exitosamente');
       } else {
-        const { error } = await supabase.from('padres').insert([formData]);
-        if (error) throw error;
+        const { data, error } = await supabase
+          .from('padres')
+          .insert([formData])
+          .select();
+
+        if (error) {
+          console.error('Error de Supabase:', error);
+          throw error;
+        }
+        console.log('Padre creado exitosamente:', data);
+        setSaveSuccess('Padre creado exitosamente');
       }
-      setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: false, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
-      setShowForm(false);
-      setEditingPadre(null);
-      loadPadres();
-    } catch (error) {
-      console.error('Error saving padre:', error);
+
+      setFormData({
+        email: '',
+        nombre: '',
+        telefono: '',
+        activo: true,
+        es_personal: false,
+        exento_facturacion: false,
+        motivo_exencion: '',
+        fecha_inicio_exencion: '',
+        fecha_fin_exencion: ''
+      });
+
+      await loadPadres();
+
+      // Cerrar el formulario después de 1.5 segundos para que el usuario vea el mensaje
+      setTimeout(() => {
+        setShowForm(false);
+        setEditingPadre(null);
+        setSaveSuccess(null);
+      }, 1500);
+
+    } catch (error: any) {
+      console.error('Error guardando padre:', error);
+      setSaveError(error.message || 'Error al guardar el padre. Por favor, intenta de nuevo.');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -154,6 +203,8 @@ export function PadresManager() {
       fecha_inicio_exencion: padre.fecha_inicio_exencion || '',
       fecha_fin_exencion: padre.fecha_fin_exencion || ''
     });
+    setSaveError(null);
+    setSaveSuccess(null);
     setShowForm(true);
   };
 
@@ -373,6 +424,21 @@ Equipo del Comedor`
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {editingPadre ? 'Editar Padre' : 'Nuevo Padre'}
           </h3>
+
+          {saveError && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0" />
+              <p className="text-sm text-red-800">{saveError}</p>
+            </div>
+          )}
+
+          {saveSuccess && (
+            <div className="mb-4 p-4 bg-green-50 border border-green-200 rounded-lg flex items-center space-x-2">
+              <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
+              <p className="text-sm text-green-800">{saveSuccess}</p>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -498,17 +564,28 @@ Equipo del Comedor`
             <div className="md:col-span-2 flex space-x-3">
               <button
                 type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+                disabled={isSaving}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
               >
-                {editingPadre ? 'Actualizar' : 'Crear'}
+                {isSaving ? (
+                  <>
+                    <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    <span>Guardando...</span>
+                  </>
+                ) : (
+                  <span>{editingPadre ? 'Actualizar' : 'Crear'}</span>
+                )}
               </button>
               <button
                 type="button"
+                disabled={isSaving}
                 onClick={() => {
                   setShowForm(false);
                   setEditingPadre(null);
+                  setSaveError(null);
+                  setSaveSuccess(null);
                 }}
-                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg transition-colors"
+                className="bg-gray-300 hover:bg-gray-400 text-gray-700 px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Cancelar
               </button>
