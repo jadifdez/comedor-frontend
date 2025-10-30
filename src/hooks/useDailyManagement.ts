@@ -370,11 +370,6 @@ export function useDailyManagement(fecha: string) {
 
       const menuRancho = sinEleccion;
 
-      console.log('=== DEBUG DIETAS BLANDAS ===');
-      console.log('Dietas blandas raw:', dietasBlandas);
-      console.log('Inscripciones padre filtradas:', inscripcionesPadre);
-      console.log('Comensales construidos:', comensales.filter(c => c.tipo === 'padre'));
-
       const dietasBlandasFormatted: DietaBlanda[] = dietasBlandas
         .filter(d => d.estado === 'aprobada')
         .map(d => ({
@@ -385,8 +380,6 @@ export function useDailyManagement(fecha: string) {
           estado: d.estado,
           fecha_dieta_blanda: d.fecha_dieta_blanda
         }));
-
-      console.log('Dietas blandas formateadas:', dietasBlandasFormatted);
 
       const bajasFormatted: Baja[] = bajas.map(b => ({
         id: b.id,
