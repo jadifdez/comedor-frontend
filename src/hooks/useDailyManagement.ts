@@ -14,9 +14,11 @@ export interface DailyDiner {
   opcion_principal?: string;
   opcion_guarnicion?: string;
   tiene_dieta_blanda: boolean;
+  tiene_menu_personalizado: boolean;
   padre_id?: string;
   hijo_id?: string;
   restricciones: string[];
+  es_personal?: boolean;
 }
 
 export interface MenuSummary {
@@ -58,6 +60,8 @@ export interface DailyData {
   es_festivo: boolean;
   nombre_festivo?: string;
   comensales: DailyDiner[];
+  comensales_recurrentes: DailyDiner[];
+  comensales_puntuales: DailyDiner[];
   total_comensales: number;
   total_inscritos: number;
   total_invitaciones: number;
@@ -95,6 +99,7 @@ export function useDailyManagement(fecha: string) {
       const [
         inscripcionesResult,
         inscripcionesPadreResult,
+        menusPersonalizadosResult,
         bajasResult,
         invitacionesResult,
         eleccionesResult,
@@ -127,6 +132,11 @@ export function useDailyManagement(fecha: string) {
           `)
           .eq('activo', true)
           .contains('dias_semana', [diaSemana]),
+
+        supabase
+          .from('comedor_menupersonalizado')
+          .select('hijo_id, padre_id')
+          .eq('fecha', selectedDate),
 
         supabase
           .from('comedor_bajas')
@@ -183,6 +193,7 @@ export function useDailyManagement(fecha: string) {
 
       if (inscripcionesResult.error) throw inscripcionesResult.error;
       if (inscripcionesPadreResult.error) throw inscripcionesPadreResult.error;
+      if (menusPersonalizadosResult.error) throw menusPersonalizadosResult.error;
       if (bajasResult.error) throw bajasResult.error;
       if (invitacionesResult.error) throw invitacionesResult.error;
       if (eleccionesResult.error) throw eleccionesResult.error;
@@ -192,6 +203,7 @@ export function useDailyManagement(fecha: string) {
 
       const inscripcionesRaw = inscripcionesResult.data || [];
       const inscripcionesPadreRaw = inscripcionesPadreResult.data || [];
+      const menusPersonalizadosRaw = menusPersonalizadosResult.data || [];
       const bajas = bajasResult.data || [];
       const invitaciones = invitacionesResult.data || [];
       const elecciones = eleccionesResult.data || [];
@@ -226,6 +238,18 @@ export function useDailyManagement(fecha: string) {
         restriccionesPorHijo.get(r.hijo_id)!.push(r.restriccion.nombre);
       });
 
+      const menusPersonalizadosSet = new Set<string>();
+      menusPersonalizadosRaw.forEach((m: any) => {
+        if (m.hijo_id) menusPersonalizadosSet.add(`hijo_${m.hijo_id}`);
+        if (m.padre_id) menusPersonalizadosSet.add(`padre_${m.padre_id}`);
+      });
+
+      const tieneMenuPersonalizado = (hijoId?: string, padreId?: string): boolean => {
+        if (hijoId && menusPersonalizadosSet.has(`hijo_${hijoId}`)) return true;
+        if (padreId && menusPersonalizadosSet.has(`padre_${padreId}`)) return true;
+        return false;
+      };
+
       const bajasHijoIds = new Set(bajas.map(b => b.hijo_id));
       const bajasPadreIds = new Set(bajas.map(b => b.padre_id).filter(Boolean));
 
@@ -248,8 +272,10 @@ export function useDailyManagement(fecha: string) {
             opcion_principal: eleccion?.opcion_principal?.nombre,
             opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
             tiene_dieta_blanda: !!dietaBlanda,
+            tiene_menu_personalizado: tieneMenuPersonalizado(insc.hijo_id, undefined),
             hijo_id: insc.hijo_id,
-            restricciones: restriccionesPorHijo.get(insc.hijo_id) || []
+            restricciones: restriccionesPorHijo.get(insc.hijo_id) || [],
+            es_personal: false
           });
         }
       });
@@ -270,8 +296,10 @@ export function useDailyManagement(fecha: string) {
             opcion_principal: eleccion?.opcion_principal?.nombre,
             opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
             tiene_dieta_blanda: !!dietaBlanda,
+            tiene_menu_personalizado: tieneMenuPersonalizado(undefined, insc.padre_id),
             padre_id: insc.padre_id,
-            restricciones: []
+            restricciones: [],
+            es_personal: insc.padre?.es_personal || false
           });
         }
       });
@@ -306,9 +334,11 @@ export function useDailyManagement(fecha: string) {
             opcion_principal: eleccion?.opcion_principal?.nombre,
             opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
             tiene_dieta_blanda: !!dietaBlanda,
+            tiene_menu_personalizado: tieneMenuPersonalizado(inv.hijo_id, inv.padre_id),
             hijo_id: inv.hijo_id || undefined,
             padre_id: inv.padre_id || undefined,
-            restricciones: hijoId ? (restriccionesPorHijo.get(hijoId) || []) : []
+            restricciones: hijoId ? (restriccionesPorHijo.get(hijoId) || []) : [],
+            es_personal: inv.padre?.es_personal || false
           });
         }
       });
@@ -339,9 +369,11 @@ export function useDailyManagement(fecha: string) {
             opcion_principal: eleccion.opcion_principal?.nombre,
             opcion_guarnicion: eleccion.opcion_guarnicion?.nombre,
             tiene_dieta_blanda: !!dietaBlanda,
+            tiene_menu_personalizado: tieneMenuPersonalizado(hijoId, padreId),
             hijo_id: hijoId || undefined,
             padre_id: padreId || undefined,
-            restricciones: hijoId ? (restriccionesPorHijo.get(hijoId) || []) : []
+            restricciones: hijoId ? (restriccionesPorHijo.get(hijoId) || []) : [],
+            es_personal: (eleccion as any).padre?.es_personal || false
           });
         }
       });
@@ -396,12 +428,36 @@ export function useDailyManagement(fecha: string) {
         motivo: inv.motivo || 'Sin motivo especificado'
       }));
 
+      const sortComensales = (a: DailyDiner, b: DailyDiner): number => {
+        if (a.tipo === 'padre' && b.tipo !== 'padre') return -1;
+        if (a.tipo !== 'padre' && b.tipo === 'padre') return 1;
+        if (a.tipo === 'padre' && b.tipo === 'padre') {
+          return a.nombre.localeCompare(b.nombre);
+        }
+        if (a.tipo === 'externo' && b.tipo !== 'externo') return 1;
+        if (a.tipo !== 'externo' && b.tipo === 'externo') return -1;
+        if (a.curso && b.curso && a.curso !== b.curso) {
+          return a.curso.localeCompare(b.curso);
+        }
+        return a.nombre.localeCompare(b.nombre);
+      };
+
+      const comensalesRecurrentes = comensales
+        .filter(c => c.es_inscripcion)
+        .sort(sortComensales);
+
+      const comensalesPuntuales = comensales
+        .filter(c => c.es_invitacion)
+        .sort(sortComensales);
+
       const dailyData: DailyData = {
         fecha: selectedDate,
         dia_semana: diaSemana,
         es_festivo: !!festivo,
         nombre_festivo: festivo?.nombre,
         comensales,
+        comensales_recurrentes: comensalesRecurrentes,
+        comensales_puntuales: comensalesPuntuales,
         total_comensales: comensales.length,
         total_inscritos: comensales.filter(c => c.es_inscripcion).length,
         total_invitaciones: comensales.filter(c => c.es_invitacion).length,

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, Utensils, Heart, XCircle, GraduationCap, Briefcase, ChefHat, List, BarChart3, UserPlus, ChevronDown, ChevronUp } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, Utensils, Heart, XCircle, GraduationCap, Briefcase, ChefHat, List, BarChart3, UserPlus, ChevronDown, ChevronUp, Clock, UserCheck } from 'lucide-react';
 import { useDailyManagement, DailyDiner } from '../../hooks/useDailyManagement';
 import { generateDailyPDF } from '../../utils/dailyPdfExport';
 
@@ -8,7 +8,7 @@ type ViewMode = 'resumen' | 'cocina' | 'listado';
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('resumen');
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['alumnos']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['recurrentes']));
 
   const formatDateISO = (date: Date) => {
     return date.toISOString().split('T')[0];
@@ -84,6 +84,113 @@ export function DailyManagementView() {
       grouped.get(grado)!.push(c);
     });
     return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  };
+
+  const renderDinerCard = (comensal: DailyDiner) => (
+    <div key={comensal.id} className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50 transition-colors">
+      <div className="flex items-start justify-between">
+        <div className="flex-1">
+          <div className="flex items-center gap-2 mb-1 flex-wrap">
+            {comensal.tipo === 'padre' && (
+              <Briefcase className="h-4 w-4 text-teal-600 flex-shrink-0" />
+            )}
+            {comensal.tipo === 'hijo' && (
+              <GraduationCap className="h-4 w-4 text-blue-600 flex-shrink-0" />
+            )}
+            {comensal.tipo === 'externo' && (
+              <UserPlus className="h-4 w-4 text-purple-600 flex-shrink-0" />
+            )}
+            <p className="font-medium text-gray-900">{comensal.nombre}</p>
+            {comensal.tiene_dieta_blanda && (
+              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
+                Dieta Blanda
+              </span>
+            )}
+            {comensal.tiene_menu_personalizado && (
+              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-medium">
+                Menú Personalizado
+              </span>
+            )}
+            {comensal.restricciones.length > 0 && (
+              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">
+                {comensal.restricciones.join(', ')}
+              </span>
+            )}
+          </div>
+          {comensal.curso && (
+            <p className="text-sm text-gray-600 mb-1">{comensal.curso}</p>
+          )}
+          {comensal.tiene_eleccion && (
+            <p className="text-sm text-gray-600">
+              🍽️ {comensal.opcion_principal} + {comensal.opcion_guarnicion}
+            </p>
+          )}
+          {!comensal.tiene_eleccion && !comensal.tiene_dieta_blanda && !comensal.tiene_menu_personalizado && (
+            <p className="text-sm text-blue-600">🍽️ Menú Rancho</p>
+          )}
+          {comensal.motivo_invitacion && (
+            <p className="text-sm text-gray-500 italic mt-1">
+              📝 {comensal.motivo_invitacion}
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderComensalesList = (comensalesList: DailyDiner[]) => {
+    const personal = comensalesList.filter(c => c.tipo === 'padre');
+    const alumnos = comensalesList.filter(c => c.tipo === 'hijo');
+    const externos = comensalesList.filter(c => c.tipo === 'externo');
+
+    return (
+      <div className="space-y-4">
+        {personal.length > 0 && (
+          <div>
+            <div className="flex items-center space-x-2 mb-2 px-2">
+              <Briefcase className="h-4 w-4 text-teal-600" />
+              <h4 className="text-sm font-semibold text-gray-700">Personal ({personal.length})</h4>
+            </div>
+            <div className="space-y-2">
+              {personal.map(renderDinerCard)}
+            </div>
+          </div>
+        )}
+        {alumnos.length > 0 && (
+          <div>
+            <div className="flex items-center space-x-2 mb-2 px-2">
+              <GraduationCap className="h-4 w-4 text-blue-600" />
+              <h4 className="text-sm font-semibold text-gray-700">Alumnos ({alumnos.length})</h4>
+            </div>
+            <div className="space-y-4">
+              {groupByGrado(alumnos).map(([grado, alumnosGrado]) => (
+                <div key={grado}>
+                  <div className="bg-gray-50 px-3 py-1.5 rounded mb-2">
+                    <h5 className="text-xs font-semibold text-gray-600">
+                      {grado} ({alumnosGrado.length})
+                    </h5>
+                  </div>
+                  <div className="space-y-2">
+                    {alumnosGrado.map(renderDinerCard)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        {externos.length > 0 && (
+          <div>
+            <div className="flex items-center space-x-2 mb-2 px-2">
+              <UserPlus className="h-4 w-4 text-purple-600" />
+              <h4 className="text-sm font-semibold text-gray-700">Invitados Externos ({externos.length})</h4>
+            </div>
+            <div className="space-y-2">
+              {externos.map(renderDinerCard)}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -493,178 +600,71 @@ export function DailyManagementView() {
           {/* Vista Listado Completo */}
           {viewMode === 'listado' && (
             <div className="space-y-6">
-              {/* Alumnos por curso */}
+              {/* Comensales Recurrentes */}
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                 <button
-                  onClick={() => toggleSection('alumnos')}
-                  className="w-full flex items-center justify-between mb-4"
+                  onClick={() => toggleSection('recurrentes')}
+                  className="w-full flex items-center justify-between mb-4 group"
                 >
                   <div className="flex items-center space-x-3">
-                    <GraduationCap className="h-6 w-6 text-blue-600" />
+                    <UserCheck className="h-6 w-6 text-blue-600" />
                     <h2 className="text-xl font-bold text-gray-900">
-                      Alumnos ({data.comensales.filter(c => c.tipo === 'hijo').length})
+                      Comensales Recurrentes ({data.comensales_recurrentes.length})
                     </h2>
                   </div>
-                  {expandedSections.has('alumnos') ? (
-                    <ChevronUp className="h-5 w-5 text-gray-600" />
+                  {expandedSections.has('recurrentes') ? (
+                    <ChevronUp className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
                   ) : (
-                    <ChevronDown className="h-5 w-5 text-gray-600" />
+                    <ChevronDown className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
                   )}
                 </button>
 
-                {expandedSections.has('alumnos') && (
-                  <div className="space-y-4">
-                  {groupByGrado(data.comensales.filter(c => c.tipo === 'hijo')).map(([grado, alumnos]) => (
-                    <div key={grado} className="border border-gray-200 rounded-lg overflow-hidden">
-                      <div className="bg-gray-50 px-4 py-2 border-b border-gray-200">
-                        <h3 className="font-semibold text-gray-900">
-                          {grado} ({alumnos.length})
-                        </h3>
+                {expandedSections.has('recurrentes') && (
+                  <div className="mt-4">
+                    {data.comensales_recurrentes.length > 0 ? (
+                      renderComensalesList(data.comensales_recurrentes)
+                    ) : (
+                      <div className="text-center py-8 text-gray-500">
+                        <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                        <p>No hay comensales recurrentes para este día</p>
                       </div>
-                      <div className="divide-y divide-gray-200">
-                        {alumnos.map((alumno) => (
-                          <div key={alumno.id} className="px-4 py-3 hover:bg-gray-50">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <p className="font-medium text-gray-900">{alumno.nombre}</p>
-                                  {alumno.es_invitacion && (
-                                    <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">
-                                      Invitado
-                                    </span>
-                                  )}
-                                  {alumno.restricciones.length > 0 && (
-                                    <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">
-                                      {alumno.restricciones.join(', ')}
-                                    </span>
-                                  )}
-                                </div>
-                                {alumno.tiene_dieta_blanda && (
-                                  <p className="text-sm text-amber-600 font-semibold">🍲 Dieta Blanda</p>
-                                )}
-                                {alumno.tiene_eleccion && (
-                                  <p className="text-sm text-gray-600">
-                                    🍽️ {alumno.opcion_principal} + {alumno.opcion_guarnicion}
-                                  </p>
-                                )}
-                                {!alumno.tiene_eleccion && !alumno.tiene_dieta_blanda && (
-                                  <p className="text-sm text-blue-600">🍽️ Menú Rancho</p>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* Personal */}
-              {data.comensales.filter(c => c.tipo === 'padre').length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <button
-                    onClick={() => toggleSection('personal')}
-                    className="w-full flex items-center justify-between mb-4"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Briefcase className="h-6 w-6 text-teal-600" />
-                      <h2 className="text-xl font-bold text-gray-900">
-                        Personal del Colegio ({data.comensales.filter(c => c.tipo === 'padre').length})
-                      </h2>
-                    </div>
-                    {expandedSections.has('personal') ? (
-                      <ChevronUp className="h-5 w-5 text-gray-600" />
-                    ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-600" />
-                    )}
-                  </button>
-
-                  {expandedSections.has('personal') && (
-                    <div className="space-y-2">
-                    {data.comensales.filter(c => c.tipo === 'padre').map((personal) => (
-                      <div key={personal.id} className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium text-gray-900">{personal.nombre}</p>
-                              {personal.es_invitacion && (
-                                <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">
-                                  Invitado
-                                </span>
-                              )}
-                              {personal.restricciones.length > 0 && (
-                                <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">
-                                  {personal.restricciones.join(', ')}
-                                </span>
-                              )}
-                            </div>
-                            {personal.tiene_dieta_blanda && (
-                              <p className="text-sm text-amber-600 font-semibold">🍲 Dieta Blanda</p>
-                            )}
-                            {personal.tiene_eleccion && (
-                              <p className="text-sm text-gray-600">
-                                🍽️ {personal.opcion_principal} + {personal.opcion_guarnicion}
-                              </p>
-                            )}
-                            {!personal.tiene_eleccion && !personal.tiene_dieta_blanda && (
-                              <p className="text-sm text-blue-600">🍽️ Menú Rancho</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    </div>
+              {/* Comensales Puntuales */}
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <button
+                  onClick={() => toggleSection('puntuales')}
+                  className="w-full flex items-center justify-between mb-4 group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Clock className="h-6 w-6 text-purple-600" />
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Comensales Puntuales ({data.comensales_puntuales.length})
+                    </h2>
+                  </div>
+                  {expandedSections.has('puntuales') ? (
+                    <ChevronUp className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
+                  ) : (
+                    <ChevronDown className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
                   )}
-                </div>
-              )}
+                </button>
 
-              {/* Invitados */}
-              {data.invitados.length > 0 && (
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                  <button
-                    onClick={() => toggleSection('invitados')}
-                    className="w-full flex items-center justify-between mb-4"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <UserPlus className="h-6 w-6 text-purple-600" />
-                      <h2 className="text-xl font-bold text-gray-900">
-                        Invitados ({data.invitados.length})
-                      </h2>
-                    </div>
-                    {expandedSections.has('invitados') ? (
-                      <ChevronUp className="h-5 w-5 text-gray-600" />
+                {expandedSections.has('puntuales') && (
+                  <div className="mt-4">
+                    {data.comensales_puntuales.length > 0 ? (
+                      renderComensalesList(data.comensales_puntuales)
                     ) : (
-                      <ChevronDown className="h-5 w-5 text-gray-600" />
-                    )}
-                  </button>
-
-                  {expandedSections.has('invitados') && (
-                    <div className="space-y-2">
-                    {data.invitados.map((invitado) => (
-                      <div key={invitado.id} className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50">
-                        <div className="flex items-start justify-between">
-                          <div className="flex-1">
-                            <div className="flex items-center gap-2 mb-1">
-                              <p className="font-medium text-gray-900">{invitado.nombre}</p>
-                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs font-medium">
-                                Invitado
-                              </span>
-                            </div>
-                            {invitado.motivo && (
-                              <p className="text-sm text-gray-600">
-                                📝 {invitado.motivo}
-                              </p>
-                            )}
-                          </div>
-                        </div>
+                      <div className="text-center py-8 text-gray-500">
+                        <Clock className="h-12 w-12 mx-auto mb-2 text-gray-300" />
+                        <p>No hay comensales puntuales para este día</p>
                       </div>
-                    ))}
-                    </div>
-                  )}
-                </div>
-              )}
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </>
