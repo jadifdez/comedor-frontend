@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle, Gift, User } from 'lucide-react';
+import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle, Gift, User, Home } from 'lucide-react';
 
-type TabType = 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil';
+type TabType = 'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil';
 
 interface ParentHeaderProps {
   activeTab: TabType;
@@ -76,7 +76,16 @@ export function ParentHeader({ activeTab, onTabChange }: ParentHeaderProps) {
 
             {isMenuOpen && (
               <div ref={menuRef} className="absolute top-full right-0 mt-2 w-72 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <div className="px-4 py-2 border-b border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => handleMenuItemClick('home')}
+                  className={getMenuItemClass('home')}
+                >
+                  <Home className="h-5 w-5" />
+                  <span className="text-sm">Inicio</span>
+                </button>
+
+                <div className="px-4 py-2 border-b border-t border-gray-200 mt-2">
                   <h3 className="text-sm font-semibold text-gray-900">Comedor</h3>
                 </div>
                 <button

@@ -19,6 +19,7 @@ import { InvitacionesView } from './components/InvitacionesView';
 import { RestriccionesDieteticasHijo } from './components/RestriccionesDieteticasHijo';
 import { PerfilPadre } from './components/PerfilPadre';
 import { SuccessMessage } from './components/SuccessMessage';
+import { MenusDashboard } from './components/MenusDashboard';
 import { useInscripcionesComedor } from './hooks/useInscripcionesComedor';
 import { useInscripcionesPadres } from './hooks/useInscripcionesPadres';
 import { useBajas } from './hooks/useBajas';
@@ -32,7 +33,7 @@ import { formatDateForDisplay } from './utils/dateUtils';
 import ResetPassword from './pages/ResetPassword';
 
 function AppContent({ user }: { user: User }) {
-  const [activeTab, setActiveTab] = useState<'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil'>('inscripcion');
+  const [activeTab, setActiveTab] = useState<'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil'>('home');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
@@ -427,7 +428,9 @@ function AppContent({ user }: { user: User }) {
     <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
       <div className="space-y-8">
 
-        {activeTab === 'inscripcion' ? (
+        {activeTab === 'home' ? (
+          <MenusDashboard />
+        ) : activeTab === 'inscripcion' ? (
           <>
             {padre?.es_personal && (
               <InscripcionComedorPadreForm
