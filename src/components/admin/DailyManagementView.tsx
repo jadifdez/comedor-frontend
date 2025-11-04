@@ -9,6 +9,7 @@ export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<ViewMode>('resumen');
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['recurrentes']));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const formatDateISO = (date: Date) => {
     return date.toISOString().split('T')[0];
@@ -93,23 +94,22 @@ export function DailyManagementView() {
     return 'Menú Rancho';
   };
 
+  const toggleGroup = (groupKey: string) => {
+    setExpandedGroups(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(groupKey)) {
+        newSet.delete(groupKey);
+      } else {
+        newSet.add(groupKey);
+      }
+      return newSet;
+    });
+  };
+
   const renderComensalesTable = (comensalesList: DailyDiner[]) => {
     const personal = comensalesList.filter(c => c.tipo === 'padre');
     const alumnos = comensalesList.filter(c => c.tipo === 'hijo');
     const externos = comensalesList.filter(c => c.tipo === 'externo');
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
-
-    const toggleGroup = (groupKey: string) => {
-      setExpandedGroups(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(groupKey)) {
-          newSet.delete(groupKey);
-        } else {
-          newSet.add(groupKey);
-        }
-        return newSet;
-      });
-    };
 
     return (
       <div className="space-y-4">
