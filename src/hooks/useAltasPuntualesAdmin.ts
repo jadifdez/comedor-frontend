@@ -24,9 +24,9 @@ export const useAltasPuntualesAdmin = () => {
       if (formData.tipo_persona === 'hijo') {
         const { data: hijoData, error: hijoError } = await supabase
           .from('hijos')
-          .select('id, nombre, apellido1, apellido2, grado:grados(nombre)')
+          .select('id, nombre, grado:grados(nombre)')
           .eq('id', formData.persona_id)
-          .single();
+          .maybeSingle();
 
         if (hijoError) throw hijoError;
         if (!hijoData) throw new Error('Hijo no encontrado');
@@ -34,16 +34,16 @@ export const useAltasPuntualesAdmin = () => {
       } else {
         const { data: padreData, error: padreError } = await supabase
           .from('padres')
-          .select('id, nombre, apellido1, apellido2')
+          .select('id, nombre')
           .eq('id', formData.persona_id)
-          .single();
+          .maybeSingle();
 
         if (padreError) throw padreError;
         if (!padreData) throw new Error('Padre no encontrado');
         personaData = padreData;
       }
 
-      const nombreCompleto = `${personaData.nombre} ${personaData.apellido1} ${personaData.apellido2 || ''}`.trim();
+      const nombreCompleto = personaData.nombre;
 
       const solicitudesToInsert = formData.fechas.map(fecha => {
         const date = new Date(fecha);

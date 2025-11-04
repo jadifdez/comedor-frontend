@@ -195,14 +195,14 @@ export function DailyManagementView() {
       const [hijosResult, padresResult] = await Promise.all([
         supabase
           .from('hijos')
-          .select('id, nombre, apellido1, apellido2')
+          .select('id, nombre')
           .eq('activo', true)
-          .order('apellido1', { ascending: true }),
+          .order('nombre', { ascending: true }),
         supabase
           .from('padres')
-          .select('id, nombre, apellido1, apellido2')
+          .select('id, nombre')
           .eq('activo', true)
-          .order('apellido1', { ascending: true })
+          .order('nombre', { ascending: true })
       ]);
 
       if (hijosResult.error) {
@@ -216,13 +216,13 @@ export function DailyManagementView() {
 
       const hijosList = (hijosResult.data || []).map(h => ({
         id: h.id,
-        nombre: `${h.nombre} ${h.apellido1} ${h.apellido2 || ''}`.trim(),
+        nombre: h.nombre,
         tipo: 'hijo' as const
       }));
 
       const padresList = (padresResult.data || []).map(p => ({
         id: p.id,
-        nombre: `${p.nombre} ${p.apellido1} ${p.apellido2 || ''}`.trim(),
+        nombre: p.nombre,
         tipo: 'padre' as const
       }));
 
