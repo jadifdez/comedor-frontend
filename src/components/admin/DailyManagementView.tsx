@@ -6,8 +6,8 @@ import { supabase } from '../../lib/supabase';
 
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['recurrentes']));
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['recurrentes', 'puntuales']));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['personal', 'alumnos', 'externos']));
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedComensal, setSelectedComensal] = useState<DailyDiner | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState('');
