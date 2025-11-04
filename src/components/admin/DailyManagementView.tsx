@@ -136,16 +136,14 @@ export function DailyManagementView() {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Menú</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Observaciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {personal.map((comensal) => (
                       <tr key={comensal.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{comensal.nombre}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{getMenuText(comensal)}</td>
                         <td className="px-4 py-3 text-sm">
                           <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-gray-900">{comensal.nombre}</span>
                             {comensal.tiene_dieta_blanda && (
                               <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
                                 Dieta Blanda
@@ -162,10 +160,13 @@ export function DailyManagementView() {
                               </span>
                             )}
                             {comensal.motivo_invitacion && (
-                              <span className="text-gray-600 italic text-xs">{comensal.motivo_invitacion}</span>
+                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs italic">
+                                {comensal.motivo_invitacion}
+                              </span>
                             )}
                           </div>
                         </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{getMenuText(comensal)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -198,17 +199,14 @@ export function DailyManagementView() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Curso</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Menú</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Observaciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {alumnos.map((comensal) => (
                       <tr key={comensal.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{comensal.nombre}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{comensal.curso || '-'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-700">{getMenuText(comensal)}</td>
                         <td className="px-4 py-3 text-sm">
                           <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-gray-900">{comensal.nombre}</span>
                             {comensal.tiene_dieta_blanda && (
                               <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
                                 Dieta Blanda
@@ -225,10 +223,14 @@ export function DailyManagementView() {
                               </span>
                             )}
                             {comensal.motivo_invitacion && (
-                              <span className="text-gray-600 italic text-xs">{comensal.motivo_invitacion}</span>
+                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs italic">
+                                {comensal.motivo_invitacion}
+                              </span>
                             )}
                           </div>
                         </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{comensal.curso || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{getMenuText(comensal)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -259,14 +261,23 @@ export function DailyManagementView() {
                   <thead className="bg-gray-50 border-b border-gray-200">
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Motivo</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Menú</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {externos.map((comensal) => (
                       <tr key={comensal.id} className="hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{comensal.nombre}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{comensal.motivo_invitacion || '-'}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-medium text-gray-900">{comensal.nombre}</span>
+                            {comensal.motivo_invitacion && (
+                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs italic">
+                                {comensal.motivo_invitacion}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{getMenuText(comensal)}</td>
                       </tr>
                     ))}
                   </tbody>
