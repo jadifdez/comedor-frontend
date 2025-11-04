@@ -574,28 +574,28 @@ export function HijosManager() {
       {/* Lista de hijos */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Hijo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Padre/Madre
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Grado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Comedor
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Exención
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
@@ -603,31 +603,26 @@ export function HijosManager() {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredHijos.map((hijo) => (
                 <tr key={hijo.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4 text-gray-400" />
                       <div className="text-sm font-medium text-gray-900">{hijo.nombre}</div>
                       {hijo.exento_facturacion && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" title={hijo.motivo_exencion || 'Exento'}>
-                          <Shield className="h-3 w-3 mr-1" />
-                          EXENTO
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" title={hijo.motivo_exencion || 'Exento'}>
+                          <Shield className="h-3 w-3" />
                         </span>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <div className="max-w-xs">
                       <div className="text-sm text-gray-900 truncate">{(hijo.padre as any)?.nombre}</div>
-                      <div className="text-sm text-gray-500 truncate" title={(hijo.padre as any)?.email}>{(hijo.padre as any)?.email}</div>
+                      <div className="text-xs text-gray-500 truncate" title={(hijo.padre as any)?.email}>{(hijo.padre as any)?.email}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <GraduationCap className="h-4 w-4 text-gray-400 mr-2" />
-                      <div className="text-sm text-gray-900">{(hijo.grado as any)?.nombre}</div>
-                    </div>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <div className="text-sm text-gray-900">{(hijo.grado as any)?.nombre}</div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-sm text-gray-900">{getDiasComedorText(hijo.id)}</div>
@@ -646,24 +641,16 @@ export function HijosManager() {
                       </button>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap text-center">
                     {hijo.exento_facturacion ? (
-                      <div className="text-sm">
-                        <div className="flex items-center text-green-700 font-medium">
-                          <Shield className="h-4 w-4 mr-1" />
-                          Exento
-                        </div>
-                        {hijo.motivo_exencion && (
-                          <div className="text-xs text-gray-500 mt-0.5" title={hijo.motivo_exencion}>
-                            {hijo.motivo_exencion.length > 20 ? hijo.motivo_exencion.substring(0, 20) + '...' : hijo.motivo_exencion}
-                          </div>
-                        )}
-                      </div>
+                      <span className="inline-flex items-center text-green-700" title={hijo.motivo_exencion}>
+                        <Shield className="h-4 w-4" />
+                      </span>
                     ) : (
                       <span className="text-sm text-gray-400">-</span>
                     )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-3 py-3 whitespace-nowrap">
                     <button
                       onClick={() => toggleActivo(hijo)}
                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -685,21 +672,21 @@ export function HijosManager() {
                       )}
                     </button>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex items-center space-x-2">
+                  <td className="px-3 py-3 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center justify-center space-x-2">
                       <button
                         onClick={() => handleEdit(hijo)}
-                        className="text-green-600 hover:text-green-900 transition-colors"
+                        className="p-1 text-green-600 hover:text-green-900 hover:bg-green-50 rounded transition-colors"
                         title="Editar hijo"
                       >
-                        <Edit className="h-5 w-5" />
+                        <Edit className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(hijo)}
-                        className="text-red-600 hover:text-red-900 transition-colors"
+                        className="p-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
                         title="Eliminar hijo"
                       >
-                        <Trash2 className="h-5 w-5" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </td>
