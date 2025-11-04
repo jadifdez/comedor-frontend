@@ -177,9 +177,9 @@ export function DailyManagementView() {
   };
 
   const renderComensalesTable = (comensales: DailyDiner[], prefix: string) => {
-    const personal = comensales.filter(c => c.tipo === 'personal' || c.tipo === 'padre');
+    const personal = comensales.filter(c => c.tipo === 'padre');
     const alumnos = comensales.filter(c => c.tipo === 'hijo');
-    const externos = comensales.filter(c => c.tipo === 'invitacion');
+    const externos = comensales.filter(c => c.tipo === 'externo');
 
     return (
       <div className="space-y-4">

@@ -514,7 +514,12 @@ export function useDailyManagement(fecha: string) {
       setData(dailyData);
     } catch (err) {
       console.error('Error fetching daily data:', err);
-      setError(err instanceof Error ? err.message : 'Error desconocido');
+      const errorMessage = err instanceof Error
+        ? err.message
+        : typeof err === 'object' && err !== null
+        ? JSON.stringify(err)
+        : 'Error desconocido';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
