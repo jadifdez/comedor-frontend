@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, GraduationCap, Briefcase, UserPlus, ChevronDown, ChevronUp, Clock, UserCheck, Ban, RotateCcw } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, GraduationCap, Briefcase, UserPlus, ChevronDown, ChevronUp, Clock, UserCheck, Ban, RotateCcw, Plus, X } from 'lucide-react';
 import { useDailyManagement, DailyDiner } from '../../hooks/useDailyManagement';
 import { generateDailyPDF } from '../../utils/dailyPdfExport';
 import { supabase } from '../../lib/supabase';
@@ -15,6 +15,13 @@ export function DailyManagementView() {
   const [selectedComensal, setSelectedComensal] = useState<DailyDiner | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState('');
   const [processingCancel, setProcessingCancel] = useState(false);
+  const [showInvitacionModal, setShowInvitacionModal] = useState(false);
+  const [invitacionTipo, setInvitacionTipo] = useState<'hijo' | 'padre'>('hijo');
+  const [selectedPersonId, setSelectedPersonId] = useState('');
+  const [invitacionMotivo, setInvitacionMotivo] = useState('');
+  const [processingInvitacion, setProcessingInvitacion] = useState(false);
+  const [personas, setPersonas] = useState<Array<{id: string, nombre: string, tipo: 'hijo' | 'padre'}>>([]);
+  const [loadingPersonas, setLoadingPersonas] = useState(false);
 
   const formatDateISO = (date: Date) => {
     return date.toISOString().split('T')[0];
@@ -173,6 +180,85 @@ export function DailyManagementView() {
     } catch (error) {
       console.error('Error al restaurar comida:', error);
       alert('Error al restaurar la comida. Por favor, intenta de nuevo.');
+    }
+  };
+
+  const loadPersonas = async () => {
+    setLoadingPersonas(true);
+    try {
+      const [hijosResult, padresResult] = await Promise.all([
+        supabase
+          .from('hijos')
+          .select('id, nombre, apellido1, apellido2')
+          .order('apellido1', { ascending: true }),
+        supabase
+          .from('padres')
+          .select('id, nombre, apellido1, apellido2')
+          .order('apellido1', { ascending: true })
+      ]);
+
+      if (hijosResult.error) throw hijosResult.error;
+      if (padresResult.error) throw padresResult.error;
+
+      const hijosList = (hijosResult.data || []).map(h => ({
+        id: h.id,
+        nombre: `${h.nombre} ${h.apellido1} ${h.apellido2 || ''}`.trim(),
+        tipo: 'hijo' as const
+      }));
+
+      const padresList = (padresResult.data || []).map(p => ({
+        id: p.id,
+        nombre: `${p.nombre} ${p.apellido1} ${p.apellido2 || ''}`.trim(),
+        tipo: 'padre' as const
+      }));
+
+      setPersonas([...hijosList, ...padresList]);
+    } catch (err) {
+      console.error('Error al cargar personas:', err);
+      alert('Error al cargar la lista de personas');
+    } finally {
+      setLoadingPersonas(false);
+    }
+  };
+
+  const handleOpenInvitacionModal = async () => {
+    setShowInvitacionModal(true);
+    await loadPersonas();
+  };
+
+  const handleCreateInvitacion = async () => {
+    if (!selectedPersonId || !invitacionMotivo.trim()) {
+      alert('Por favor, selecciona una persona y proporciona un motivo');
+      return;
+    }
+
+    setProcessingInvitacion(true);
+    try {
+      const persona = personas.find(p => p.id === selectedPersonId);
+      if (!persona) return;
+
+      const invitacion = {
+        fecha: formatDateISO(selectedDate),
+        [persona.tipo === 'hijo' ? 'hijo_id' : 'padre_id']: selectedPersonId,
+        motivo: invitacionMotivo.trim()
+      };
+
+      const { error } = await supabase
+        .from('invitaciones_comedor')
+        .insert(invitacion);
+
+      if (error) throw error;
+
+      refetch();
+      setShowInvitacionModal(false);
+      setSelectedPersonId('');
+      setInvitacionMotivo('');
+      setInvitacionTipo('hijo');
+    } catch (err) {
+      console.error('Error al crear invitación:', err);
+      alert('Error al crear la invitación. Por favor, intenta de nuevo.');
+    } finally {
+      setProcessingInvitacion(false);
     }
   };
 
@@ -422,14 +508,24 @@ export function DailyManagementView() {
           <Calendar className="h-8 w-8 text-blue-600" />
           <h1 className="text-3xl font-bold text-gray-900">Parte Diario del Comedor</h1>
         </div>
-        <button
-          onClick={handleDownloadPDF}
-          disabled={!data || loading}
-          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
-        >
-          <Download className="h-5 w-5" />
-          <span>Descargar PDF</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleOpenInvitacionModal}
+            disabled={loading}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Añadir Invitación</span>
+          </button>
+          <button
+            onClick={handleDownloadPDF}
+            disabled={!data || loading}
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
+          >
+            <Download className="h-5 w-5" />
+            <span>Descargar PDF</span>
+          </button>
+        </div>
       </div>
 
       {/* Date Selector */}
@@ -646,6 +742,133 @@ export function DailyManagementView() {
                 className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors disabled:opacity-50"
               >
                 {processingCancel ? 'Cancelando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Añadir Invitación */}
+      {showInvitacionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold text-gray-900">Añadir Invitación</h3>
+              <button
+                onClick={() => {
+                  setShowInvitacionModal(false);
+                  setSelectedPersonId('');
+                  setInvitacionMotivo('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Fecha
+                </label>
+                <input
+                  type="text"
+                  value={formatDate(selectedDate)}
+                  disabled
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-50 text-gray-700"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de persona
+                </label>
+                <div className="flex space-x-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="hijo"
+                      checked={invitacionTipo === 'hijo'}
+                      onChange={(e) => {
+                        setInvitacionTipo(e.target.value as 'hijo' | 'padre');
+                        setSelectedPersonId('');
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Alumno</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="padre"
+                      checked={invitacionTipo === 'padre'}
+                      onChange={(e) => {
+                        setInvitacionTipo(e.target.value as 'hijo' | 'padre');
+                        setSelectedPersonId('');
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Personal</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Seleccionar persona
+                </label>
+                {loadingPersonas ? (
+                  <div className="text-sm text-gray-500">Cargando...</div>
+                ) : (
+                  <select
+                    value={selectedPersonId}
+                    onChange={(e) => setSelectedPersonId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    <option value="">-- Seleccionar --</option>
+                    {personas
+                      .filter(p => p.tipo === invitacionTipo)
+                      .map(p => (
+                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                      ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Motivo
+                </label>
+                <textarea
+                  value={invitacionMotivo}
+                  onChange={(e) => setInvitacionMotivo(e.target.value)}
+                  rows={3}
+                  placeholder="Describe el motivo de la invitación..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowInvitacionModal(false);
+                  setSelectedPersonId('');
+                  setInvitacionMotivo('');
+                }}
+                disabled={processingInvitacion}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateInvitacion}
+                disabled={processingInvitacion || !selectedPersonId || !invitacionMotivo.trim()}
+                className="flex-1 px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {processingInvitacion ? 'Creando...' : 'Crear Invitación'}
               </button>
             </div>
           </div>
