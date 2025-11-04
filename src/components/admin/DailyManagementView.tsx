@@ -7,7 +7,10 @@ import { supabase } from '../../lib/supabase';
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['recurrentes', 'puntuales']));
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(['personal', 'alumnos', 'externos']));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set([
+    'recurrentes-personal', 'recurrentes-alumnos', 'recurrentes-externos',
+    'puntuales-personal', 'puntuales-alumnos', 'puntuales-externos'
+  ]));
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedComensal, setSelectedComensal] = useState<DailyDiner | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState('');
@@ -173,7 +176,7 @@ export function DailyManagementView() {
     }
   };
 
-  const renderComensalesTable = (comensales: DailyDiner[]) => {
+  const renderComensalesTable = (comensales: DailyDiner[], prefix: string) => {
     const personal = comensales.filter(c => c.tipo === 'personal' || c.tipo === 'padre');
     const alumnos = comensales.filter(c => c.tipo === 'hijo');
     const externos = comensales.filter(c => c.tipo === 'invitacion');
@@ -183,20 +186,20 @@ export function DailyManagementView() {
         {personal.length > 0 && (
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <button
-              onClick={() => toggleGroup('personal')}
+              onClick={() => toggleGroup(`${prefix}-personal`)}
               className="w-full flex items-center justify-between bg-green-50 px-4 py-3 hover:bg-green-100 transition-colors"
             >
               <div className="flex items-center space-x-2">
                 <Briefcase className="h-5 w-5 text-green-600" />
                 <h4 className="font-semibold text-gray-900">Personal ({personal.length})</h4>
               </div>
-              {expandedGroups.has('personal') ? (
+              {expandedGroups.has(`${prefix}-personal`) ? (
                 <ChevronUp className="h-5 w-5 text-gray-600" />
               ) : (
                 <ChevronDown className="h-5 w-5 text-gray-600" />
               )}
             </button>
-            {expandedGroups.has('personal') && (
+            {expandedGroups.has(`${prefix}-personal`) && (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
@@ -272,20 +275,20 @@ export function DailyManagementView() {
         {alumnos.length > 0 && (
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <button
-              onClick={() => toggleGroup('alumnos')}
+              onClick={() => toggleGroup(`${prefix}-alumnos`)}
               className="w-full flex items-center justify-between bg-blue-50 px-4 py-3 hover:bg-blue-100 transition-colors"
             >
               <div className="flex items-center space-x-2">
                 <GraduationCap className="h-5 w-5 text-blue-600" />
                 <h4 className="font-semibold text-gray-900">Alumnos ({alumnos.length})</h4>
               </div>
-              {expandedGroups.has('alumnos') ? (
+              {expandedGroups.has(`${prefix}-alumnos`) ? (
                 <ChevronUp className="h-5 w-5 text-gray-600" />
               ) : (
                 <ChevronDown className="h-5 w-5 text-gray-600" />
               )}
             </button>
-            {expandedGroups.has('alumnos') && (
+            {expandedGroups.has(`${prefix}-alumnos`) && (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
@@ -363,20 +366,20 @@ export function DailyManagementView() {
         {externos.length > 0 && (
           <div className="border border-gray-200 rounded-lg overflow-hidden">
             <button
-              onClick={() => toggleGroup('externos')}
+              onClick={() => toggleGroup(`${prefix}-externos`)}
               className="w-full flex items-center justify-between bg-purple-50 px-4 py-3 hover:bg-purple-100 transition-colors"
             >
               <div className="flex items-center space-x-2">
                 <UserPlus className="h-5 w-5 text-purple-600" />
                 <h4 className="font-semibold text-gray-900">Invitados Externos ({externos.length})</h4>
               </div>
-              {expandedGroups.has('externos') ? (
+              {expandedGroups.has(`${prefix}-externos`) ? (
                 <ChevronUp className="h-5 w-5 text-gray-600" />
               ) : (
                 <ChevronDown className="h-5 w-5 text-gray-600" />
               )}
             </button>
-            {expandedGroups.has('externos') && (
+            {expandedGroups.has(`${prefix}-externos`) && (
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead className="bg-gray-50 border-b border-gray-200">
@@ -536,7 +539,7 @@ export function DailyManagementView() {
               {expandedSections.has('recurrentes') && (
                 <div className="mt-4">
                   {data.comensales_recurrentes.length > 0 ? (
-                    renderComensalesTable(data.comensales_recurrentes)
+                    renderComensalesTable(data.comensales_recurrentes, 'recurrentes')
                   ) : (
                     <div className="text-center py-8 text-gray-500">
                       <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
@@ -569,7 +572,7 @@ export function DailyManagementView() {
               {expandedSections.has('puntuales') && (
                 <div className="mt-4">
                   {data.comensales_puntuales.length > 0 ? (
-                    renderComensalesTable(data.comensales_puntuales)
+                    renderComensalesTable(data.comensales_puntuales, 'puntuales')
                   ) : (
                     <div className="text-center py-8 text-gray-500">
                       <Clock className="h-12 w-12 mx-auto mb-2 text-gray-300" />
