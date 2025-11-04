@@ -27,6 +27,7 @@ export function HijosManager() {
   const [selectedHijoForRestricciones, setSelectedHijoForRestricciones] = useState<Hijo | null>(null);
   const [restriccionesList, setRestriccionesList] = useState<any[]>([]);
   const [hijoRestricciones, setHijoRestricciones] = useState<string[]>([]);
+  const [hijosConRestricciones, setHijosConRestricciones] = useState<Set<string>>(new Set());
   const [formData, setFormData] = useState({
     nombre: '',
     padre_id: '',
@@ -137,6 +138,21 @@ export function HijosManager() {
         console.error('Error loading restricciones:', restriccionesError);
       } else {
         setRestriccionesList(restriccionesData || []);
+      }
+
+      // Cargar qué hijos tienen restricciones asignadas
+      const { data: hijosRestriccionesData, error: hijosRestriccionesError } = await supabase
+        .from('hijos_restricciones_dieteticas')
+        .select('hijo_id');
+
+      if (hijosRestriccionesError) {
+        console.error('Error loading hijos restricciones:', hijosRestriccionesError);
+      } else {
+        const hijosConRestriccionesSet = new Set<string>();
+        hijosRestriccionesData?.forEach(item => {
+          hijosConRestriccionesSet.add(item.hijo_id);
+        });
+        setHijosConRestricciones(hijosConRestriccionesSet);
       }
 
     } catch (error) {
@@ -738,7 +754,7 @@ export function HijosManager() {
                       className="p-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
                       title="Gestionar restricciones dietéticas y alergias"
                     >
-                      <Heart className="h-4 w-4" />
+                      <Heart className={`h-4 w-4 ${hijosConRestricciones.has(hijo.id) ? 'fill-current' : ''}`} />
                     </button>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-center">
