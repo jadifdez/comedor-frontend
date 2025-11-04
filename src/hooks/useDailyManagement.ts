@@ -104,6 +104,7 @@ export function useDailyManagement(fecha: string) {
         menusPersonalizadosResult,
         bajasResult,
         invitacionesResult,
+        altasPuntualesResult,
         eleccionesResult,
         dietasBlandasResult,
         festivosResult,
@@ -160,6 +161,16 @@ export function useDailyManagement(fecha: string) {
           .eq('fecha', selectedDate),
 
         supabase
+          .from('comedor_altaspuntuales')
+          .select(`
+            *,
+            hijo:hijos(id, nombre, grado:grados(nombre)),
+            padre:padres(id, nombre, es_personal)
+          `)
+          .eq('fecha', fechaEspanol)
+          .eq('estado', 'aprobada'),
+
+        supabase
           .from('comedor_menupersonalizado')
           .select(`
             *,
@@ -204,6 +215,7 @@ export function useDailyManagement(fecha: string) {
       if (menusPersonalizadosResult.error) throw menusPersonalizadosResult.error;
       if (bajasResult.error) throw bajasResult.error;
       if (invitacionesResult.error) throw invitacionesResult.error;
+      if (altasPuntualesResult.error) throw altasPuntualesResult.error;
       if (eleccionesResult.error) throw eleccionesResult.error;
       if (dietasBlandasResult.error) throw dietasBlandasResult.error;
       if (festivosResult.error) throw festivosResult.error;
@@ -215,6 +227,7 @@ export function useDailyManagement(fecha: string) {
       const menusPersonalizadosRaw = menusPersonalizadosResult.data || [];
       const bajas = bajasResult.data || [];
       const invitaciones = invitacionesResult.data || [];
+      const altasPuntuales = altasPuntualesResult.data || [];
       const elecciones = eleccionesResult.data || [];
       const dietasBlandas = dietasBlandasResult.data || [];
       const festivo = festivosResult.data;
@@ -377,6 +390,59 @@ export function useDailyManagement(fecha: string) {
             padre_id: inv.padre_id || undefined,
             restricciones: hijoId ? (restriccionesPorHijo.get(hijoId) || []) : [],
             es_personal: inv.padre?.es_personal || false,
+            cancelado_ultimo_momento: canceladoUltimoMomento,
+            cancelacion_id: cancelacionId
+          });
+        }
+      });
+
+      altasPuntuales.forEach(alta => {
+        const hijoId = alta.hijo_id;
+        const padreId = alta.padre_id;
+
+        const yaInscrito = comensales.find(c =>
+          (hijoId && c.hijo_id === hijoId) || (padreId && c.padre_id === padreId)
+        );
+
+        if (!yaInscrito) {
+          const eleccion = elecciones.find(e =>
+            (hijoId && e.hijo_id === hijoId) || (padreId && e.padre_id === padreId)
+          );
+          const dietaBlanda = dietasBlandas.find(d =>
+            ((hijoId && d.hijo_id === hijoId) || (padreId && d.padre_id === padreId)) &&
+            d.estado === 'aprobada'
+          );
+
+          const canceladoUltimoMomento = alta.hijo_id
+            ? cancelacionesHijos.has(alta.hijo_id)
+            : alta.padre_id
+            ? cancelacionesPadres.has(alta.padre_id)
+            : false;
+
+          const cancelacionId = alta.hijo_id
+            ? cancelacionesHijos.get(alta.hijo_id)
+            : alta.padre_id
+            ? cancelacionesPadres.get(alta.padre_id)
+            : undefined;
+
+          comensales.push({
+            id: alta.id,
+            nombre: alta.hijo ? alta.hijo.nombre : alta.padre ? alta.padre.nombre : alta.hijo || 'Desconocido',
+            tipo: alta.hijo_id ? 'hijo' : 'padre',
+            curso: alta.hijo?.grado?.nombre || alta.curso,
+            es_inscripcion: false,
+            es_invitacion: true,
+            es_baja: false,
+            motivo_invitacion: 'Alta puntual',
+            tiene_eleccion: !!eleccion,
+            opcion_principal: eleccion?.opcion_principal?.nombre,
+            opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
+            tiene_dieta_blanda: !!dietaBlanda,
+            tiene_menu_personalizado: tieneMenuPersonalizado(alta.hijo_id, alta.padre_id),
+            hijo_id: alta.hijo_id || undefined,
+            padre_id: alta.padre_id || undefined,
+            restricciones: hijoId ? (restriccionesPorHijo.get(hijoId) || []) : [],
+            es_personal: alta.padre?.es_personal || false,
             cancelado_ultimo_momento: canceladoUltimoMomento,
             cancelacion_id: cancelacionId
           });
