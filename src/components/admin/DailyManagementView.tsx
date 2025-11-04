@@ -26,7 +26,6 @@ export function DailyManagementView() {
   const [showAltaPuntualModal, setShowAltaPuntualModal] = useState(false);
   const [altaTipoPersona, setAltaTipoPersona] = useState<'hijo' | 'padre'>('hijo');
   const [altaPersonaId, setAltaPersonaId] = useState('');
-  const [altaFechasSeleccionadas, setAltaFechasSeleccionadas] = useState<string[]>([]);
   const { loading: processingAlta, createAltasPuntuales } = useAltasPuntualesAdmin();
 
   const formatDateISO = (date: Date) => {
@@ -371,59 +370,32 @@ export function DailyManagementView() {
 
   const handleOpenAltaPuntualModal = async () => {
     setShowAltaPuntualModal(true);
-    setAltaFechasSeleccionadas([formatDateISO(selectedDate)]);
     await loadPersonasDisponibles(formatDateISO(selectedDate));
   };
 
   const handleCreateAltaPuntual = async () => {
-    if (!altaPersonaId || altaFechasSeleccionadas.length === 0) {
-      alert('Por favor, selecciona una persona y al menos una fecha');
+    if (!altaPersonaId) {
+      alert('Por favor, selecciona una persona');
       return;
     }
 
     const result = await createAltasPuntuales({
       tipo_persona: altaTipoPersona,
       persona_id: altaPersonaId,
-      fechas: altaFechasSeleccionadas
+      fechas: [formatDateISO(selectedDate)]
     });
 
     if (result.success) {
       refetch();
       setShowAltaPuntualModal(false);
       setAltaPersonaId('');
-      setAltaFechasSeleccionadas([]);
       setAltaTipoPersona('hijo');
-      alert(`Se ${altaFechasSeleccionadas.length === 1 ? 'ha' : 'han'} creado ${altaFechasSeleccionadas.length} alta${altaFechasSeleccionadas.length === 1 ? '' : 's'} puntual${altaFechasSeleccionadas.length === 1 ? '' : 'es'} correctamente`);
+      alert('Se ha creado el alta puntual correctamente');
     } else {
-      alert(`Error al crear altas puntuales: ${result.error}`);
+      alert(`Error al crear alta puntual: ${result.error}`);
     }
   };
 
-  const toggleAltaFecha = (fecha: string) => {
-    setAltaFechasSeleccionadas(prev => {
-      if (prev.includes(fecha)) {
-        return prev.filter(f => f !== fecha);
-      } else {
-        return [...prev, fecha];
-      }
-    });
-  };
-
-  const getNext7Days = () => {
-    const days = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(selectedDate);
-      date.setDate(date.getDate() + i);
-      const dayOfWeek = date.getDay();
-      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-        days.push({
-          date: formatDateISO(date),
-          label: date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
-        });
-      }
-    }
-    return days;
-  };
 
   const renderComensalesTable = (comensales: DailyDiner[], prefix: string) => {
     const personal = comensales.filter(c => c.tipo === 'padre');
@@ -1066,7 +1038,6 @@ export function DailyManagementView() {
                 onClick={() => {
                   setShowAltaPuntualModal(false);
                   setAltaPersonaId('');
-                  setAltaFechasSeleccionadas([]);
                   setAltaTipoPersona('hijo');
                 }}
                 className="text-gray-400 hover:text-gray-600"
@@ -1080,7 +1051,7 @@ export function DailyManagementView() {
                 Las altas puntuales SÍ se facturan. Para invitaciones gratuitas, usa el botón "Invitación".
               </p>
               <p className="text-xs text-blue-700 mt-1">
-                Solo se muestran personas sin comida asignada para la primera fecha seleccionada.
+                Solo se muestran personas sin comida asignada para este día.
               </p>
             </div>
 
@@ -1148,31 +1119,15 @@ export function DailyManagementView() {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-3">
-                  Seleccionar fechas (próximos días laborables)
-                </label>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                  {getNext7Days().map(day => (
-                    <button
-                      key={day.date}
-                      type="button"
-                      onClick={() => toggleAltaFecha(day.date)}
-                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border-2 ${
-                        altaFechasSeleccionadas.includes(day.date)
-                          ? 'bg-blue-100 border-blue-500 text-blue-800'
-                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {day.label}
-                    </button>
-                  ))}
-                </div>
-                {altaFechasSeleccionadas.length > 0 && (
-                  <p className="text-sm text-gray-600 mt-2">
-                    {altaFechasSeleccionadas.length} fecha{altaFechasSeleccionadas.length !== 1 ? 's' : ''} seleccionada{altaFechasSeleccionadas.length !== 1 ? 's' : ''}
-                  </p>
-                )}
+              <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                <p className="text-sm text-gray-700">
+                  <span className="font-medium">Fecha:</span> {selectedDate.toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric'
+                  })}
+                </p>
               </div>
             </div>
 
@@ -1182,7 +1137,6 @@ export function DailyManagementView() {
                 onClick={() => {
                   setShowAltaPuntualModal(false);
                   setAltaPersonaId('');
-                  setAltaFechasSeleccionadas([]);
                   setAltaTipoPersona('hijo');
                 }}
                 disabled={processingAlta}
@@ -1193,10 +1147,10 @@ export function DailyManagementView() {
               <button
                 type="button"
                 onClick={handleCreateAltaPuntual}
-                disabled={processingAlta || !altaPersonaId || altaFechasSeleccionadas.length === 0}
+                disabled={processingAlta || !altaPersonaId}
                 className="flex-1 px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {processingAlta ? 'Creando...' : `Crear ${altaFechasSeleccionadas.length} Alta${altaFechasSeleccionadas.length !== 1 ? 's' : ''}`}
+                {processingAlta ? 'Creando...' : 'Crear Alta'}
               </button>
             </div>
           </div>
