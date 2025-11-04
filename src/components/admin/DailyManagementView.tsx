@@ -277,10 +277,102 @@ export function DailyManagementView() {
     }
   };
 
+  const loadPersonasDisponibles = async (fecha: string) => {
+    setLoadingPersonas(true);
+    try {
+      const fechaDate = new Date(fecha);
+      const diaSemana = fechaDate.getDay();
+      const fechaFormateada = fechaDate.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+
+      const [hijosResult, padresResult, inscripcionesResult, inscripcionesPadreResult, altasResult] = await Promise.all([
+        supabase
+          .from('hijos')
+          .select('id, nombre')
+          .eq('activo', true)
+          .order('nombre', { ascending: true }),
+        supabase
+          .from('padres')
+          .select('id, nombre')
+          .eq('activo', true)
+          .order('nombre', { ascending: true }),
+        supabase
+          .from('comedor_inscripciones')
+          .select('hijo_id, dias_semana')
+          .eq('activo', true),
+        supabase
+          .from('comedor_inscripciones_padres')
+          .select('padre_id, dias_semana')
+          .eq('activo', true),
+        supabase
+          .from('comedor_altaspuntuales')
+          .select('hijo_id, padre_id, fecha')
+          .eq('fecha', fechaFormateada)
+      ]);
+
+      if (hijosResult.error) throw hijosResult.error;
+      if (padresResult.error) throw padresResult.error;
+      if (inscripcionesResult.error) throw inscripcionesResult.error;
+      if (inscripcionesPadreResult.error) throw inscripcionesPadreResult.error;
+      if (altasResult.error) throw altasResult.error;
+
+      const inscripciones = inscripcionesResult.data || [];
+      const inscripcionesPadre = inscripcionesPadreResult.data || [];
+      const altas = altasResult.data || [];
+
+      const hijosConComidaHoy = new Set<string>();
+      inscripciones.forEach(insc => {
+        if (insc.dias_semana.includes(diaSemana)) {
+          hijosConComidaHoy.add(insc.hijo_id);
+        }
+      });
+      altas.forEach(alta => {
+        if (alta.hijo_id) hijosConComidaHoy.add(alta.hijo_id);
+      });
+
+      const padresConComidaHoy = new Set<string>();
+      inscripcionesPadre.forEach(insc => {
+        if (insc.dias_semana.includes(diaSemana)) {
+          padresConComidaHoy.add(insc.padre_id);
+        }
+      });
+      altas.forEach(alta => {
+        if (alta.padre_id) padresConComidaHoy.add(alta.padre_id);
+      });
+
+      const hijosDisponibles = (hijosResult.data || [])
+        .filter(h => !hijosConComidaHoy.has(h.id))
+        .map(h => ({
+          id: h.id,
+          nombre: h.nombre,
+          tipo: 'hijo' as const
+        }));
+
+      const padresDisponibles = (padresResult.data || [])
+        .filter(p => !padresConComidaHoy.has(p.id))
+        .map(p => ({
+          id: p.id,
+          nombre: p.nombre,
+          tipo: 'padre' as const
+        }));
+
+      setPersonas([...hijosDisponibles, ...padresDisponibles]);
+    } catch (err: any) {
+      console.error('Error al cargar personas disponibles:', err);
+      const errorMsg = err?.message || 'Error desconocido';
+      alert(`Error al cargar la lista de personas: ${errorMsg}`);
+    } finally {
+      setLoadingPersonas(false);
+    }
+  };
+
   const handleOpenAltaPuntualModal = async () => {
     setShowAltaPuntualModal(true);
     setAltaFechasSeleccionadas([formatDateISO(selectedDate)]);
-    await loadPersonas();
+    await loadPersonasDisponibles(formatDateISO(selectedDate));
   };
 
   const handleCreateAltaPuntual = async () => {
@@ -986,6 +1078,9 @@ export function DailyManagementView() {
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
               <p className="text-sm text-blue-800 font-medium">
                 Las altas puntuales SÍ se facturan. Para invitaciones gratuitas, usa el botón "Invitación".
+              </p>
+              <p className="text-xs text-blue-700 mt-1">
+                Solo se muestran personas sin comida asignada para la primera fecha seleccionada.
               </p>
             </div>
 
