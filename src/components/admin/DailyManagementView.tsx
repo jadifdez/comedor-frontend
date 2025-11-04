@@ -86,107 +86,193 @@ export function DailyManagementView() {
     return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   };
 
-  const renderDinerCard = (comensal: DailyDiner) => (
-    <div key={comensal.id} className="border border-gray-200 rounded-lg px-4 py-3 hover:bg-gray-50 transition-colors">
-      <div className="flex items-start justify-between">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1 flex-wrap">
-            {comensal.tipo === 'padre' && (
-              <Briefcase className="h-4 w-4 text-teal-600 flex-shrink-0" />
-            )}
-            {comensal.tipo === 'hijo' && (
-              <GraduationCap className="h-4 w-4 text-blue-600 flex-shrink-0" />
-            )}
-            {comensal.tipo === 'externo' && (
-              <UserPlus className="h-4 w-4 text-purple-600 flex-shrink-0" />
-            )}
-            <p className="font-medium text-gray-900">{comensal.nombre}</p>
-            {comensal.tiene_dieta_blanda && (
-              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
-                Dieta Blanda
-              </span>
-            )}
-            {comensal.tiene_menu_personalizado && (
-              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-medium">
-                Menú Personalizado
-              </span>
-            )}
-            {comensal.restricciones.length > 0 && (
-              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">
-                {comensal.restricciones.join(', ')}
-              </span>
-            )}
-          </div>
-          {comensal.curso && (
-            <p className="text-sm text-gray-600 mb-1">{comensal.curso}</p>
-          )}
-          {comensal.tiene_eleccion && (
-            <p className="text-sm text-gray-600">
-              🍽️ {comensal.opcion_principal} + {comensal.opcion_guarnicion}
-            </p>
-          )}
-          {!comensal.tiene_eleccion && !comensal.tiene_dieta_blanda && !comensal.tiene_menu_personalizado && (
-            <p className="text-sm text-blue-600">🍽️ Menú Rancho</p>
-          )}
-          {comensal.motivo_invitacion && (
-            <p className="text-sm text-gray-500 italic mt-1">
-              📝 {comensal.motivo_invitacion}
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+  const getMenuText = (comensal: DailyDiner): string => {
+    if (comensal.tiene_dieta_blanda) return 'Dieta Blanda';
+    if (comensal.tiene_menu_personalizado) return 'Menú Personalizado';
+    if (comensal.tiene_eleccion) return `${comensal.opcion_principal} + ${comensal.opcion_guarnicion}`;
+    return 'Menú Rancho';
+  };
 
-  const renderComensalesList = (comensalesList: DailyDiner[]) => {
+  const renderComensalesTable = (comensalesList: DailyDiner[]) => {
     const personal = comensalesList.filter(c => c.tipo === 'padre');
     const alumnos = comensalesList.filter(c => c.tipo === 'hijo');
     const externos = comensalesList.filter(c => c.tipo === 'externo');
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+
+    const toggleGroup = (groupKey: string) => {
+      setExpandedGroups(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(groupKey)) {
+          newSet.delete(groupKey);
+        } else {
+          newSet.add(groupKey);
+        }
+        return newSet;
+      });
+    };
 
     return (
       <div className="space-y-4">
         {personal.length > 0 && (
-          <div>
-            <div className="flex items-center space-x-2 mb-2 px-2">
-              <Briefcase className="h-4 w-4 text-teal-600" />
-              <h4 className="text-sm font-semibold text-gray-700">Personal ({personal.length})</h4>
-            </div>
-            <div className="space-y-2">
-              {personal.map(renderDinerCard)}
-            </div>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => toggleGroup('personal')}
+              className="w-full flex items-center justify-between bg-teal-50 px-4 py-3 hover:bg-teal-100 transition-colors"
+            >
+              <div className="flex items-center space-x-2">
+                <Briefcase className="h-5 w-5 text-teal-600" />
+                <h4 className="font-semibold text-gray-900">Personal ({personal.length})</h4>
+              </div>
+              {expandedGroups.has('personal') ? (
+                <ChevronUp className="h-5 w-5 text-gray-600" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-600" />
+              )}
+            </button>
+            {expandedGroups.has('personal') && (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Menú</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {personal.map((comensal) => (
+                      <tr key={comensal.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{comensal.nombre}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{getMenuText(comensal)}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {comensal.tiene_dieta_blanda && (
+                              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
+                                Dieta Blanda
+                              </span>
+                            )}
+                            {comensal.tiene_menu_personalizado && (
+                              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-medium">
+                                Menú Personalizado
+                              </span>
+                            )}
+                            {comensal.restricciones.length > 0 && (
+                              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">
+                                {comensal.restricciones.join(', ')}
+                              </span>
+                            )}
+                            {comensal.motivo_invitacion && (
+                              <span className="text-gray-600 italic text-xs">{comensal.motivo_invitacion}</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
         {alumnos.length > 0 && (
-          <div>
-            <div className="flex items-center space-x-2 mb-2 px-2">
-              <GraduationCap className="h-4 w-4 text-blue-600" />
-              <h4 className="text-sm font-semibold text-gray-700">Alumnos ({alumnos.length})</h4>
-            </div>
-            <div className="space-y-4">
-              {groupByGrado(alumnos).map(([grado, alumnosGrado]) => (
-                <div key={grado}>
-                  <div className="bg-gray-50 px-3 py-1.5 rounded mb-2">
-                    <h5 className="text-xs font-semibold text-gray-600">
-                      {grado} ({alumnosGrado.length})
-                    </h5>
-                  </div>
-                  <div className="space-y-2">
-                    {alumnosGrado.map(renderDinerCard)}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => toggleGroup('alumnos')}
+              className="w-full flex items-center justify-between bg-blue-50 px-4 py-3 hover:bg-blue-100 transition-colors"
+            >
+              <div className="flex items-center space-x-2">
+                <GraduationCap className="h-5 w-5 text-blue-600" />
+                <h4 className="font-semibold text-gray-900">Alumnos ({alumnos.length})</h4>
+              </div>
+              {expandedGroups.has('alumnos') ? (
+                <ChevronUp className="h-5 w-5 text-gray-600" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-600" />
+              )}
+            </button>
+            {expandedGroups.has('alumnos') && (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Curso</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Menú</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {alumnos.map((comensal) => (
+                      <tr key={comensal.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{comensal.nombre}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{comensal.curso || '-'}</td>
+                        <td className="px-4 py-3 text-sm text-gray-700">{getMenuText(comensal)}</td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {comensal.tiene_dieta_blanda && (
+                              <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
+                                Dieta Blanda
+                              </span>
+                            )}
+                            {comensal.tiene_menu_personalizado && (
+                              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded text-xs font-medium">
+                                Menú Personalizado
+                              </span>
+                            )}
+                            {comensal.restricciones.length > 0 && (
+                              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">
+                                {comensal.restricciones.join(', ')}
+                              </span>
+                            )}
+                            {comensal.motivo_invitacion && (
+                              <span className="text-gray-600 italic text-xs">{comensal.motivo_invitacion}</span>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
         {externos.length > 0 && (
-          <div>
-            <div className="flex items-center space-x-2 mb-2 px-2">
-              <UserPlus className="h-4 w-4 text-purple-600" />
-              <h4 className="text-sm font-semibold text-gray-700">Invitados Externos ({externos.length})</h4>
-            </div>
-            <div className="space-y-2">
-              {externos.map(renderDinerCard)}
-            </div>
+          <div className="border border-gray-200 rounded-lg overflow-hidden">
+            <button
+              onClick={() => toggleGroup('externos')}
+              className="w-full flex items-center justify-between bg-purple-50 px-4 py-3 hover:bg-purple-100 transition-colors"
+            >
+              <div className="flex items-center space-x-2">
+                <UserPlus className="h-5 w-5 text-purple-600" />
+                <h4 className="font-semibold text-gray-900">Invitados Externos ({externos.length})</h4>
+              </div>
+              {expandedGroups.has('externos') ? (
+                <ChevronUp className="h-5 w-5 text-gray-600" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-600" />
+              )}
+            </button>
+            {expandedGroups.has('externos') && (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50 border-b border-gray-200">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
+                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Motivo</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 bg-white">
+                    {externos.map((comensal) => (
+                      <tr key={comensal.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-4 py-3 text-sm font-medium text-gray-900">{comensal.nombre}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{comensal.motivo_invitacion || '-'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -622,7 +708,7 @@ export function DailyManagementView() {
                 {expandedSections.has('recurrentes') && (
                   <div className="mt-4">
                     {data.comensales_recurrentes.length > 0 ? (
-                      renderComensalesList(data.comensales_recurrentes)
+                      renderComensalesTable(data.comensales_recurrentes)
                     ) : (
                       <div className="text-center py-8 text-gray-500">
                         <Users className="h-12 w-12 mx-auto mb-2 text-gray-300" />
@@ -655,7 +741,7 @@ export function DailyManagementView() {
                 {expandedSections.has('puntuales') && (
                   <div className="mt-4">
                     {data.comensales_puntuales.length > 0 ? (
-                      renderComensalesList(data.comensales_puntuales)
+                      renderComensalesTable(data.comensales_puntuales)
                     ) : (
                       <div className="text-center py-8 text-gray-500">
                         <Clock className="h-12 w-12 mx-auto mb-2 text-gray-300" />
