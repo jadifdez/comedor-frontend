@@ -297,6 +297,7 @@ export function DailyManagementView() {
           .from('padres')
           .select('id, nombre')
           .eq('activo', true)
+          .eq('es_personal', true)
           .order('nombre', { ascending: true }),
         supabase
           .from('comedor_inscripciones')
