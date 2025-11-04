@@ -19,6 +19,8 @@ export interface DailyDiner {
   hijo_id?: string;
   restricciones: string[];
   es_personal?: boolean;
+  cancelado_ultimo_momento?: boolean;
+  cancelacion_id?: string;
 }
 
 export interface MenuSummary {
@@ -105,7 +107,8 @@ export function useDailyManagement(fecha: string) {
         eleccionesResult,
         dietasBlandasResult,
         festivosResult,
-        restriccionesResult
+        restriccionesResult,
+        cancelacionesResult
       ] = await Promise.all([
         supabase
           .from('comedor_inscripciones')
@@ -188,7 +191,12 @@ export function useDailyManagement(fecha: string) {
           .select(`
             hijo_id,
             restriccion:restricciones_dieteticas(nombre)
-          `)
+          `),
+
+        supabase
+          .from('comedor_cancelaciones_ultimo_momento')
+          .select('*')
+          .eq('fecha', selectedDate)
       ]);
 
       if (inscripcionesResult.error) throw inscripcionesResult.error;
@@ -200,6 +208,7 @@ export function useDailyManagement(fecha: string) {
       if (dietasBlandasResult.error) throw dietasBlandasResult.error;
       if (festivosResult.error) throw festivosResult.error;
       if (restriccionesResult.error) throw restriccionesResult.error;
+      if (cancelacionesResult.error) throw cancelacionesResult.error;
 
       const inscripcionesRaw = inscripcionesResult.data || [];
       const inscripcionesPadreRaw = inscripcionesPadreResult.data || [];
@@ -210,6 +219,7 @@ export function useDailyManagement(fecha: string) {
       const dietasBlandas = dietasBlandasResult.data || [];
       const festivo = festivosResult.data;
       const restriccionesData = restriccionesResult.data || [];
+      const cancelaciones = cancelacionesResult.data || [];
 
       // Filtrar inscripciones por fecha
       const inscripciones = inscripcionesRaw.filter(insc => {
@@ -253,6 +263,18 @@ export function useDailyManagement(fecha: string) {
       const bajasHijoIds = new Set(bajas.map(b => b.hijo_id));
       const bajasPadreIds = new Set(bajas.map(b => b.padre_id).filter(Boolean));
 
+      // Crear mapas de cancelaciones
+      const cancelacionesHijos = new Map(
+        cancelaciones
+          .filter(c => c.hijo_id)
+          .map(c => [c.hijo_id, c.id])
+      );
+      const cancelacionesPadres = new Map(
+        cancelaciones
+          .filter(c => c.padre_id)
+          .map(c => [c.padre_id, c.id])
+      );
+
       const comensales: DailyDiner[] = [];
 
       inscripciones.forEach(insc => {
@@ -275,7 +297,9 @@ export function useDailyManagement(fecha: string) {
             tiene_menu_personalizado: tieneMenuPersonalizado(insc.hijo_id, undefined),
             hijo_id: insc.hijo_id,
             restricciones: restriccionesPorHijo.get(insc.hijo_id) || [],
-            es_personal: false
+            es_personal: false,
+            cancelado_ultimo_momento: cancelacionesHijos.has(insc.hijo_id),
+            cancelacion_id: cancelacionesHijos.get(insc.hijo_id)
           });
         }
       });
@@ -299,7 +323,9 @@ export function useDailyManagement(fecha: string) {
             tiene_menu_personalizado: tieneMenuPersonalizado(undefined, insc.padre_id),
             padre_id: insc.padre_id,
             restricciones: [],
-            es_personal: insc.padre?.es_personal || false
+            es_personal: insc.padre?.es_personal || false,
+            cancelado_ultimo_momento: cancelacionesPadres.has(insc.padre_id),
+            cancelacion_id: cancelacionesPadres.get(insc.padre_id)
           });
         }
       });
@@ -321,6 +347,18 @@ export function useDailyManagement(fecha: string) {
             d.estado === 'aprobada'
           );
 
+          const canceladoUltimoMomento = inv.hijo_id
+            ? cancelacionesHijos.has(inv.hijo_id)
+            : inv.padre_id
+            ? cancelacionesPadres.has(inv.padre_id)
+            : false;
+
+          const cancelacionId = inv.hijo_id
+            ? cancelacionesHijos.get(inv.hijo_id)
+            : inv.padre_id
+            ? cancelacionesPadres.get(inv.padre_id)
+            : undefined;
+
           comensales.push({
             id: inv.id,
             nombre: inv.hijo ? inv.hijo.nombre : inv.padre ? inv.padre.nombre : inv.nombre_completo || 'Desconocido',
@@ -338,7 +376,9 @@ export function useDailyManagement(fecha: string) {
             hijo_id: inv.hijo_id || undefined,
             padre_id: inv.padre_id || undefined,
             restricciones: hijoId ? (restriccionesPorHijo.get(hijoId) || []) : [],
-            es_personal: inv.padre?.es_personal || false
+            es_personal: inv.padre?.es_personal || false,
+            cancelado_ultimo_momento: canceladoUltimoMomento,
+            cancelacion_id: cancelacionId
           });
         }
       });

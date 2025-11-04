@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, GraduationCap, Briefcase, UserPlus, ChevronDown, ChevronUp, Clock, UserCheck } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, GraduationCap, Briefcase, UserPlus, ChevronDown, ChevronUp, Clock, UserCheck, Ban, RotateCcw } from 'lucide-react';
 import { useDailyManagement, DailyDiner } from '../../hooks/useDailyManagement';
 import { generateDailyPDF } from '../../utils/dailyPdfExport';
+import { supabase } from '../../lib/supabase';
 
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['recurrentes']));
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedComensal, setSelectedComensal] = useState<DailyDiner | null>(null);
+  const [cancelMotivo, setCancelMotivo] = useState('');
+  const [processingCancel, setProcessingCancel] = useState(false);
 
   const formatDateISO = (date: Date) => {
     return date.toISOString().split('T')[0];
   };
 
-  const { data, loading, error } = useDailyManagement(formatDateISO(selectedDate));
+  const { data, loading, error, refetch } = useDailyManagement(formatDateISO(selectedDate));
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('es-ES', {
@@ -103,6 +108,71 @@ export function DailyManagementView() {
     });
   };
 
+  const handleCancelClick = (comensal: DailyDiner) => {
+    setSelectedComensal(comensal);
+    setCancelMotivo('');
+    setShowCancelModal(true);
+  };
+
+  const handleCancelConfirm = async () => {
+    if (!selectedComensal) return;
+
+    try {
+      setProcessingCancel(true);
+
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error('Usuario no autenticado');
+
+      const cancelacionData: any = {
+        fecha: formatDateISO(selectedDate),
+        motivo: cancelMotivo || null,
+        cancelado_por: userData.user.id
+      };
+
+      if (selectedComensal.hijo_id) {
+        cancelacionData.hijo_id = selectedComensal.hijo_id;
+      } else if (selectedComensal.padre_id) {
+        cancelacionData.padre_id = selectedComensal.padre_id;
+      }
+
+      const { error } = await supabase
+        .from('comedor_cancelaciones_ultimo_momento')
+        .insert([cancelacionData]);
+
+      if (error) throw error;
+
+      setShowCancelModal(false);
+      setSelectedComensal(null);
+      setCancelMotivo('');
+      refetch();
+    } catch (error) {
+      console.error('Error al cancelar comida:', error);
+      alert('Error al cancelar la comida. Por favor, intenta de nuevo.');
+    } finally {
+      setProcessingCancel(false);
+    }
+  };
+
+  const handleRestoreClick = async (comensal: DailyDiner) => {
+    if (!comensal.cancelacion_id) return;
+
+    if (!confirm(`¿Restaurar la comida de ${comensal.nombre}?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('comedor_cancelaciones_ultimo_momento')
+        .delete()
+        .eq('id', comensal.cancelacion_id);
+
+      if (error) throw error;
+
+      refetch();
+    } catch (error) {
+      console.error('Error al restaurar comida:', error);
+      alert('Error al restaurar la comida. Por favor, intenta de nuevo.');
+    }
+  };
+
   const renderComensalesTable = (comensales: DailyDiner[]) => {
     const personal = comensales.filter(c => c.tipo === 'personal' || c.tipo === 'padre');
     const alumnos = comensales.filter(c => c.tipo === 'hijo');
@@ -133,14 +203,20 @@ export function DailyManagementView() {
                     <tr>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Menú</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {personal.map((comensal) => (
-                      <tr key={comensal.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={comensal.id} className={`hover:bg-gray-50 transition-colors ${comensal.cancelado_ultimo_momento ? 'bg-red-50' : ''}`}>
                         <td className="px-4 py-3 text-sm">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-gray-900">{comensal.nombre}</span>
+                            <span className={`font-medium ${comensal.cancelado_ultimo_momento ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{comensal.nombre}</span>
+                            {comensal.cancelado_ultimo_momento && (
+                              <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold">
+                                CANCELADO
+                              </span>
+                            )}
                             {comensal.tiene_dieta_blanda && (
                               <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
                                 Dieta Blanda
@@ -164,6 +240,27 @@ export function DailyManagementView() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-700">{getMenuText(comensal)}</td>
+                        <td className="px-4 py-3 text-center">
+                          {comensal.cancelado_ultimo_momento ? (
+                            <button
+                              onClick={() => handleRestoreClick(comensal)}
+                              className="inline-flex items-center space-x-1 px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded transition-colors"
+                              title="Restaurar comida"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              <span>Restaurar</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleCancelClick(comensal)}
+                              className="inline-flex items-center space-x-1 px-3 py-1 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors"
+                              title="Cancelar comida"
+                            >
+                              <Ban className="h-3 w-3" />
+                              <span>Cancelar</span>
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -196,14 +293,20 @@ export function DailyManagementView() {
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Nombre</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Curso</th>
                       <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Menú</th>
+                      <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">Acciones</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 bg-white">
                     {alumnos.map((comensal) => (
-                      <tr key={comensal.id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={comensal.id} className={`hover:bg-gray-50 transition-colors ${comensal.cancelado_ultimo_momento ? 'bg-red-50' : ''}`}>
                         <td className="px-4 py-3 text-sm">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-medium text-gray-900">{comensal.nombre}</span>
+                            <span className={`font-medium ${comensal.cancelado_ultimo_momento ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{comensal.nombre}</span>
+                            {comensal.cancelado_ultimo_momento && (
+                              <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-xs font-bold">
+                                CANCELADO
+                              </span>
+                            )}
                             {comensal.tiene_dieta_blanda && (
                               <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded text-xs font-medium">
                                 Dieta Blanda
@@ -228,6 +331,27 @@ export function DailyManagementView() {
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{comensal.curso || '-'}</td>
                         <td className="px-4 py-3 text-sm text-gray-700">{getMenuText(comensal)}</td>
+                        <td className="px-4 py-3 text-center">
+                          {comensal.cancelado_ultimo_momento ? (
+                            <button
+                              onClick={() => handleRestoreClick(comensal)}
+                              className="inline-flex items-center space-x-1 px-3 py-1 text-sm bg-green-100 text-green-700 hover:bg-green-200 rounded transition-colors"
+                              title="Restaurar comida"
+                            >
+                              <RotateCcw className="h-3 w-3" />
+                              <span>Restaurar</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleCancelClick(comensal)}
+                              className="inline-flex items-center space-x-1 px-3 py-1 text-sm bg-red-100 text-red-700 hover:bg-red-200 rounded transition-colors"
+                              title="Cancelar comida"
+                            >
+                              <Ban className="h-3 w-3" />
+                              <span>Cancelar</span>
+                            </button>
+                          )}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -464,6 +588,64 @@ export function DailyManagementView() {
           <AlertCircle className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No hay datos disponibles</h3>
           <p className="text-gray-600">No se encontraron datos para esta fecha</p>
+        </div>
+      )}
+
+      {/* Modal de cancelación */}
+      {showCancelModal && selectedComensal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-shrink-0">
+                <Ban className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Cancelar Comida
+                </h3>
+                <p className="text-sm text-gray-600">{selectedComensal.nombre}</p>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-sm text-gray-700 mb-3">
+                Esta acción cancelará la comida para <strong>{formatDate(selectedDate)}</strong> y no será facturada.
+              </p>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Motivo de cancelación (opcional)
+              </label>
+              <textarea
+                value={cancelMotivo}
+                onChange={(e) => setCancelMotivo(e.target.value)}
+                placeholder="Ej: Aviso de última hora, enfermedad..."
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              />
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setSelectedComensal(null);
+                  setCancelMotivo('');
+                }}
+                disabled={processingCancel}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCancelConfirm}
+                disabled={processingCancel}
+                className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                {processingCancel ? 'Cancelando...' : 'Confirmar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
