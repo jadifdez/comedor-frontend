@@ -1105,16 +1105,14 @@ export function DailyManagementView() {
                   </div>
                 ) : (
                   <select
+                    key={altaTipoPersona}
                     value={altaPersonaId}
                     onChange={(e) => setAltaPersonaId(e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                   >
                     <option value="">-- Seleccionar --</option>
                     {personas
-                      .filter(p => {
-                        console.log('Persona:', p.nombre, 'Tipo:', p.tipo, 'Filtro:', altaTipoPersona, 'Match:', p.tipo === altaTipoPersona);
-                        return p.tipo === altaTipoPersona;
-                      })
+                      .filter(p => p.tipo === altaTipoPersona)
                       .map(p => (
                         <option key={p.id} value={p.id}>{p.nombre}</option>
                       ))}
