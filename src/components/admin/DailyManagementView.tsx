@@ -509,9 +509,15 @@ export function DailyManagementView() {
                                 {comensal.restricciones.join(', ')}
                               </span>
                             )}
-                            {comensal.motivo_invitacion && (
-                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs italic">
-                                {comensal.motivo_invitacion}
+                            {comensal.es_alta_puntual && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                SE FACTURA
+                              </span>
+                            )}
+                            {comensal.es_invitacion && (
+                              <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-medium">
+                                {comensal.motivo_invitacion || 'Invitación'}
                               </span>
                             )}
                           </div>
@@ -599,9 +605,15 @@ export function DailyManagementView() {
                                 {comensal.restricciones.join(', ')}
                               </span>
                             )}
-                            {comensal.motivo_invitacion && (
-                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs italic">
-                                {comensal.motivo_invitacion}
+                            {comensal.es_alta_puntual && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                SE FACTURA
+                              </span>
+                            )}
+                            {comensal.es_invitacion && (
+                              <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-medium">
+                                {comensal.motivo_invitacion || 'Invitación'}
                               </span>
                             )}
                           </div>
@@ -668,9 +680,15 @@ export function DailyManagementView() {
                         <td className="px-4 py-3 text-sm">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-gray-900">{comensal.nombre}</span>
-                            {comensal.motivo_invitacion && (
-                              <span className="bg-purple-100 text-purple-700 px-2 py-0.5 rounded text-xs italic">
-                                {comensal.motivo_invitacion}
+                            {comensal.es_alta_puntual && (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
+                                <DollarSign className="h-3 w-3" />
+                                SE FACTURA
+                              </span>
+                            )}
+                            {comensal.es_invitacion && (
+                              <span className="bg-green-100 text-green-800 px-2 py-0.5 rounded text-xs font-medium">
+                                {comensal.motivo_invitacion || 'Invitación'}
                               </span>
                             )}
                           </div>
@@ -850,9 +868,21 @@ export function DailyManagementView() {
               >
                 <div className="flex items-center space-x-3">
                   <Clock className="h-6 w-6 text-purple-600" />
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Comensales Puntuales ({data.comensales_puntuales.length})
-                  </h2>
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">
+                      Comensales Puntuales ({data.comensales_puntuales.length})
+                    </h2>
+                    <div className="flex items-center gap-3 mt-1 text-sm">
+                      <span className="flex items-center gap-1 text-blue-700">
+                        <DollarSign className="h-4 w-4" />
+                        Altas puntuales: {data.comensales_puntuales.filter(c => c.es_alta_puntual).length}
+                      </span>
+                      <span className="text-gray-400">•</span>
+                      <span className="text-green-700">
+                        Invitaciones: {data.comensales_puntuales.filter(c => c.es_invitacion).length}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 {expandedSections.has('puntuales') ? (
                   <ChevronUp className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />

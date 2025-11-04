@@ -8,6 +8,7 @@ export interface DailyDiner {
   curso?: string;
   es_inscripcion: boolean;
   es_invitacion: boolean;
+  es_alta_puntual: boolean;
   es_baja: boolean;
   motivo_invitacion?: string;
   tiene_eleccion: boolean;
@@ -302,6 +303,7 @@ export function useDailyManagement(fecha: string) {
             curso: insc.hijo_details?.grado?.nombre,
             es_inscripcion: true,
             es_invitacion: false,
+            es_alta_puntual: false,
             es_baja: false,
             tiene_eleccion: !!eleccion,
             opcion_principal: eleccion?.opcion_principal?.nombre,
@@ -328,6 +330,7 @@ export function useDailyManagement(fecha: string) {
             tipo: 'padre',
             es_inscripcion: true,
             es_invitacion: false,
+            es_alta_puntual: false,
             es_baja: false,
             tiene_eleccion: !!eleccion,
             opcion_principal: eleccion?.opcion_principal?.nombre,
@@ -379,6 +382,7 @@ export function useDailyManagement(fecha: string) {
             curso: inv.hijo?.grado?.nombre,
             es_inscripcion: false,
             es_invitacion: true,
+            es_alta_puntual: false,
             es_baja: false,
             motivo_invitacion: inv.motivo,
             tiene_eleccion: !!eleccion,
@@ -431,9 +435,11 @@ export function useDailyManagement(fecha: string) {
             tipo: alta.hijo_id ? 'hijo' : 'padre',
             curso: alta.hijo?.grado?.nombre || alta.curso,
             es_inscripcion: false,
-            es_invitacion: true,
+            es_invitacion: false,
+            es_alta_puntual: true,
             es_baja: false,
-            motivo_invitacion: 'Alta puntual',
+            motivo_invitacion: 'Alta puntual (se factura)',
+
             tiene_eleccion: !!eleccion,
             opcion_principal: eleccion?.opcion_principal?.nombre,
             opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
@@ -470,6 +476,7 @@ export function useDailyManagement(fecha: string) {
             curso: eleccion.hijo_details?.grado?.nombre,
             es_inscripcion: false,
             es_invitacion: false,
+            es_alta_puntual: false,
             es_baja: false,
             tiene_eleccion: true,
             opcion_principal: eleccion.opcion_principal?.nombre,
@@ -553,7 +560,7 @@ export function useDailyManagement(fecha: string) {
         .sort(sortComensales);
 
       const comensalesPuntuales = comensales
-        .filter(c => c.es_invitacion)
+        .filter(c => c.es_invitacion || c.es_alta_puntual)
         .sort(sortComensales);
 
       const dailyData: DailyData = {
