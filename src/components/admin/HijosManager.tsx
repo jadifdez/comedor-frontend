@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, Hijo, Padre, Grado, InscripcionComedor } from '../../lib/supabase';
-import { UserCheck, Plus, CreditCard as Edit, Trash2, User, GraduationCap, Check, X, Search, AlertTriangle, Utensils, Calendar, FileText, Shield } from 'lucide-react';
+import { UserCheck, Plus, CreditCard as Edit, Trash2, User, GraduationCap, Check, X, Search, AlertTriangle, Utensils, Calendar, FileText, Shield, Heart } from 'lucide-react';
 import { useConfiguracionPrecios } from '../../hooks/useConfiguracionPrecios';
 import { exportParentContactsPDF } from '../../utils/parentContactsPdfExport';
 
@@ -23,6 +23,10 @@ export function HijosManager() {
   const [comedorFormData, setComedorFormData] = useState({
     diasSemana: [] as number[]
   });
+  const [showRestriccionesModal, setShowRestriccionesModal] = useState(false);
+  const [selectedHijoForRestricciones, setSelectedHijoForRestricciones] = useState<Hijo | null>(null);
+  const [restriccionesList, setRestriccionesList] = useState<any[]>([]);
+  const [hijoRestricciones, setHijoRestricciones] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     nombre: '',
     padre_id: '',
@@ -120,6 +124,19 @@ export function HijosManager() {
           inscripcionesMap[inscripcion.hijo_id] = inscripcion;
         });
         setInscripcionesComedor(inscripcionesMap);
+      }
+
+      // Cargar restricciones dietéticas disponibles
+      const { data: restriccionesData, error: restriccionesError } = await supabase
+        .from('restricciones_dieteticas')
+        .select('*')
+        .eq('activo', true)
+        .order('tipo, nombre');
+
+      if (restriccionesError) {
+        console.error('Error loading restricciones:', restriccionesError);
+      } else {
+        setRestriccionesList(restriccionesData || []);
       }
 
     } catch (error) {
@@ -287,6 +304,77 @@ export function HijosManager() {
     setShowComedorModal(false);
     setSelectedHijoForComedor(null);
     setComedorFormData({ diasSemana: [] });
+  };
+
+  const handleRestriccionesClick = async (hijo: Hijo) => {
+    setSelectedHijoForRestricciones(hijo);
+
+    // Cargar restricciones asignadas a este hijo
+    try {
+      const { data, error } = await supabase
+        .from('hijos_restricciones_dieteticas')
+        .select('restriccion_id')
+        .eq('hijo_id', hijo.id);
+
+      if (error) throw error;
+      setHijoRestricciones(data?.map(r => r.restriccion_id) || []);
+    } catch (error) {
+      console.error('Error loading hijo restricciones:', error);
+      setHijoRestricciones([]);
+    }
+
+    setShowRestriccionesModal(true);
+  };
+
+  const handleRestriccionesSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedHijoForRestricciones) return;
+
+    try {
+      // Eliminar todas las restricciones actuales del hijo
+      const { error: deleteError } = await supabase
+        .from('hijos_restricciones_dieteticas')
+        .delete()
+        .eq('hijo_id', selectedHijoForRestricciones.id);
+
+      if (deleteError) throw deleteError;
+
+      // Insertar las nuevas restricciones seleccionadas
+      if (hijoRestricciones.length > 0) {
+        const insertData = hijoRestricciones.map(restriccionId => ({
+          hijo_id: selectedHijoForRestricciones.id,
+          restriccion_id: restriccionId,
+          fecha_asignacion: new Date().toISOString()
+        }));
+
+        const { error: insertError } = await supabase
+          .from('hijos_restricciones_dieteticas')
+          .insert(insertData);
+
+        if (insertError) throw insertError;
+      }
+
+      setShowRestriccionesModal(false);
+      setSelectedHijoForRestricciones(null);
+      setHijoRestricciones([]);
+      loadData();
+    } catch (error) {
+      console.error('Error saving restricciones:', error);
+    }
+  };
+
+  const handleRestriccionesCancel = () => {
+    setShowRestriccionesModal(false);
+    setSelectedHijoForRestricciones(null);
+    setHijoRestricciones([]);
+  };
+
+  const toggleRestriccion = (restriccionId: string) => {
+    setHijoRestricciones(prev =>
+      prev.includes(restriccionId)
+        ? prev.filter(id => id !== restriccionId)
+        : [...prev, restriccionId]
+    );
   };
 
   const handleDiaComedorToggle = (dia: number) => {
@@ -590,6 +678,9 @@ export function HijosManager() {
                   Comedor
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Restricciones
+                </th>
+                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Exención
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -640,6 +731,15 @@ export function HijosManager() {
                         <Utensils className="h-4 w-4" />
                       </button>
                     </div>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap text-center">
+                    <button
+                      onClick={() => handleRestriccionesClick(hijo)}
+                      className="p-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
+                      title="Gestionar restricciones dietéticas y alergias"
+                    >
+                      <Heart className="h-4 w-4" />
+                    </button>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-center">
                     {hijo.exento_facturacion ? (
@@ -799,6 +899,125 @@ export function HijosManager() {
                   `}
                 >
                   {inscripcionesComedor[selectedHijoForComedor.id] ? 'Actualizar' : 'Inscribir'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de restricciones dietéticas */}
+      {showRestriccionesModal && selectedHijoForRestricciones && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center space-x-3 mb-4">
+              <div className="flex-shrink-0">
+                <Heart className="h-6 w-6 text-red-600" />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Gestionar Restricciones Dietéticas
+                </h3>
+                <p className="text-sm text-gray-600">{selectedHijoForRestricciones.nombre}</p>
+              </div>
+            </div>
+
+            <form onSubmit={handleRestriccionesSubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Selecciona las restricciones o alergias que aplican:
+                </label>
+
+                {/* Alergias */}
+                <div className="mb-4">
+                  <h4 className="text-sm font-semibold text-red-700 mb-2">Alergias</h4>
+                  <div className="space-y-2">
+                    {restriccionesList
+                      .filter(r => r.tipo === 'alergia')
+                      .map(restriccion => {
+                        const isSelected = hijoRestricciones.includes(restriccion.id);
+                        return (
+                          <button
+                            key={restriccion.id}
+                            type="button"
+                            onClick={() => toggleRestriccion(restriccion.id)}
+                            className={`
+                              w-full text-left px-4 py-3 rounded-lg border-2 transition-all
+                              ${isSelected
+                                ? 'border-red-500 bg-red-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                              }
+                            `}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900">{restriccion.nombre}</p>
+                                {restriccion.descripcion && (
+                                  <p className="text-sm text-gray-600 mt-1">{restriccion.descripcion}</p>
+                                )}
+                              </div>
+                              {isSelected && (
+                                <Check className="h-5 w-5 text-red-600 flex-shrink-0 ml-2" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+
+                {/* Restricciones */}
+                <div>
+                  <h4 className="text-sm font-semibold text-orange-700 mb-2">Restricciones Alimentarias</h4>
+                  <div className="space-y-2">
+                    {restriccionesList
+                      .filter(r => r.tipo === 'restriccion')
+                      .map(restriccion => {
+                        const isSelected = hijoRestricciones.includes(restriccion.id);
+                        return (
+                          <button
+                            key={restriccion.id}
+                            type="button"
+                            onClick={() => toggleRestriccion(restriccion.id)}
+                            className={`
+                              w-full text-left px-4 py-3 rounded-lg border-2 transition-all
+                              ${isSelected
+                                ? 'border-orange-500 bg-orange-50'
+                                : 'border-gray-200 bg-white hover:border-gray-300'
+                              }
+                            `}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <p className="font-medium text-gray-900">{restriccion.nombre}</p>
+                                {restriccion.descripcion && (
+                                  <p className="text-sm text-gray-600 mt-1">{restriccion.descripcion}</p>
+                                )}
+                              </div>
+                              {isSelected && (
+                                <Check className="h-5 w-5 text-orange-600 flex-shrink-0 ml-2" />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex space-x-3 pt-4 border-t">
+                <button
+                  type="button"
+                  onClick={handleRestriccionesCancel}
+                  className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
+                >
+                  Guardar
                 </button>
               </div>
             </form>
