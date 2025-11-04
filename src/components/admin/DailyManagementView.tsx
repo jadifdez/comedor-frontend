@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, GraduationCap, Briefcase, UserPlus, ChevronDown, ChevronUp, Clock, UserCheck, Ban, RotateCcw, Plus, X } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, GraduationCap, Briefcase, UserPlus, ChevronDown, ChevronUp, Clock, UserCheck, Ban, RotateCcw, Plus, X, DollarSign } from 'lucide-react';
 import { useDailyManagement, DailyDiner } from '../../hooks/useDailyManagement';
 import { generateDailyPDF } from '../../utils/dailyPdfExport';
 import { supabase } from '../../lib/supabase';
+import { useAltasPuntualesAdmin } from '../../hooks/useAltasPuntualesAdmin';
 
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -22,6 +23,11 @@ export function DailyManagementView() {
   const [processingInvitacion, setProcessingInvitacion] = useState(false);
   const [personas, setPersonas] = useState<Array<{id: string, nombre: string, tipo: 'hijo' | 'padre'}>>([]);
   const [loadingPersonas, setLoadingPersonas] = useState(false);
+  const [showAltaPuntualModal, setShowAltaPuntualModal] = useState(false);
+  const [altaTipoPersona, setAltaTipoPersona] = useState<'hijo' | 'padre'>('hijo');
+  const [altaPersonaId, setAltaPersonaId] = useState('');
+  const [altaFechasSeleccionadas, setAltaFechasSeleccionadas] = useState<string[]>([]);
+  const { loading: processingAlta, createAltasPuntuales } = useAltasPuntualesAdmin();
 
   const formatDateISO = (date: Date) => {
     return date.toISOString().split('T')[0];
@@ -190,15 +196,23 @@ export function DailyManagementView() {
         supabase
           .from('hijos')
           .select('id, nombre, apellido1, apellido2')
+          .eq('activo', true)
           .order('apellido1', { ascending: true }),
         supabase
           .from('padres')
           .select('id, nombre, apellido1, apellido2')
+          .eq('activo', true)
           .order('apellido1', { ascending: true })
       ]);
 
-      if (hijosResult.error) throw hijosResult.error;
-      if (padresResult.error) throw padresResult.error;
+      if (hijosResult.error) {
+        console.error('Error al cargar hijos:', hijosResult.error);
+        throw hijosResult.error;
+      }
+      if (padresResult.error) {
+        console.error('Error al cargar padres:', padresResult.error);
+        throw padresResult.error;
+      }
 
       const hijosList = (hijosResult.data || []).map(h => ({
         id: h.id,
@@ -213,9 +227,10 @@ export function DailyManagementView() {
       }));
 
       setPersonas([...hijosList, ...padresList]);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error al cargar personas:', err);
-      alert('Error al cargar la lista de personas');
+      const errorMsg = err?.message || 'Error desconocido';
+      alert(`Error al cargar la lista de personas: ${errorMsg}`);
     } finally {
       setLoadingPersonas(false);
     }
@@ -260,6 +275,62 @@ export function DailyManagementView() {
     } finally {
       setProcessingInvitacion(false);
     }
+  };
+
+  const handleOpenAltaPuntualModal = async () => {
+    setShowAltaPuntualModal(true);
+    setAltaFechasSeleccionadas([formatDateISO(selectedDate)]);
+    await loadPersonas();
+  };
+
+  const handleCreateAltaPuntual = async () => {
+    if (!altaPersonaId || altaFechasSeleccionadas.length === 0) {
+      alert('Por favor, selecciona una persona y al menos una fecha');
+      return;
+    }
+
+    const result = await createAltasPuntuales({
+      tipo_persona: altaTipoPersona,
+      persona_id: altaPersonaId,
+      fechas: altaFechasSeleccionadas
+    });
+
+    if (result.success) {
+      refetch();
+      setShowAltaPuntualModal(false);
+      setAltaPersonaId('');
+      setAltaFechasSeleccionadas([]);
+      setAltaTipoPersona('hijo');
+      alert(`Se ${altaFechasSeleccionadas.length === 1 ? 'ha' : 'han'} creado ${altaFechasSeleccionadas.length} alta${altaFechasSeleccionadas.length === 1 ? '' : 's'} puntual${altaFechasSeleccionadas.length === 1 ? '' : 'es'} correctamente`);
+    } else {
+      alert(`Error al crear altas puntuales: ${result.error}`);
+    }
+  };
+
+  const toggleAltaFecha = (fecha: string) => {
+    setAltaFechasSeleccionadas(prev => {
+      if (prev.includes(fecha)) {
+        return prev.filter(f => f !== fecha);
+      } else {
+        return [...prev, fecha];
+      }
+    });
+  };
+
+  const getNext7Days = () => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(selectedDate);
+      date.setDate(date.getDate() + i);
+      const dayOfWeek = date.getDay();
+      if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+        days.push({
+          date: formatDateISO(date),
+          label: date.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })
+        });
+      }
+    }
+    return days;
   };
 
   const renderComensalesTable = (comensales: DailyDiner[], prefix: string) => {
@@ -510,20 +581,28 @@ export function DailyManagementView() {
         </div>
         <div className="flex items-center space-x-3">
           <button
+            onClick={handleOpenAltaPuntualModal}
+            disabled={loading}
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
+          >
+            <DollarSign className="h-5 w-5" />
+            <span>Alta Puntual</span>
+          </button>
+          <button
             onClick={handleOpenInvitacionModal}
             disabled={loading}
-            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
           >
             <Plus className="h-5 w-5" />
-            <span>Añadir Invitación</span>
+            <span>Invitación</span>
           </button>
           <button
             onClick={handleDownloadPDF}
             disabled={!data || loading}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-3 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
+            className="flex items-center space-x-2 bg-gray-700 hover:bg-gray-800 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-3 rounded-lg font-medium transition-colors shadow-sm hover:shadow-md"
           >
             <Download className="h-5 w-5" />
-            <span>Descargar PDF</span>
+            <span>PDF</span>
           </button>
         </div>
       </div>
@@ -818,7 +897,14 @@ export function DailyManagementView() {
                   Seleccionar persona
                 </label>
                 {loadingPersonas ? (
-                  <div className="text-sm text-gray-500">Cargando...</div>
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-green-600 border-t-transparent"></div>
+                    <span>Cargando personas...</span>
+                  </div>
+                ) : personas.length === 0 ? (
+                  <div className="text-sm text-red-600">
+                    No se encontraron personas disponibles
+                  </div>
                 ) : (
                   <select
                     value={selectedPersonId}
@@ -869,6 +955,153 @@ export function DailyManagementView() {
                 className="flex-1 px-4 py-2 text-white bg-green-600 hover:bg-green-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {processingInvitacion ? 'Creando...' : 'Crear Invitación'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Alta Puntual Facturada */}
+      {showAltaPuntualModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl shadow-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-2">
+                <DollarSign className="h-6 w-6 text-blue-600" />
+                <h3 className="text-xl font-bold text-gray-900">Crear Alta Puntual (Facturada)</h3>
+              </div>
+              <button
+                onClick={() => {
+                  setShowAltaPuntualModal(false);
+                  setAltaPersonaId('');
+                  setAltaFechasSeleccionadas([]);
+                  setAltaTipoPersona('hijo');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800 font-medium">
+                Las altas puntuales SÍ se facturan. Para invitaciones gratuitas, usa el botón "Invitación".
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Tipo de persona
+                </label>
+                <div className="flex space-x-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="hijo"
+                      checked={altaTipoPersona === 'hijo'}
+                      onChange={(e) => {
+                        setAltaTipoPersona(e.target.value as 'hijo' | 'padre');
+                        setAltaPersonaId('');
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Alumno</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      value="padre"
+                      checked={altaTipoPersona === 'padre'}
+                      onChange={(e) => {
+                        setAltaTipoPersona(e.target.value as 'hijo' | 'padre');
+                        setAltaPersonaId('');
+                      }}
+                      className="mr-2"
+                    />
+                    <span className="text-sm text-gray-700">Personal</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Seleccionar persona
+                </label>
+                {loadingPersonas ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                    <span>Cargando personas...</span>
+                  </div>
+                ) : personas.length === 0 ? (
+                  <div className="text-sm text-red-600">
+                    No se encontraron personas disponibles
+                  </div>
+                ) : (
+                  <select
+                    value={altaPersonaId}
+                    onChange={(e) => setAltaPersonaId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Seleccionar --</option>
+                    {personas
+                      .filter(p => p.tipo === altaTipoPersona)
+                      .map(p => (
+                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                      ))}
+                  </select>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Seleccionar fechas (próximos días laborables)
+                </label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                  {getNext7Days().map(day => (
+                    <button
+                      key={day.date}
+                      type="button"
+                      onClick={() => toggleAltaFecha(day.date)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors border-2 ${
+                        altaFechasSeleccionadas.includes(day.date)
+                          ? 'bg-blue-100 border-blue-500 text-blue-800'
+                          : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {day.label}
+                    </button>
+                  ))}
+                </div>
+                {altaFechasSeleccionadas.length > 0 && (
+                  <p className="text-sm text-gray-600 mt-2">
+                    {altaFechasSeleccionadas.length} fecha{altaFechasSeleccionadas.length !== 1 ? 's' : ''} seleccionada{altaFechasSeleccionadas.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex space-x-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAltaPuntualModal(false);
+                  setAltaPersonaId('');
+                  setAltaFechasSeleccionadas([]);
+                  setAltaTipoPersona('hijo');
+                }}
+                disabled={processingAlta}
+                className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg font-medium transition-colors disabled:opacity-50"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleCreateAltaPuntual}
+                disabled={processingAlta || !altaPersonaId || altaFechasSeleccionadas.length === 0}
+                className="flex-1 px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {processingAlta ? 'Creando...' : `Crear ${altaFechasSeleccionadas.length} Alta${altaFechasSeleccionadas.length !== 1 ? 's' : ''}`}
               </button>
             </div>
           </div>
