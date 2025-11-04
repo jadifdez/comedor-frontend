@@ -1104,19 +1104,28 @@ export function DailyManagementView() {
                     No se encontraron personas disponibles
                   </div>
                 ) : (
-                  <select
-                    key={altaTipoPersona}
-                    value={altaPersonaId}
-                    onChange={(e) => setAltaPersonaId(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="">-- Seleccionar --</option>
-                    {personas
-                      .filter(p => p.tipo === altaTipoPersona)
-                      .map(p => (
-                        <option key={p.id} value={p.id}>{p.nombre}</option>
-                      ))}
-                  </select>
+                  <>
+                    <div className="text-xs text-gray-500 mb-1">
+                      DEBUG: Total personas: {personas.length},
+                      Hijos: {personas.filter(p => p.tipo === 'hijo').length},
+                      Padres: {personas.filter(p => p.tipo === 'padre').length},
+                      Filtro actual: {altaTipoPersona},
+                      Mostrando: {personas.filter(p => p.tipo === altaTipoPersona).length}
+                    </div>
+                    <select
+                      key={altaTipoPersona}
+                      value={altaPersonaId}
+                      onChange={(e) => setAltaPersonaId(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">-- Seleccionar --</option>
+                      {personas
+                        .filter(p => p.tipo === altaTipoPersona)
+                        .map(p => (
+                          <option key={p.id} value={p.id}>{p.nombre} (tipo: {p.tipo})</option>
+                        ))}
+                    </select>
+                  </>
                 )}
               </div>
 
