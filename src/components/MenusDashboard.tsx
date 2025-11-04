@@ -1,23 +1,26 @@
-import React from 'react';
-import { FileText, Wheat, Milk, Egg, Ban, Fish, UtensilsCrossed, ExternalLink } from 'lucide-react';
+import React, { useState } from 'react';
+import { FileText, Wheat, Milk, Egg, Ban, Fish, UtensilsCrossed, ExternalLink, ChevronDown, ChevronUp, Moon } from 'lucide-react';
 
 interface MenuCard {
   title: string;
   description: string;
   icon: React.ReactNode;
   url: string;
+  urlAnterior: string;
   color: string;
   bgColor: string;
   borderColor: string;
 }
 
 export function MenusDashboard() {
+  const [showPreviousMonth, setShowPreviousMonth] = useState(false);
   const menus: MenuCard[] = [
     {
       title: 'Menú Basal',
       description: 'Menú estándar del comedor escolar',
       icon: <UtensilsCrossed className="h-8 w-8" />,
       url: 'https://colegiolospinos.eu/menus/menu_basal_actual.pdf',
+      urlAnterior: 'https://colegiolospinos.eu/menus/menu_basal_anterior.pdf',
       color: 'text-blue-700',
       bgColor: 'bg-blue-50',
       borderColor: 'border-blue-200'
@@ -27,6 +30,7 @@ export function MenusDashboard() {
       description: 'Opciones de menú combinado',
       icon: <FileText className="h-8 w-8" />,
       url: 'https://colegiolospinos.eu/menus/menu_platoscombinados_actual.pdf',
+      urlAnterior: 'https://colegiolospinos.eu/menus/menu_platoscombinados_anterior.pdf',
       color: 'text-purple-700',
       bgColor: 'bg-purple-50',
       borderColor: 'border-purple-200'
@@ -36,6 +40,7 @@ export function MenusDashboard() {
       description: 'Menú adaptado para celíacos',
       icon: <Wheat className="h-8 w-8" />,
       url: 'https://colegiolospinos.eu/menus/menu_singluten_actual.pdf',
+      urlAnterior: 'https://colegiolospinos.eu/menus/menu_singluten_anterior.pdf',
       color: 'text-amber-700',
       bgColor: 'bg-amber-50',
       borderColor: 'border-amber-200'
@@ -45,6 +50,7 @@ export function MenusDashboard() {
       description: 'Menú libre de lácteos',
       icon: <Milk className="h-8 w-8" />,
       url: 'https://colegiolospinos.eu/menus/menu_sinlactosa_actual.pdf',
+      urlAnterior: 'https://colegiolospinos.eu/menus/menu_sinlactosa_anterior.pdf',
       color: 'text-cyan-700',
       bgColor: 'bg-cyan-50',
       borderColor: 'border-cyan-200'
@@ -54,6 +60,7 @@ export function MenusDashboard() {
       description: 'Menú sin contenido de huevo',
       icon: <Egg className="h-8 w-8" />,
       url: 'https://colegiolospinos.eu/menus/menu_sinhuevo_actual.pdf',
+      urlAnterior: 'https://colegiolospinos.eu/menus/menu_sinhuevo_anterior.pdf',
       color: 'text-orange-700',
       bgColor: 'bg-orange-50',
       borderColor: 'border-orange-200'
@@ -63,6 +70,7 @@ export function MenusDashboard() {
       description: 'Menú sin carne de cerdo',
       icon: <Ban className="h-8 w-8" />,
       url: 'https://colegiolospinos.eu/menus/menu_sincerdo_actual.pdf',
+      urlAnterior: 'https://colegiolospinos.eu/menus/menu_sincerdo_anterior.pdf',
       color: 'text-rose-700',
       bgColor: 'bg-rose-50',
       borderColor: 'border-rose-200'
@@ -72,9 +80,20 @@ export function MenusDashboard() {
       description: 'Menú sin pescado ni marisco',
       icon: <Fish className="h-8 w-8" />,
       url: 'https://colegiolospinos.eu/menus/menu_sinpescado_actual.pdf',
+      urlAnterior: 'https://colegiolospinos.eu/menus/menu_sinpescado_anterior.pdf',
       color: 'text-teal-700',
       bgColor: 'bg-teal-50',
       borderColor: 'border-teal-200'
+    },
+    {
+      title: 'Menú Cenas',
+      description: 'Menú de cenas escolares',
+      icon: <Moon className="h-8 w-8" />,
+      url: '',
+      urlAnterior: 'https://colegiolospinos.eu/menus/menu_cenas_anterior.pdf',
+      color: 'text-indigo-700',
+      bgColor: 'bg-indigo-50',
+      borderColor: 'border-indigo-200'
     }
   ];
 
@@ -88,7 +107,7 @@ export function MenusDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {menus.map((menu) => (
+        {menus.filter(m => m.url).map((menu) => (
           <a
             key={menu.title}
             href={menu.url}
@@ -122,6 +141,49 @@ export function MenusDashboard() {
             </div>
           </a>
         ))}
+      </div>
+
+      <div className="bg-white border border-gray-200 rounded-xl overflow-hidden">
+        <button
+          onClick={() => setShowPreviousMonth(!showPreviousMonth)}
+          className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
+        >
+          <div className="flex items-center space-x-2 text-gray-600">
+            <FileText className="h-5 w-5" />
+            <span className="text-sm font-medium">Menús del mes anterior</span>
+          </div>
+          {showPreviousMonth ? (
+            <ChevronUp className="h-5 w-5 text-gray-400" />
+          ) : (
+            <ChevronDown className="h-5 w-5 text-gray-400" />
+          )}
+        </button>
+
+        {showPreviousMonth && (
+          <div className="border-t border-gray-200 p-4 bg-gray-50">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {menus.map((menu) => (
+                <a
+                  key={`anterior-${menu.title}`}
+                  href={menu.urlAnterior}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div className={`${menu.color}`}>
+                      {React.cloneElement(menu.icon as React.ReactElement, { className: 'h-5 w-5' })}
+                    </div>
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">
+                      {menu.title}
+                    </span>
+                  </div>
+                  <ExternalLink className="h-4 w-4 text-gray-400 group-hover:text-gray-600" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="bg-gray-50 border border-gray-200 rounded-xl p-6">
