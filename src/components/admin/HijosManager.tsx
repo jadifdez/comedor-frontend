@@ -595,7 +595,7 @@ export function HijosManager() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Acciones
                 </th>
               </tr>
@@ -685,21 +685,21 @@ export function HijosManager() {
                       )}
                     </button>
                   </td>
-                  <td className="px-6 py-4 text-sm font-medium w-24">
-                    <div className="flex space-x-2 flex-shrink-0">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <div className="flex items-center space-x-2">
                       <button
                         onClick={() => handleEdit(hijo)}
-                        className="text-green-600 hover:text-green-900 flex-shrink-0"
+                        className="text-green-600 hover:text-green-900 transition-colors"
                         title="Editar hijo"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => handleDeleteClick(hijo)}
-                        className="text-red-600 hover:text-red-900 flex-shrink-0"
+                        className="text-red-600 hover:text-red-900 transition-colors"
                         title="Eliminar hijo"
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-5 w-5" />
                       </button>
                     </div>
                   </td>
