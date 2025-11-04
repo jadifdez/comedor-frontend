@@ -1111,7 +1111,10 @@ export function DailyManagementView() {
                   >
                     <option value="">-- Seleccionar --</option>
                     {personas
-                      .filter(p => p.tipo === altaTipoPersona)
+                      .filter(p => {
+                        console.log('Persona:', p.nombre, 'Tipo:', p.tipo, 'Filtro:', altaTipoPersona, 'Match:', p.tipo === altaTipoPersona);
+                        return p.tipo === altaTipoPersona;
+                      })
                       .map(p => (
                         <option key={p.id} value={p.id}>{p.nombre}</option>
                       ))}
