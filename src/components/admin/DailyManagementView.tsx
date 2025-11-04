@@ -4,6 +4,7 @@ import { useDailyManagement, DailyDiner } from '../../hooks/useDailyManagement';
 import { generateDailyPDF } from '../../utils/dailyPdfExport';
 import { supabase } from '../../lib/supabase';
 import { useAltasPuntualesAdmin } from '../../hooks/useAltasPuntualesAdmin';
+import { NotificationModal } from '../NotificationModal';
 
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
@@ -27,6 +28,12 @@ export function DailyManagementView() {
   const [altaTipoPersona, setAltaTipoPersona] = useState<'hijo' | 'padre'>('hijo');
   const [altaPersonaId, setAltaPersonaId] = useState('');
   const { loading: processingAlta, createAltasPuntuales } = useAltasPuntualesAdmin();
+  const [notification, setNotification] = useState<{
+    isOpen: boolean;
+    type: 'success' | 'error' | 'warning' | 'info';
+    title: string;
+    message?: string;
+  }>({ isOpen: false, type: 'info', title: '' });
 
   const formatDateISO = (date: Date) => {
     return date.toISOString().split('T')[0];
@@ -162,7 +169,12 @@ export function DailyManagementView() {
       refetch();
     } catch (error) {
       console.error('Error al cancelar comida:', error);
-      alert('Error al cancelar la comida. Por favor, intenta de nuevo.');
+      setNotification({
+        isOpen: true,
+        type: 'error',
+        title: 'Error al cancelar la comida',
+        message: 'Por favor, intenta de nuevo.'
+      });
     } finally {
       setProcessingCancel(false);
     }
@@ -184,7 +196,12 @@ export function DailyManagementView() {
       refetch();
     } catch (error) {
       console.error('Error al restaurar comida:', error);
-      alert('Error al restaurar la comida. Por favor, intenta de nuevo.');
+      setNotification({
+        isOpen: true,
+        type: 'error',
+        title: 'Error al restaurar la comida',
+        message: 'Por favor, intenta de nuevo.'
+      });
     }
   };
 
@@ -229,7 +246,12 @@ export function DailyManagementView() {
     } catch (err: any) {
       console.error('Error al cargar personas:', err);
       const errorMsg = err?.message || 'Error desconocido';
-      alert(`Error al cargar la lista de personas: ${errorMsg}`);
+      setNotification({
+        isOpen: true,
+        type: 'error',
+        title: 'Error al cargar la lista',
+        message: errorMsg
+      });
     } finally {
       setLoadingPersonas(false);
     }
@@ -242,7 +264,12 @@ export function DailyManagementView() {
 
   const handleCreateInvitacion = async () => {
     if (!selectedPersonId || !invitacionMotivo.trim()) {
-      alert('Por favor, selecciona una persona y proporciona un motivo');
+      setNotification({
+        isOpen: true,
+        type: 'warning',
+        title: 'Datos incompletos',
+        message: 'Por favor, selecciona una persona y proporciona un motivo'
+      });
       return;
     }
 
@@ -270,7 +297,12 @@ export function DailyManagementView() {
       setInvitacionTipo('hijo');
     } catch (err) {
       console.error('Error al crear invitación:', err);
-      alert('Error al crear la invitación. Por favor, intenta de nuevo.');
+      setNotification({
+        isOpen: true,
+        type: 'error',
+        title: 'Error al crear la invitación',
+        message: 'Por favor, intenta de nuevo.'
+      });
     } finally {
       setProcessingInvitacion(false);
     }
@@ -363,7 +395,12 @@ export function DailyManagementView() {
     } catch (err: any) {
       console.error('Error al cargar personas disponibles:', err);
       const errorMsg = err?.message || 'Error desconocido';
-      alert(`Error al cargar la lista de personas: ${errorMsg}`);
+      setNotification({
+        isOpen: true,
+        type: 'error',
+        title: 'Error al cargar la lista',
+        message: errorMsg
+      });
     } finally {
       setLoadingPersonas(false);
     }
@@ -376,7 +413,12 @@ export function DailyManagementView() {
 
   const handleCreateAltaPuntual = async () => {
     if (!altaPersonaId) {
-      alert('Por favor, selecciona una persona');
+      setNotification({
+        isOpen: true,
+        type: 'warning',
+        title: 'Selecciona una persona',
+        message: 'Debes seleccionar una persona para crear el alta puntual'
+      });
       return;
     }
 
@@ -391,9 +433,19 @@ export function DailyManagementView() {
       setShowAltaPuntualModal(false);
       setAltaPersonaId('');
       setAltaTipoPersona('hijo');
-      alert('Se ha creado el alta puntual correctamente');
+      setNotification({
+        isOpen: true,
+        type: 'success',
+        title: 'Alta puntual creada',
+        message: 'Se ha registrado correctamente'
+      });
     } else {
-      alert(`Error al crear alta puntual: ${result.error}`);
+      setNotification({
+        isOpen: true,
+        type: 'error',
+        title: 'Error al crear alta puntual',
+        message: result.error
+      });
     }
   };
 
@@ -1105,28 +1157,19 @@ export function DailyManagementView() {
                     No se encontraron personas disponibles
                   </div>
                 ) : (
-                  <>
-                    <div className="text-xs text-gray-500 mb-1">
-                      DEBUG: Total personas: {personas.length},
-                      Hijos: {personas.filter(p => p.tipo === 'hijo').length},
-                      Padres: {personas.filter(p => p.tipo === 'padre').length},
-                      Filtro actual: {altaTipoPersona},
-                      Mostrando: {personas.filter(p => p.tipo === altaTipoPersona).length}
-                    </div>
-                    <select
-                      key={altaTipoPersona}
-                      value={altaPersonaId}
-                      onChange={(e) => setAltaPersonaId(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <option value="">-- Seleccionar --</option>
-                      {personas
-                        .filter(p => p.tipo === altaTipoPersona)
-                        .map(p => (
-                          <option key={p.id} value={p.id}>{p.nombre} (tipo: {p.tipo})</option>
-                        ))}
-                    </select>
-                  </>
+                  <select
+                    key={altaTipoPersona}
+                    value={altaPersonaId}
+                    onChange={(e) => setAltaPersonaId(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">-- Seleccionar --</option>
+                    {personas
+                      .filter(p => p.tipo === altaTipoPersona)
+                      .map(p => (
+                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                      ))}
+                  </select>
                 )}
               </div>
 
@@ -1167,6 +1210,14 @@ export function DailyManagementView() {
           </div>
         </div>
       )}
+
+      <NotificationModal
+        isOpen={notification.isOpen}
+        onClose={() => setNotification({ ...notification, isOpen: false })}
+        type={notification.type}
+        title={notification.title}
+        message={notification.message}
+      />
     </div>
   );
 }
