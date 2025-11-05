@@ -719,9 +719,6 @@ export function HijosManager() {
                   Grado
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Exención
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
                 <th className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -736,8 +733,8 @@ export function HijosManager() {
                     <div className="flex items-center space-x-2">
                       <div className="text-sm font-medium text-gray-900">{hijo.nombre}</div>
                       {hijo.exento_facturacion && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" title={hijo.motivo_exencion || 'Exento'}>
-                          <Shield className="h-3 w-3" />
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800" title={hijo.motivo_exencion || 'Exento'}>
+                          EXENTO
                         </span>
                       )}
                     </div>
@@ -750,15 +747,6 @@ export function HijosManager() {
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{(hijo.grado as any)?.nombre}</div>
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center">
-                    {hijo.exento_facturacion ? (
-                      <span className="inline-flex items-center text-green-700" title={hijo.motivo_exencion}>
-                        <Shield className="h-4 w-4" />
-                      </span>
-                    ) : (
-                      <span className="text-sm text-gray-400">-</span>
-                    )}
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <button
