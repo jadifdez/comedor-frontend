@@ -740,64 +740,60 @@ export function DailyManagementView() {
       </div>
 
       {/* Date Selector */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={goToToday}
-                className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-              >
-                Hoy
-              </button>
-              <button
-                onClick={goToTomorrow}
-                className="px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
-              >
-                Mañana
-              </button>
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={goToPreviousDay}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Día anterior"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </button>
+            <button
+              onClick={goToNextDay}
+              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              title="Día siguiente"
+            >
+              <ChevronRight className="h-5 w-5" />
+            </button>
+            <div className="h-6 w-px bg-gray-300 mx-1"></div>
+            <button
+              onClick={goToToday}
+              className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              Hoy
+            </button>
+            <button
+              onClick={goToTomorrow}
+              className="px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+            >
+              Mañana
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="flex-1 sm:flex-none">
+              <p className="text-lg font-bold text-gray-900 capitalize truncate">
+                {formatDate(selectedDate)}
+              </p>
+              {(isWeekend(selectedDate) || data?.es_festivo) && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <AlertCircle className="h-4 w-4 text-amber-600 flex-shrink-0" />
+                  <span className="text-xs font-medium text-amber-700 truncate">
+                    {isWeekend(selectedDate)
+                      ? 'Fin de semana'
+                      : `Festivo: ${data.nombre_festivo}`}
+                  </span>
+                </div>
+              )}
             </div>
             <input
               type="date"
               value={formatDateISO(selectedDate)}
               onChange={handleDateChange}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
-          </div>
-
-          <div className="flex items-center justify-center space-x-4">
-            <button
-              onClick={goToPreviousDay}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-            <button
-              onClick={goToNextDay}
-              className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
-            <p className="text-2xl font-bold text-gray-900 capitalize">{formatDate(selectedDate)}</p>
-            {isWeekend(selectedDate) && (
-              <div className="flex items-center space-x-2 mt-2">
-                <AlertCircle className="h-5 w-5 text-amber-600" />
-                <span className="text-sm font-medium text-amber-700">
-                  Fin de semana - No hay servicio de comedor
-                </span>
-              </div>
-            )}
-            {data?.es_festivo && (
-              <div className="flex items-center space-x-2 mt-2">
-                <AlertCircle className="h-5 w-5 text-red-600" />
-                <span className="text-sm font-medium text-red-700">
-                  Día festivo: {data.nombre_festivo}
-                </span>
-              </div>
-            )}
           </div>
         </div>
       </div>
