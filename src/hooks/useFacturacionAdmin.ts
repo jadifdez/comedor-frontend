@@ -471,12 +471,12 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
 
         // Incluir familia si:
         // - Tiene importe a pagar (totalGeneral > 0), O
-        // - Tiene hijos exentos, O
-        // - El padre está exento
-        const tieneHijosExentos = hijosFacturacion.some(h => h.estaExento);
-        const tienePadreExento = padreComedor?.estaExento || false;
+        // - Tiene hijos exentos CON días de servicio, O
+        // - El padre está exento CON días de servicio
+        const tieneHijosExentosConServicio = hijosFacturacion.some(h => h.estaExento && h.diasFacturables.length > 0);
+        const tienePadreExentoConServicio = padreComedor?.estaExento && (padreComedor?.diasFacturables.length > 0) || false;
 
-        if (totalGeneral > 0 || tieneHijosExentos || tienePadreExento) {
+        if (totalGeneral > 0 || tieneHijosExentosConServicio || tienePadreExentoConServicio) {
           facturacionPadres.push({
             padre,
             hijos: hijosFacturacion,

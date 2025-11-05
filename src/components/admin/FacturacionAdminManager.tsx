@@ -247,7 +247,7 @@ export function FacturacionAdminManager() {
 
                     <div className="flex items-center space-x-4 text-sm text-gray-600">
                       <p>
-                        <strong>Hijos con servicio:</strong> {facturacionPadre.hijos.filter(h => h.totalImporte > 0 || h.estaExento).length}
+                        <strong>Hijos con servicio:</strong> {facturacionPadre.hijos.filter(h => h.diasFacturables.length > 0).length}
                       </p>
                       {facturacionPadre.padreComedor && (
                         <span className="flex items-center space-x-1 text-blue-600">
@@ -298,7 +298,7 @@ export function FacturacionAdminManager() {
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <h5 className="font-medium text-gray-900 mb-3">Detalle por persona</h5>
                     <div className="space-y-3">
-                      {facturacionPadre.padreComedor && (facturacionPadre.padreComedor.totalImporte > 0 || facturacionPadre.padreComedor.estaExento) && (
+                      {facturacionPadre.padreComedor && facturacionPadre.padreComedor.diasFacturables.length > 0 && (
                         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-2">
@@ -346,7 +346,7 @@ export function FacturacionAdminManager() {
                         </div>
                       )}
 
-                      {facturacionPadre.hijos.map((hijoData) => (
+                      {facturacionPadre.hijos.filter(h => h.diasFacturables.length > 0).map((hijoData) => (
                         <div key={hijoData.hijo.id} className="bg-gray-50 rounded-lg p-4">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-2">
