@@ -393,9 +393,6 @@ export function PersonalManager() {
                   Hijos
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Comedor
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Estado
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32">
@@ -434,29 +431,6 @@ export function PersonalManager() {
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {hijosCount[padre.id] || 0} {hijosCount[padre.id] === 1 ? 'hijo' : 'hijos'}
                       </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm text-gray-900">{getDiasComedorText(padre.id)}</div>
-                        {inscripcionesActivas[padre.id] && configuraciones[0] && (
-                          <div className="text-xs text-gray-500">
-                            {configuraciones[0].precio_adulto.toFixed(2)}€/día
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleInscribirProfesor(padre)}
-                        className={`ml-2 p-1 rounded transition-colors ${
-                          inscripcionesActivas[padre.id]
-                            ? 'text-green-600 hover:text-green-900 hover:bg-green-50'
-                            : 'text-orange-600 hover:text-orange-900 hover:bg-orange-50'
-                        }`}
-                        title={inscripcionesActivas[padre.id] ? 'Modificar inscripción comedor' : 'Inscribir al comedor'}
-                      >
-                        <Utensils className="h-4 w-4" />
-                      </button>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -509,7 +483,7 @@ export function PersonalManager() {
                   </tr>
                   {expandedPadre === padre.id && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-2 bg-gray-50">
+                      <td colSpan={4} className="px-6 py-2 bg-gray-50">
                         {hijosDetails[padre.id]?.length > 0 ? (
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
