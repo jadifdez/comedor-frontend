@@ -758,22 +758,13 @@ export function HijosManager() {
                     <div className="text-sm text-gray-900">{(hijo.grado as any)?.nombre}</div>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-sm text-gray-900">{getDiasComedorText(hijo.id)}</div>
-                        {inscripcionesComedor[hijo.id] && (
-                          <div className="text-xs text-gray-500">
-                            {getPrecioPorDias(inscripcionesComedor[hijo.id].dias_semana.length).toFixed(2)}€/día
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        onClick={() => handleComedorClick(hijo)}
-                        className="ml-2 p-1 text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors"
-                        title={inscripcionesComedor[hijo.id] ? 'Modificar inscripción comedor' : 'Inscribir al comedor'}
-                      >
-                        <Utensils className="h-4 w-4" />
-                      </button>
+                    <div>
+                      <div className="text-sm text-gray-900">{getDiasComedorText(hijo.id)}</div>
+                      {inscripcionesComedor[hijo.id] && (
+                        <div className="text-xs text-gray-500">
+                          {getPrecioPorDias(inscripcionesComedor[hijo.id].dias_semana.length).toFixed(2)}€/día
+                        </div>
+                      )}
                     </div>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-center">
