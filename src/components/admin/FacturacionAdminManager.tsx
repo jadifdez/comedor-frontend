@@ -306,6 +306,12 @@ export function FacturacionAdminManager() {
                               <h6 className="font-medium text-gray-900">
                                 {facturacionPadre.padre.nombre} (Personal del colegio)
                               </h6>
+                              {facturacionPadre.padreComedor.tieneDescuentoAsistencia80 && (
+                                <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs">
+                                  <CheckCircle className="h-3 w-3" />
+                                  <span>-{facturacionPadre.padreComedor.porcentajeDescuentoAsistencia80}% (80%)</span>
+                                </span>
+                              )}
                               {facturacionPadre.padreComedor.estaExento && (
                                 <span className="inline-flex items-center space-x-1 px-2 py-0.5 bg-green-100 text-green-700 rounded text-xs font-medium" title={facturacionPadre.padreComedor.motivoExencion}>
                                   <Shield className="h-3 w-3" />
@@ -318,7 +324,7 @@ export function FacturacionAdminManager() {
                                 {facturacionPadre.padreComedor.totalImporte.toFixed(2)}€
                                 {facturacionPadre.padreComedor.estaExento && ' (EXENTO)'}
                               </p>
-                              {facturacionPadre.padreComedor.estaExento && facturacionPadre.padreComedor.totalImporteSinDescuento && (
+                              {(facturacionPadre.padreComedor.tieneDescuentoAsistencia80 || facturacionPadre.padreComedor.estaExento) && facturacionPadre.padreComedor.totalImporteSinDescuento && (
                                 <p className="text-xs text-gray-500 line-through">
                                   {facturacionPadre.padreComedor.totalImporteSinDescuento.toFixed(2)}€
                                 </p>
@@ -329,7 +335,7 @@ export function FacturacionAdminManager() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div className="grid grid-cols-4 gap-4 text-sm">
                             <div>
                               <p className="text-gray-600">Días inscripción:</p>
                               <p className="font-medium">{facturacionPadre.padreComedor.diasInscripcion}</p>
@@ -342,7 +348,24 @@ export function FacturacionAdminManager() {
                               <p className="text-gray-600">Días baja:</p>
                               <p className="font-medium text-red-600">-{facturacionPadre.padreComedor.diasBaja}</p>
                             </div>
+                            {facturacionPadre.padreComedor.tieneDescuentoAsistencia80 && (
+                              <div>
+                                <p className="text-gray-600">Descuento:</p>
+                                <p className="font-medium text-green-600">-{facturacionPadre.padreComedor.porcentajeDescuentoAsistencia80}%</p>
+                              </div>
+                            )}
                           </div>
+
+                          {facturacionPadre.padreComedor.inscripcion && (
+                            <div className="mt-2 text-xs text-gray-500">
+                              Precio diario: {facturacionPadre.padreComedor.inscripcion.precio_diario.toFixed(2)}€
+                              {facturacionPadre.padreComedor.tieneDescuentoAsistencia80 && facturacionPadre.padreComedor.porcentajeAsistencia && (
+                                <span className="ml-2 text-green-600">
+                                  • Asistencia: {facturacionPadre.padreComedor.porcentajeAsistencia}%
+                                </span>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
 
@@ -405,7 +428,7 @@ export function FacturacionAdminManager() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-3 gap-4 text-sm">
+                          <div className="grid grid-cols-4 gap-4 text-sm">
                             <div>
                               <p className="text-gray-600">Días inscripción:</p>
                               <p className="font-medium">{hijoData.diasInscripcion}</p>
@@ -418,11 +441,22 @@ export function FacturacionAdminManager() {
                               <p className="text-gray-600">Días baja:</p>
                               <p className="font-medium text-red-600">-{hijoData.diasBaja}</p>
                             </div>
+                            {hijoData.tieneDescuentoAsistencia80 && (
+                              <div>
+                                <p className="text-gray-600">Descuento:</p>
+                                <p className="font-medium text-green-600">-{hijoData.porcentajeDescuentoAsistencia80}%</p>
+                              </div>
+                            )}
                           </div>
 
                           {hijoData.inscripcion && (
                             <div className="mt-2 text-xs text-gray-500">
                               Precio diario: {hijoData.inscripcion.precio_diario.toFixed(2)}€
+                              {hijoData.tieneDescuentoAsistencia80 && hijoData.porcentajeAsistencia && (
+                                <span className="ml-2 text-green-600">
+                                  • Asistencia: {hijoData.porcentajeAsistencia}%
+                                </span>
+                              )}
                             </div>
                           )}
                         </div>

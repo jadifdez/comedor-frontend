@@ -122,6 +122,17 @@ export function exportarFacturacionAExcel({ mesSeleccionado, facturacion }: Exce
         famFacturacion.padreComedor.diasFacturables.length,
         famFacturacion.padreComedor.totalImporte.toFixed(2) + ' €'
       ]);
+
+      if (famFacturacion.padreComedor.tieneDescuentoAsistencia80) {
+        familiaData.push([]);
+        familiaData.push(['DESCUENTO POR ASISTENCIA']);
+        familiaData.push(['Porcentaje de asistencia:', `${famFacturacion.padreComedor.porcentajeAsistencia}%`]);
+        familiaData.push(['Descuento aplicado:', `${famFacturacion.padreComedor.porcentajeDescuentoAsistencia80}%`]);
+        familiaData.push(['Subtotal sin descuento:', (famFacturacion.padreComedor.totalImporteSinDescuento || 0).toFixed(2) + ' €']);
+        familiaData.push(['Descuento:', ((famFacturacion.padreComedor.totalImporteSinDescuento || 0) - famFacturacion.padreComedor.totalImporte).toFixed(2) + ' €']);
+        familiaData.push(['Total con descuento:', famFacturacion.padreComedor.totalImporte.toFixed(2) + ' €']);
+      }
+
       familiaData.push([]);
 
       familiaData.push(['DETALLE DE DÍAS FACTURABLES (PADRE/MADRE)']);
@@ -191,6 +202,16 @@ export function exportarFacturacionAExcel({ mesSeleccionado, facturacion }: Exce
         hijoData.diasFacturables.length,
         hijoData.totalImporte.toFixed(2) + ' €'
       ]);
+
+      if (hijoData.tieneDescuentoAsistencia80) {
+        familiaData.push([]);
+        familiaData.push(['DESCUENTO POR ASISTENCIA']);
+        familiaData.push(['Porcentaje de asistencia:', `${hijoData.porcentajeAsistencia}%`]);
+        familiaData.push(['Descuento aplicado:', `${hijoData.porcentajeDescuentoAsistencia80}%`]);
+        familiaData.push(['Subtotal sin descuento:', (hijoData.totalImporteSinDescuento || 0).toFixed(2) + ' €']);
+        familiaData.push(['Descuento:', ((hijoData.totalImporteSinDescuento || 0) - hijoData.totalImporte).toFixed(2) + ' €']);
+        familiaData.push(['Total con descuento:', hijoData.totalImporte.toFixed(2) + ' €']);
+      }
 
       familiaData.push([]);
       familiaData.push(['DETALLE DE DÍAS FACTURABLES']);
