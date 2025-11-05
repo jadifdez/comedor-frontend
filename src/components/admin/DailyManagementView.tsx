@@ -8,11 +8,8 @@ import { NotificationModal } from '../NotificationModal';
 
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['recurrentes', 'puntuales']));
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set([
-    'recurrentes-personal', 'recurrentes-alumnos', 'recurrentes-externos',
-    'puntuales-personal', 'puntuales-alumnos', 'puntuales-externos'
-  ]));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedComensal, setSelectedComensal] = useState<DailyDiner | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState('');
