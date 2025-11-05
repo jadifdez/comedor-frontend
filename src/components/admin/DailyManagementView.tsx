@@ -829,7 +829,7 @@ export function DailyManagementView() {
                 <div className="flex items-center space-x-3">
                   <UserCheck className="h-6 w-6 text-blue-600" />
                   <h2 className="text-xl font-bold text-gray-900">
-                    Comensales Recurrentes ({data.comensales_recurrentes.length})
+                    Comensales Inscritos ({data.comensales_recurrentes.length})
                   </h2>
                 </div>
                 {expandedSections.has('recurrentes') ? (
