@@ -315,6 +315,37 @@ export default function InscripcionesManager() {
       .join(', ');
   };
 
+  const DiasSemanaIndicator = ({ diasSeleccionados }: { diasSeleccionados: number[] }) => {
+    const diasAbreviados = [
+      { value: 1, label: 'L' },
+      { value: 2, label: 'M' },
+      { value: 3, label: 'X' },
+      { value: 4, label: 'J' },
+      { value: 5, label: 'V' }
+    ];
+
+    return (
+      <div className="flex gap-1">
+        {diasAbreviados.map(dia => {
+          const isSelected = diasSeleccionados.includes(dia.value);
+          return (
+            <div
+              key={dia.value}
+              className={`w-7 h-7 flex items-center justify-center rounded text-xs font-semibold ${
+                isSelected
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 text-gray-400'
+              }`}
+              title={DIAS_SEMANA.find(d => d.value === dia.value)?.label}
+            >
+              {dia.label}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
@@ -575,9 +606,7 @@ export default function InscripcionesManager() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {getDiasText(insc.dias_semana)}
-                          </div>
+                          <DiasSemanaIndicator diasSeleccionados={insc.dias_semana} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
@@ -638,9 +667,7 @@ export default function InscripcionesManager() {
                           </div>
                         </td>
                         <td className="px-6 py-4">
-                          <div className="text-sm text-gray-900">
-                            {getDiasText(insc.dias_semana)}
-                          </div>
+                          <DiasSemanaIndicator diasSeleccionados={insc.dias_semana} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
