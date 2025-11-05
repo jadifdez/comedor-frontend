@@ -858,49 +858,44 @@ export function DailyManagementView() {
             </div>
 
             {/* Comensales Puntuales */}
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <button
-                onClick={() => toggleSection('puntuales')}
-                className="w-full flex items-center justify-between mb-4 group"
-              >
-                <div className="flex items-center space-x-3">
-                  <Clock className="h-6 w-6 text-purple-600" />
-                  <div>
-                    <h2 className="text-xl font-bold text-gray-900">
-                      Comensales Puntuales ({data.comensales_puntuales.length})
-                    </h2>
-                    <div className="flex items-center gap-3 mt-1 text-sm">
-                      <span className="flex items-center gap-1 text-blue-700">
-                        <DollarSign className="h-4 w-4" />
-                        Altas puntuales: {data.comensales_puntuales.filter(c => c.es_alta_puntual).length}
-                      </span>
-                      <span className="text-gray-400">•</span>
-                      <span className="text-green-700">
-                        Invitaciones: {data.comensales_puntuales.filter(c => c.es_invitacion).length}
-                      </span>
+            {data.comensales_puntuales.length > 0 && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                <button
+                  onClick={() => toggleSection('puntuales')}
+                  className="w-full flex items-center justify-between mb-4 group"
+                >
+                  <div className="flex items-center space-x-3">
+                    <Clock className="h-6 w-6 text-purple-600" />
+                    <div>
+                      <h2 className="text-xl font-bold text-gray-900">
+                        Comensales Puntuales ({data.comensales_puntuales.length})
+                      </h2>
+                      <div className="flex items-center gap-3 mt-1 text-sm">
+                        <span className="flex items-center gap-1 text-blue-700">
+                          <DollarSign className="h-4 w-4" />
+                          Altas puntuales: {data.comensales_puntuales.filter(c => c.es_alta_puntual).length}
+                        </span>
+                        <span className="text-gray-400">•</span>
+                        <span className="text-green-700">
+                          Invitaciones: {data.comensales_puntuales.filter(c => c.es_invitacion).length}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-                {expandedSections.has('puntuales') ? (
-                  <ChevronUp className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
-                ) : (
-                  <ChevronDown className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
-                )}
-              </button>
-
-              {expandedSections.has('puntuales') && (
-                <div className="mt-4">
-                  {data.comensales_puntuales.length > 0 ? (
-                    renderComensalesTable(data.comensales_puntuales, 'puntuales')
+                  {expandedSections.has('puntuales') ? (
+                    <ChevronUp className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
                   ) : (
-                    <div className="text-center py-8 text-gray-500">
-                      <Clock className="h-12 w-12 mx-auto mb-2 text-gray-300" />
-                      <p>No hay comensales puntuales para este día</p>
-                    </div>
+                    <ChevronDown className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
                   )}
-                </div>
-              )}
-            </div>
+                </button>
+
+                {expandedSections.has('puntuales') && (
+                  <div className="mt-4">
+                    {renderComensalesTable(data.comensales_puntuales, 'puntuales')}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </>
       )}
