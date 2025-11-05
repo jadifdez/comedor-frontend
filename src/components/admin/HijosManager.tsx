@@ -719,9 +719,6 @@ export function HijosManager() {
                   Grado
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Restricciones
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Exención
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -753,15 +750,6 @@ export function HijosManager() {
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{(hijo.grado as any)?.nombre}</div>
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap text-center">
-                    <button
-                      onClick={() => handleRestriccionesClick(hijo)}
-                      className="p-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
-                      title="Gestionar restricciones dietéticas y alergias"
-                    >
-                      <Heart className={`h-4 w-4 ${hijosConRestricciones.has(hijo.id) ? 'fill-current' : ''}`} />
-                    </button>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-center">
                     {hijo.exento_facturacion ? (
@@ -796,6 +784,13 @@ export function HijosManager() {
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center justify-center space-x-2">
+                      <button
+                        onClick={() => handleRestriccionesClick(hijo)}
+                        className="p-1 text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors"
+                        title="Gestionar restricciones dietéticas y alergias"
+                      >
+                        <Heart className={`h-4 w-4 ${hijosConRestricciones.has(hijo.id) ? 'fill-current' : ''}`} />
+                      </button>
                       <button
                         onClick={() => handleEdit(hijo)}
                         className="p-1 text-green-600 hover:text-green-900 hover:bg-green-50 rounded transition-colors"
