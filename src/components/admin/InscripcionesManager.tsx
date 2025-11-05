@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Calendar, Plus, Edit2, Trash2, User, Users, X, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
+import { SearchableSelect } from '../SearchableSelect';
 
 interface Hijo {
   id: string;
@@ -377,30 +378,42 @@ export default function InscripcionesManager() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    {activeTab === 'alumnos' ? 'Alumno' : 'Personal'} *
-                  </label>
-                  <select
-                    value={formData.persona_id}
-                    onChange={(e) => setFormData({ ...formData, persona_id: e.target.value })}
-                    disabled={!!editingId}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
-                    required
-                  >
-                    <option value="">Selecciona...</option>
-                    {activeTab === 'alumnos'
-                      ? todosAlumnos.map(h => (
-                          <option key={h.id} value={h.id}>
-                            {h.nombre} - {h.grado?.nombre || 'Sin grado'}
-                          </option>
-                        ))
-                      : todosPadres.map(p => (
-                          <option key={p.id} value={p.id}>
-                            {p.nombre}
-                          </option>
-                        ))
-                    }
-                  </select>
+                  {editingId ? (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        {activeTab === 'alumnos' ? 'Alumno' : 'Personal'} *
+                      </label>
+                      <input
+                        type="text"
+                        value={
+                          activeTab === 'alumnos'
+                            ? todosAlumnos.find(h => h.id === formData.persona_id)?.nombre || ''
+                            : todosPadres.find(p => p.id === formData.persona_id)?.nombre || ''
+                        }
+                        disabled
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600"
+                      />
+                    </>
+                  ) : (
+                    <SearchableSelect
+                      label={activeTab === 'alumnos' ? 'Alumno' : 'Personal'}
+                      options={
+                        activeTab === 'alumnos'
+                          ? todosAlumnos.map(h => ({
+                              value: h.id,
+                              label: `${h.nombre} - ${h.grado?.nombre || 'Sin grado'}`
+                            }))
+                          : todosPadres.map(p => ({
+                              value: p.id,
+                              label: p.nombre
+                            }))
+                      }
+                      value={formData.persona_id}
+                      onChange={(value) => setFormData({ ...formData, persona_id: value })}
+                      placeholder={`Buscar ${activeTab === 'alumnos' ? 'alumno' : 'personal'}...`}
+                      required
+                    />
+                  )}
                 </div>
 
                 <div>
