@@ -610,7 +610,6 @@ Equipo del Comedor`
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Padre</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Contacto</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hijos</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Exención</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Acciones</th>
               </tr>
@@ -635,7 +634,6 @@ Equipo del Comedor`
                           )}
                           {padre.exento_facturacion && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 flex-shrink-0" title={padre.motivo_exencion || 'Exento'}>
-                              <Shield className="h-3 w-3 mr-1" />
                               EXENTO
                             </span>
                           )}
@@ -662,23 +660,6 @@ Equipo del Comedor`
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {padre.exento_facturacion ? (
-                        <div className="text-sm">
-                          <div className="flex items-center text-green-700 font-medium">
-                            <Shield className="h-4 w-4 mr-1" />
-                            Exento
-                          </div>
-                          {padre.motivo_exencion && (
-                            <div className="text-xs text-gray-500 mt-0.5" title={padre.motivo_exencion}>
-                              {padre.motivo_exencion.length > 20 ? padre.motivo_exencion.substring(0, 20) + '...' : padre.motivo_exencion}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-sm text-gray-400">-</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
                       <button
                         onClick={() => toggleActivo(padre)}
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
@@ -700,15 +681,6 @@ Equipo del Comedor`
                     </td>
                     <td className="px-6 py-4 text-sm font-medium w-40">
                       <div className="flex space-x-2 flex-shrink-0">
-                        {/* NUEVO: Enviar email backend */}
-                        <button
-                          onClick={() => openEmailModal(padre)}
-                          className="text-blue-600 hover:text-blue-900 flex-shrink-0"
-                          title="Enviar email"
-                        >
-                          <Send className="h-4 w-4" />
-                        </button>
-
                         {padre.es_personal && (
                           <button
                             onClick={() => handleInscribirProfesor(padre)}
@@ -745,7 +717,7 @@ Equipo del Comedor`
 
                   {expandedPadre === padre.id && (
                     <tr>
-                      <td colSpan={5} className="px-6 py-2 bg-gray-50">
+                      <td colSpan={4} className="px-6 py-2 bg-gray-50">
                         {hijosDetails[padre.id]?.length > 0 ? (
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
