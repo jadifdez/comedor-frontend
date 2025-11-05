@@ -141,6 +141,7 @@ export default function InscripcionesManager() {
       .from('padres')
       .select('id, nombre, es_personal')
       .eq('es_personal', true)
+      .eq('activo', true)
       .order('nombre');
 
     if (!error && data) {
@@ -154,6 +155,19 @@ export default function InscripcionesManager() {
     fetchTodosAlumnos();
     fetchTodosPadres();
   }, []);
+
+  // Filtrar padres que NO tienen una inscripción activa
+  const padresDisponibles = todosPadres.filter(padre => {
+    // Si estamos editando, permitir el padre actual
+    if (editingId && activeTab === 'personal') {
+      const inscripcionActual = inscripcionesPadres.find(i => i.id === editingId);
+      if (inscripcionActual && inscripcionActual.padre_id === padre.id) {
+        return true;
+      }
+    }
+    // Verificar si el padre ya tiene una inscripción activa
+    return !inscripcionesPadres.some(i => i.padre_id === padre.id && i.activo);
+  });
 
   const resetForm = () => {
     setFormData({
@@ -403,7 +417,7 @@ export default function InscripcionesManager() {
                               value: h.id,
                               label: `${h.nombre} - ${h.grado?.nombre || 'Sin grado'}`
                             }))
-                          : todosPadres.map(p => ({
+                          : padresDisponibles.map(p => ({
                               value: p.id,
                               label: p.nombre
                             }))
