@@ -28,6 +28,7 @@ export function HijosManager() {
   const [restriccionesList, setRestriccionesList] = useState<any[]>([]);
   const [hijoRestricciones, setHijoRestricciones] = useState<string[]>([]);
   const [hijosConRestricciones, setHijosConRestricciones] = useState<Set<string>>(new Set());
+  const [errorMessage, setErrorMessage] = useState<string>('');
   const [formData, setFormData] = useState({
     nombre: '',
     padre_id: '',
@@ -164,20 +165,35 @@ export function HijosManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+    setErrorMessage('');
+
     try {
+      // Preparar datos para enviar, convirtiendo strings vacías a null para fechas
+      const dataToSave = {
+        ...formData,
+        fecha_inicio_exencion: formData.fecha_inicio_exencion || null,
+        fecha_fin_exencion: formData.fecha_fin_exencion || null,
+        motivo_exencion: formData.exento_facturacion ? formData.motivo_exencion : null
+      };
+
+      console.log('Guardando hijo con datos:', dataToSave);
+
       if (editingHijo) {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('hijos')
-          .update(formData)
-          .eq('id', editingHijo.id);
-        
+          .update(dataToSave)
+          .eq('id', editingHijo.id)
+          .select();
+
+        console.log('Resultado de update:', { data, error });
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from('hijos')
-          .insert([formData]);
-        
+          .insert([dataToSave])
+          .select();
+
+        console.log('Resultado de insert:', { data, error });
         if (error) throw error;
       }
 
@@ -185,8 +201,9 @@ export function HijosManager() {
       setShowForm(false);
       setEditingHijo(null);
       loadData();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving hijo:', error);
+      setErrorMessage(error?.message || 'Error al guardar el alumno. Por favor, intenta de nuevo.');
     }
   };
 
@@ -533,6 +550,17 @@ export function HijosManager() {
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {editingHijo ? 'Editar Alumno' : 'Nuevo Alumno'}
           </h3>
+          {errorMessage && (
+            <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-sm font-semibold text-red-800 mb-1">Error al guardar</h4>
+                  <p className="text-sm text-red-700">{errorMessage}</p>
+                </div>
+              </div>
+            </div>
+          )}
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
