@@ -13,6 +13,7 @@ interface Padre {
   id: string;
   nombre: string;
   es_personal: boolean;
+  exento_facturacion: boolean;
 }
 
 interface InscripcionAlumno {
@@ -104,7 +105,8 @@ export default function InscripcionesManager() {
         padre:padres(
           id,
           nombre,
-          es_personal
+          es_personal,
+          exento_facturacion
         )
       `)
       .order('activo', { ascending: false });
@@ -670,9 +672,15 @@ export default function InscripcionesManager() {
                           <DiasSemanaIndicator diasSeleccionados={insc.dias_semana} />
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {insc.precio_diario.toFixed(2)} €
-                          </div>
+                          {insc.padre?.exento_facturacion ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              Exento
+                            </span>
+                          ) : (
+                            <div className="text-sm text-gray-900">
+                              {insc.precio_diario.toFixed(2)} €
+                            </div>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
