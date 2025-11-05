@@ -719,9 +719,6 @@ export function HijosManager() {
                   Grado
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Comedor
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Restricciones
                 </th>
                 <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -756,16 +753,6 @@ export function HijosManager() {
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{(hijo.grado as any)?.nombre}</div>
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm text-gray-900">{getDiasComedorText(hijo.id)}</div>
-                      {inscripcionesComedor[hijo.id] && (
-                        <div className="text-xs text-gray-500">
-                          {getPrecioPorDias(inscripcionesComedor[hijo.id].dias_semana.length).toFixed(2)}€/día
-                        </div>
-                      )}
-                    </div>
                   </td>
                   <td className="px-3 py-3 whitespace-nowrap text-center">
                     <button
