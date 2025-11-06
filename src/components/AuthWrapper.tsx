@@ -567,48 +567,48 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Comedor Colegio Los Pinos</h1>
             <p className="text-gray-600">Acceso para padres autorizados</p>
             <p className="text-xs text-gray-400 mt-2">v1.0.0</p>
-
-            {/* ✅ Banner verde debajo del logo */}
-            {loginBanner && (
-              <div className="mt-4 inline-flex items-start text-left w-full">
-                <div className="w-full bg-green-50 border border-green-200 rounded-lg p-3">
-                  <div className="flex items-start space-x-2">
-                    <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-green-800">{loginBanner}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Banner azul para cambio de email */}
-            {emailChangeBanner && (
-              <div className="mt-4 inline-flex items-start text-left w-full">
-                <div className="w-full bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <div className="flex items-start space-x-3">
-                    <Mail className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div className="flex-1">
-                      <h3 className="text-sm font-semibold text-blue-900 mb-2">Confirmación de email requerida</h3>
-                      <div className="text-sm text-blue-800 space-y-2">
-                        <p>Hemos enviado un correo de confirmación a:</p>
-                        <p className="font-mono font-semibold bg-blue-100 px-2 py-1 rounded">{emailChangeBanner.newEmail}</p>
-                        <p className="font-medium">Debes hacer clic en el enlace del correo antes de poder iniciar sesión.</p>
-                        <p className="text-xs text-blue-700 mt-2">Si no encuentras el correo, revisa tu carpeta de spam o correo no deseado.</p>
-                      </div>
-                      <button
-                        onClick={() => {
-                          setEmailChangeBanner(null);
-                          localStorage.removeItem('lp_email_change_pending');
-                        }}
-                        className="mt-3 text-xs text-blue-600 hover:text-blue-800 font-medium underline"
-                      >
-                        Cerrar este mensaje
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Banner azul para cambio de email - CON MÁXIMA PRIORIDAD */}
+          {emailChangeBanner && (
+            <div className="mb-6">
+              <div className="w-full bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <Mail className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <h3 className="text-sm font-semibold text-blue-900 mb-2">Confirmación de email requerida</h3>
+                    <div className="text-sm text-blue-800 space-y-2">
+                      <p>Hemos enviado un correo de confirmación a:</p>
+                      <p className="font-mono font-semibold bg-blue-100 px-2 py-1 rounded">{emailChangeBanner.newEmail}</p>
+                      <p className="font-medium">Debes hacer clic en el enlace del correo antes de poder iniciar sesión.</p>
+                      <p className="text-xs text-blue-700 mt-2">Si no encuentras el correo, revisa tu carpeta de spam o correo no deseado.</p>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setEmailChangeBanner(null);
+                        localStorage.removeItem('lp_email_change_pending');
+                      }}
+                      className="mt-3 text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                    >
+                      Cerrar este mensaje
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ✅ Banner verde para recuperación de contraseña exitosa */}
+          {loginBanner && !emailChangeBanner && (
+            <div className="mb-6">
+              <div className="w-full bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-start space-x-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
+                  <p className="text-sm text-green-800">{loginBanner}</p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {isPadreAutorizado === false && !emailChangeBanner && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
