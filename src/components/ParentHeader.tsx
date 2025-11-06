@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle, Gift, User, Home } from 'lucide-react';
+import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle, Gift, User, Home, Key } from 'lucide-react';
 
-type TabType = 'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil';
+type TabType = 'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil' | 'password';
 
 interface ParentHeaderProps {
   activeTab: TabType;
@@ -167,6 +167,14 @@ export function ParentHeader({ activeTab, onTabChange }: ParentHeaderProps) {
                 >
                   <User className="h-5 w-5" />
                   <span className="text-sm">Mi Perfil</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleMenuItemClick('password')}
+                  className={getMenuItemClass('password')}
+                >
+                  <Key className="h-5 w-5" />
+                  <span className="text-sm">Cambiar Contraseña</span>
                 </button>
               </div>
             )}

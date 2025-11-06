@@ -18,6 +18,7 @@ import { FacturacionView } from './components/FacturacionView';
 import { InvitacionesView } from './components/InvitacionesView';
 import { RestriccionesDieteticasHijo } from './components/RestriccionesDieteticasHijo';
 import { PerfilPadre } from './components/PerfilPadre';
+import { CambiarPasswordPadre } from './components/CambiarPasswordPadre';
 import { SuccessMessage } from './components/SuccessMessage';
 import { MenusDashboard } from './components/MenusDashboard';
 import { useInscripcionesComedor } from './hooks/useInscripcionesComedor';
@@ -33,7 +34,7 @@ import { formatDateForDisplay } from './utils/dateUtils';
 import ResetPassword from './pages/ResetPassword';
 
 function AppContent({ user }: { user: User }) {
-  const [activeTab, setActiveTab] = useState<'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil' | 'password'>('home');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
@@ -554,6 +555,8 @@ function AppContent({ user }: { user: User }) {
           <RestriccionesDieteticasHijo />
         ) : activeTab === 'perfil' ? (
           <PerfilPadre user={user} />
+        ) : activeTab === 'password' ? (
+          <CambiarPasswordPadre />
         ) : null}
       </div>
     </main>
