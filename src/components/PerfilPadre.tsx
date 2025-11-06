@@ -125,6 +125,15 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
           throw new Error(`No se pudo actualizar el email: ${authError.message}`);
         }
         console.log('Auth.users actualizado correctamente');
+
+        // CRITICAL: Refrescar la sesión para obtener el nuevo JWT con el email actualizado
+        console.log('Refrescando sesión para obtener nuevo JWT...');
+        const { error: refreshError } = await supabase.auth.refreshSession();
+        if (refreshError) {
+          console.error('Error al refrescar sesión:', refreshError);
+          throw new Error(`No se pudo refrescar la sesión: ${refreshError.message}`);
+        }
+        console.log('Sesión refrescada correctamente');
       }
 
       console.log('Intentando actualizar tabla padres...');
