@@ -44,6 +44,14 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
       if (fetchError) throw fetchError;
       if (!data) throw new Error('No se encontraron datos del padre');
 
+      // Ensure user_id is set for this padre
+      if (!data.user_id) {
+        await supabase
+          .from('padres')
+          .update({ user_id: user.id })
+          .eq('id', data.id);
+      }
+
       setPadreData(data);
       setNombre(data.nombre);
       setEmail(data.email);
