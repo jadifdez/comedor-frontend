@@ -128,15 +128,27 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
       }
 
       console.log('Intentando actualizar tabla padres...');
+
+      // Debug: verificar sesión y JWT actual
+      const { data: { session } } = await supabase.auth.getSession();
+      console.log('Session user.id:', session?.user?.id);
+      console.log('Session user.email:', session?.user?.email);
+      console.log('padreData.id:', padreData.id);
+      console.log('padreData.user_id:', padreData.user_id);
+      console.log('¿Coinciden?', session?.user?.id === padreData.user_id);
+
       // Actualizar datos en la tabla padres (después de auth.users si el email cambió)
-      const { error: updateError } = await supabase
+      const { data: updateData, error: updateError } = await supabase
         .from('padres')
         .update({
           nombre: nombreTrimmed,
           email: emailTrimmed,
           telefono: telefonoTrimmed || null
         })
-        .eq('id', padreData.id);
+        .eq('id', padreData.id)
+        .select();
+
+      console.log('Resultado del update:', { data: updateData, error: updateError });
 
       if (updateError) {
         console.error('Error al actualizar padres:', updateError);
