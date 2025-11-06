@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Save, AlertCircle, CheckCircle2, Mail, Phone, UserCircle } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle2, Mail, Phone, UserCircle, Info } from 'lucide-react';
 
 interface PerfilPadreProps {
   user: User;
@@ -148,13 +148,22 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
       }
 
       if (emailChanged) {
-        setSuccess('Perfil actualizado correctamente. Por favor, verifica tu nuevo email para confirmar el cambio. Serás redirigido para que inicies sesión nuevamente.');
+        // Guardar información del cambio de email para mostrar banner en login
+        try {
+          localStorage.setItem('lp_email_change_pending', JSON.stringify({
+            newEmail: emailTrimmed,
+            oldEmail: padreData.email,
+            ts: Date.now()
+          }));
+        } catch {}
 
-        // Esperar 3 segundos y cerrar sesión para que el usuario inicie sesión con el nuevo email
+        setSuccess('email_change_pending');
+
+        // Esperar 5 segundos y cerrar sesión para que el usuario confirme el nuevo email
         setTimeout(async () => {
           await supabase.auth.signOut();
           window.location.href = '/';
-        }, 3000);
+        }, 5000);
       } else {
         setSuccess('Perfil actualizado correctamente');
         console.log('Perfil actualizado, recargando datos...');
@@ -221,7 +230,23 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
           </div>
         )}
 
-        {success && (
+        {success && success === 'email_change_pending' && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <Info className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <h3 className="text-sm font-semibold text-blue-900 mb-2">Confirmación de email requerida</h3>
+                <div className="text-sm text-blue-800 space-y-2">
+                  <p className="font-medium">Hemos enviado un correo de confirmación a tu nuevo email.</p>
+                  <p>Debes hacer clic en el enlace del correo antes de poder iniciar sesión con tu nueva dirección.</p>
+                  <p className="text-xs mt-2 text-blue-700">Serás redirigido al inicio de sesión en unos segundos...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {success && success !== 'email_change_pending' && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <div className="flex items-start space-x-3">
               <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />

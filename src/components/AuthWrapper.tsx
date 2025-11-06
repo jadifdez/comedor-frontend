@@ -77,8 +77,9 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
   const [error, setError] = useState('');
   const [infoMessage, setInfoMessage] = useState('');
 
-  // Banner verde tras reset (debajo del logo)
+  // Banner tras reset o cambio de email (debajo del logo)
   const [loginBanner, setLoginBanner] = useState<string>('');
+  const [emailChangeBanner, setEmailChangeBanner] = useState<{ newEmail: string; oldEmail: string } | null>(null);
 
   // Recuperación (solicitud)
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -167,6 +168,25 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     } finally {
       // Siempre limpiamos el flag
       localStorage.removeItem('lp_recovery_success');
+    }
+  }, []);
+
+  // 1.2) Si venimos de un cambio de email, mostrar banner informativo
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('lp_email_change_pending');
+      if (!raw) return;
+      const obj = JSON.parse(raw) as { newEmail?: string; oldEmail?: string; ts?: number };
+      // 15 minutos de validez para el banner
+      if (obj?.ts && Date.now() - obj.ts < 15 * 60 * 1000) {
+        if (obj.newEmail && obj.oldEmail) {
+          setEmailChangeBanner({ newEmail: obj.newEmail, oldEmail: obj.oldEmail });
+        }
+      } else {
+        localStorage.removeItem('lp_email_change_pending');
+      }
+    } catch {
+      // no-op
     }
   }, []);
 
@@ -553,6 +573,35 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
                   <div className="flex items-start space-x-2">
                     <CheckCircle2 className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
                     <p className="text-sm text-green-800">{loginBanner}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Banner azul para cambio de email */}
+            {emailChangeBanner && (
+              <div className="mt-4 inline-flex items-start text-left w-full">
+                <div className="w-full bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-start space-x-3">
+                    <Mail className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="text-sm font-semibold text-blue-900 mb-2">Confirmación de email requerida</h3>
+                      <div className="text-sm text-blue-800 space-y-2">
+                        <p>Hemos enviado un correo de confirmación a:</p>
+                        <p className="font-mono font-semibold bg-blue-100 px-2 py-1 rounded">{emailChangeBanner.newEmail}</p>
+                        <p className="font-medium">Debes hacer clic en el enlace del correo antes de poder iniciar sesión.</p>
+                        <p className="text-xs text-blue-700 mt-2">Si no encuentras el correo, revisa tu carpeta de spam o correo no deseado.</p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          setEmailChangeBanner(null);
+                          localStorage.removeItem('lp_email_change_pending');
+                        }}
+                        className="mt-3 text-xs text-blue-600 hover:text-blue-800 font-medium underline"
+                      >
+                        Cerrar este mensaje
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
