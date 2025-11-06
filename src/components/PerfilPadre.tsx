@@ -131,9 +131,11 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
       // Si el email cambió, actualizar también en auth.users
       if (emailChanged) {
         console.log('Email cambió, intentando actualizar auth.users...');
-        const { error: authError } = await supabase.auth.updateUser({
+        const { data: authData, error: authError } = await supabase.auth.updateUser({
           email: emailTrimmed
         });
+
+        console.log('Resultado de updateUser:', { data: authData, error: authError });
 
         if (authError) {
           console.error('Error al actualizar auth.users:', authError);
