@@ -13,24 +13,24 @@ import { ConfiguracionPreciosManager } from './components/admin/ConfiguracionPre
 import { InvitacionesManager } from './components/admin/InvitacionesManager';
 import { DailyManagementView } from './components/admin/DailyManagementView';
 import { RestriccionesDieteticasManager } from './components/admin/RestriccionesDieteticasManager';
+import { CambiarPasswordAdmin } from './components/admin/CambiarPasswordAdmin';
 import InscripcionesManager from './components/admin/InscripcionesManager';
 import { User } from '@supabase/supabase-js';
 
-function AdminContent({ user }: { user: User }) {
-  const [activeTab, setActiveTab] = useState<'administradores' | 'padres' | 'personal' | 'hijos' | 'grados' | 'menu' | 'festivos' | 'facturacion' | 'configuracion' | 'invitaciones' | 'gestion-diaria' | 'restricciones' | 'inscripciones'>('gestion-diaria');
+type TabType = 'administradores' | 'padres' | 'personal' | 'hijos' | 'grados' | 'menu' | 'festivos' | 'facturacion' | 'configuracion' | 'invitaciones' | 'gestion-diaria' | 'restricciones' | 'inscripciones' | 'cambiar-password';
 
+function AdminContent({ user, activeTab, setActiveTab }: { user: User; activeTab: TabType; setActiveTab: (tab: TabType) => void }) {
   useEffect(() => {
-    // Escuchar eventos para cambiar de pestaña
     const handleTabChange = (event: CustomEvent) => {
       setActiveTab(event.detail.tab);
     };
 
     window.addEventListener('changeAdminTab', handleTabChange as EventListener);
-    
+
     return () => {
       window.removeEventListener('changeAdminTab', handleTabChange as EventListener);
     };
-  }, []);
+  }, [setActiveTab]);
 
   return (
     <>
@@ -50,15 +50,18 @@ function AdminContent({ user }: { user: User }) {
         {activeTab === 'configuracion' && <ConfiguracionPreciosManager />}
         {activeTab === 'invitaciones' && <InvitacionesManager />}
         {activeTab === 'restricciones' && <RestriccionesDieteticasManager />}
+        {activeTab === 'cambiar-password' && <CambiarPasswordAdmin />}
       </main>
     </>
   );
 }
 
 function AdminApp() {
+  const [activeTab, setActiveTab] = useState<TabType>('gestion-diaria');
+
   return (
-    <AdminWrapper>
-      {(user) => <AdminContent user={user} />}
+    <AdminWrapper onChangePasswordClick={() => setActiveTab('cambiar-password')}>
+      {(user) => <AdminContent user={user} activeTab={activeTab} setActiveTab={setActiveTab} />}
     </AdminWrapper>
   );
 }

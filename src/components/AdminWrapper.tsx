@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { supabase, Administrador } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { AuthError } from '@supabase/supabase-js';
-import { LogIn, LogOut, AlertCircle, Shield } from 'lucide-react';
+import { LogIn, LogOut, AlertCircle, Shield, Key } from 'lucide-react';
 
 interface AdminWrapperProps {
   children: (user: User) => React.ReactNode;
+  onChangePasswordClick?: () => void;
 }
 
-export function AdminWrapper({ children }: AdminWrapperProps) {
+export function AdminWrapper({ children, onChangePasswordClick }: AdminWrapperProps) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
@@ -233,14 +234,26 @@ export function AdminWrapper({ children }: AdminWrapperProps) {
             <div className="flex items-center space-x-2">
               <Shield className="h-5 w-5 text-white" />
               <span className="text-sm font-medium text-white">Panel de Administración</span>
+              <span className="text-xs text-green-200">• {user.email}</span>
             </div>
-            <button
-              onClick={handleSignOut}
-              className="flex items-center space-x-1 text-sm text-white hover:text-green-100 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              <span>Cerrar sesión</span>
-            </button>
+            <div className="flex items-center space-x-3">
+              {onChangePasswordClick && (
+                <button
+                  onClick={onChangePasswordClick}
+                  className="flex items-center space-x-1 text-sm text-white hover:text-green-100 transition-colors"
+                >
+                  <Key className="h-4 w-4" />
+                  <span>Cambiar contraseña</span>
+                </button>
+              )}
+              <button
+                onClick={handleSignOut}
+                className="flex items-center space-x-1 text-sm text-white hover:text-green-100 transition-colors"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Cerrar sesión</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

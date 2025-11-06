@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Users, GraduationCap, ChefHat, Calendar, Euro, Settings, Gift, ChevronDown, ClipboardList, AlertCircle, UserPlus } from 'lucide-react';
 
-type TabType = 'administradores' | 'padres' | 'personal' | 'hijos' | 'grados' | 'menu' | 'festivos' | 'facturacion' | 'configuracion' | 'invitaciones' | 'gestion-diaria' | 'restricciones' | 'inscripciones';
+type TabType = 'administradores' | 'padres' | 'personal' | 'hijos' | 'grados' | 'menu' | 'festivos' | 'facturacion' | 'configuracion' | 'invitaciones' | 'gestion-diaria' | 'restricciones' | 'inscripciones' | 'cambiar-password';
 
 interface AdminHeaderProps {
   activeTab: TabType;
