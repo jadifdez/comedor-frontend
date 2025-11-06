@@ -100,8 +100,22 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     return null;
   });
 
-  // Control para mostrar error de autorización solo después de un pequeño delay (evita parpadeo con banner)
-  const [showAuthError, setShowAuthError] = useState(false);
+  // Control para mostrar error de autorización: NO mostrar si hay banner de email pendiente
+  const [showAuthError, setShowAuthError] = useState(() => {
+    // Si hay un banner de email pendiente, NO mostrar error de autorización
+    try {
+      const raw = localStorage.getItem('lp_email_change_pending');
+      if (raw) {
+        const obj = JSON.parse(raw) as { ts?: number };
+        if (obj?.ts && Date.now() - obj.ts < 15 * 60 * 1000) {
+          return false; // HAY banner pendiente, NO mostrar error
+        }
+      }
+    } catch {
+      // no-op
+    }
+    return false; // Por defecto no mostrar hasta que se evalúe en useEffect
+  });
 
   // Recuperación (solicitud)
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -220,6 +234,11 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
         }
         checkPadreAutorizado(session.user);
       } else {
+        // Si hay banner de email pendiente, no mostrar error de autorización
+        const hasEmailBanner = localStorage.getItem('lp_email_change_pending');
+        if (hasEmailBanner) {
+          setIsPadreAutorizado(null); // null = no evaluado aún
+        }
         setUser(null);
         setLoading(false);
       }
@@ -264,21 +283,22 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     return () => clearTimeout(t);
   }, [showSetNewPassword]);
 
-  // 3.2) Control del error de autorización: solo mostrarlo si NO hay banner de email y después de un delay
+  // 3.2) Control del error de autorización: NUNCA mostrarlo si hay banner de email
   useEffect(() => {
-    // Si hay banner de email, nunca mostrar error
+    // CRÍTICO: Si hay banner de email, NUNCA mostrar error de autorización
     if (emailChangeBanner) {
       setShowAuthError(false);
       return;
     }
 
-    // Si no hay usuario o no está autorizado, esperar un poco antes de mostrar error
+    // Si no hay usuario o no está autorizado, mostrar error después de un delay
     if (!user || isPadreAutorizado === false) {
       const timer = setTimeout(() => {
         setShowAuthError(true);
-      }, 100); // 100ms de delay para que el banner azul se renderice primero
+      }, 800); // Delay para asegurar que otros banners se rendericen primero
       return () => clearTimeout(timer);
     } else {
+      // Hay usuario y está autorizado
       setShowAuthError(false);
     }
   }, [user, isPadreAutorizado, emailChangeBanner]);
@@ -633,7 +653,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
           )}
 
           {showAuthError && isPadreAutorizado === false && !emailChangeBanner && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4 animate-[fadeIn_0.3s_ease-in]">
               <div className="flex items-start space-x-2">
                 <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
