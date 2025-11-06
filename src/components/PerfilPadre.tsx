@@ -111,66 +111,41 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
         }
       }
 
-      // Si el email cambió, actualizar PRIMERO en auth.users
-      if (emailChanged) {
-        console.log('Email cambió, actualizando PRIMERO auth.users...');
-        const { data: authData, error: authError } = await supabase.auth.updateUser({
-          email: emailTrimmed
-        });
-
-        console.log('Resultado de updateUser:', { data: authData, error: authError });
-
-        if (authError) {
-          console.error('Error al actualizar auth.users:', authError);
-          throw new Error(`No se pudo actualizar el email: ${authError.message}`);
-        }
-        console.log('Auth.users actualizado correctamente');
-
-        // CRITICAL: Refrescar la sesión para obtener el nuevo JWT con el email actualizado
-        console.log('Refrescando sesión para obtener nuevo JWT...');
-        const { error: refreshError } = await supabase.auth.refreshSession();
-        if (refreshError) {
-          console.error('Error al refrescar sesión:', refreshError);
-          throw new Error(`No se pudo refrescar la sesión: ${refreshError.message}`);
-        }
-        console.log('Sesión refrescada correctamente');
-      }
-
-      console.log('Intentando actualizar tabla padres...');
-
-      // Debug: verificar sesión y JWT actual
-      const { data: { session } } = await supabase.auth.getSession();
-      console.log('Session user.id:', session?.user?.id);
-      console.log('Session user.email:', session?.user?.email);
-      console.log('padreData.id:', padreData.id);
-      console.log('padreData.user_id:', padreData.user_id);
-      console.log('¿Coinciden?', session?.user?.id === padreData.user_id);
-
-      // Actualizar datos en la tabla padres (después de auth.users si el email cambió)
-      const { data: updateData, error: updateError } = await supabase
+      // Actualizar datos en la tabla padres PRIMERO
+      console.log('Actualizando tabla padres...');
+      const { error: updateError } = await supabase
         .from('padres')
         .update({
           nombre: nombreTrimmed,
           email: emailTrimmed,
           telefono: telefonoTrimmed || null
         })
-        .eq('id', padreData.id)
-        .select();
-
-      console.log('Resultado del update:', { data: updateData, error: updateError });
+        .eq('id', padreData.id);
 
       if (updateError) {
         console.error('Error al actualizar padres:', updateError);
-
-        // Si falló y habíamos cambiado el email, revertir auth.users
-        if (emailChanged) {
-          console.log('Revirtiendo cambio de email en auth.users...');
-          await supabase.auth.updateUser({ email: padreData.email });
-        }
-
         throw new Error(`No se pudo actualizar el perfil: ${updateError.message}`);
       }
       console.log('Tabla padres actualizada correctamente');
+
+      // Si el email cambió, actualizar DESPUÉS en auth.users para que se envíe el email de confirmación
+      if (emailChanged) {
+        console.log('Email cambió, actualizando auth.users (se enviará email de confirmación)...');
+        const { error: authError } = await supabase.auth.updateUser({
+          email: emailTrimmed
+        });
+
+        if (authError) {
+          console.error('Error al actualizar auth.users:', authError);
+          // Revertir el cambio en padres
+          await supabase
+            .from('padres')
+            .update({ email: padreData.email })
+            .eq('id', padreData.id);
+          throw new Error(`No se pudo actualizar el email: ${authError.message}`);
+        }
+        console.log('Auth.users actualizado, email de confirmación enviado');
+      }
 
       if (emailChanged) {
         setSuccess('Perfil actualizado correctamente. Por favor, verifica tu nuevo email para confirmar el cambio. Serás redirigido para que inicies sesión nuevamente.');
