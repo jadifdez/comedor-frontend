@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { Save, AlertCircle, CheckCircle2, Mail, Phone, UserCircle, Info } from 'lucide-react';
+import { Save, AlertCircle, CheckCircle2, Mail, Phone, CircleUser as UserCircle, Info } from 'lucide-react';
 
 interface PerfilPadreProps {
   user: User;
