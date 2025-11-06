@@ -112,6 +112,18 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
       }
 
       console.log('Intentando actualizar tabla padres...');
+
+      // Debug: verificar auth.uid()
+      const { data: { user } } = await supabase.auth.getUser();
+      console.log('Usuario actual auth.uid():', user?.id);
+      console.log('padreData.user_id:', padreData.user_id);
+      console.log('padreData.id:', padreData.id);
+      console.log('Datos a actualizar:', {
+        nombre: nombreTrimmed,
+        email: emailTrimmed,
+        telefono: telefonoTrimmed || null
+      });
+
       // Actualizar datos en la tabla padres
       const { error: updateError } = await supabase
         .from('padres')
