@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AdminWrapper } from './components/AdminWrapper';
 import { AdminHeader } from './components/AdminHeader';
+import { OfflineBanner } from './components/OfflineBanner';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { AdministradoresManager } from './components/admin/AdministradoresManager';
 import { PadresManager } from './components/admin/PadresManager';
 import { PersonalManager } from './components/admin/PersonalManager';
@@ -20,6 +22,8 @@ import { User } from '@supabase/supabase-js';
 type TabType = 'administradores' | 'padres' | 'personal' | 'hijos' | 'grados' | 'menu' | 'festivos' | 'facturacion' | 'configuracion' | 'invitaciones' | 'gestion-diaria' | 'restricciones' | 'inscripciones' | 'cambiar-password';
 
 function AdminContent({ user, activeTab, setActiveTab }: { user: User; activeTab: TabType; setActiveTab: (tab: TabType) => void }) {
+  const isOnline = useOnlineStatus();
+
   useEffect(() => {
     const handleTabChange = (event: CustomEvent) => {
       setActiveTab(event.detail.tab);
@@ -34,6 +38,7 @@ function AdminContent({ user, activeTab, setActiveTab }: { user: User; activeTab
 
   return (
     <>
+      <OfflineBanner isVisible={!isOnline} />
       <AdminHeader activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">

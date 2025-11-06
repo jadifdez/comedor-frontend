@@ -1,7 +1,10 @@
 import React, { useState, useMemo } from 'react';
-import { Routes, Route } from 'react-router-dom'; // 👈 añadimos routing
+import { Routes, Route } from 'react-router-dom';
 import { AuthWrapper } from './components/AuthWrapper';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { OfflineBanner } from './components/OfflineBanner';
+import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ParentHeader } from './components/ParentHeader';
 import { InscripcionComedorForm } from './components/InscripcionComedorForm';
 import { InscripcionComedorPadreForm } from './components/InscripcionComedorPadreForm';
@@ -30,10 +33,10 @@ import { useEnfermedades } from './hooks/useEnfermedades';
 import { User } from '@supabase/supabase-js';
 import { formatDateForDisplay } from './utils/dateUtils';
 
-// 👇 página pública para fijar contraseña
 import ResetPassword from './pages/ResetPassword';
 
 function AppContent({ user }: { user: User }) {
+  const isOnline = useOnlineStatus();
   const [activeTab, setActiveTab] = useState<'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil' | 'password'>('home');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -424,6 +427,7 @@ function AppContent({ user }: { user: User }) {
 
   return (
     <>
+      <OfflineBanner isVisible={!isOnline} />
       <ParentHeader activeTab={activeTab} onTabChange={setActiveTab} />
 
     <main className="max-w-4xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
@@ -584,10 +588,9 @@ function ProtectedApp() {
 export default function App() {
   return (
     <ErrorBoundary>
+      <PWAInstallPrompt />
       <Routes>
-        {/* Ruta pública para establecer nueva contraseña */}
         <Route path="/reset-password" element={<ResetPassword />} />
-        {/* Resto de rutas protegidas por AuthWrapper */}
         <Route path="/*" element={<ProtectedApp />} />
       </Routes>
     </ErrorBoundary>
