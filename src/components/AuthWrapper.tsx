@@ -84,18 +84,21 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
   const [emailChangeBanner, setEmailChangeBanner] = useState<{ newEmail: string; oldEmail: string } | null>(() => {
     try {
       const raw = localStorage.getItem('lp_email_change_pending');
+      console.log('[AuthWrapper] Init emailChangeBanner from localStorage:', raw);
       if (!raw) return null;
       const obj = JSON.parse(raw) as { newEmail?: string; oldEmail?: string; ts?: number };
       // 15 minutos de validez para el banner
       if (obj?.ts && Date.now() - obj.ts < 15 * 60 * 1000) {
         if (obj.newEmail && obj.oldEmail) {
+          console.log('[AuthWrapper] emailChangeBanner inicializado:', obj.newEmail);
           return { newEmail: obj.newEmail, oldEmail: obj.oldEmail };
         }
       } else {
+        console.log('[AuthWrapper] emailChangeBanner expirado, removiendo');
         localStorage.removeItem('lp_email_change_pending');
       }
-    } catch {
-      // no-op
+    } catch (e) {
+      console.error('[AuthWrapper] Error parseando emailChangeBanner:', e);
     }
     return null;
   });
@@ -108,12 +111,14 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
       if (raw) {
         const obj = JSON.parse(raw) as { ts?: number };
         if (obj?.ts && Date.now() - obj.ts < 15 * 60 * 1000) {
+          console.log('[AuthWrapper] Init showAuthError: false (hay banner pendiente)');
           return false; // HAY banner pendiente, NO mostrar error
         }
       }
     } catch {
       // no-op
     }
+    console.log('[AuthWrapper] Init showAuthError: false (default)');
     return false; // Por defecto no mostrar hasta que se evalúe en useEffect
   });
 
@@ -285,20 +290,31 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
 
   // 3.2) Control del error de autorización: NUNCA mostrarlo si hay banner de email
   useEffect(() => {
+    console.log('[AuthWrapper] Evaluando showAuthError:', {
+      emailChangeBanner: !!emailChangeBanner,
+      user: !!user,
+      isPadreAutorizado,
+      showAuthError
+    });
+
     // CRÍTICO: Si hay banner de email, NUNCA mostrar error de autorización
     if (emailChangeBanner) {
+      console.log('[AuthWrapper] HAY emailChangeBanner, NO mostrar error');
       setShowAuthError(false);
       return;
     }
 
     // Si no hay usuario o no está autorizado, mostrar error después de un delay
     if (!user || isPadreAutorizado === false) {
+      console.log('[AuthWrapper] Sin usuario o no autorizado, iniciando timer para mostrar error');
       const timer = setTimeout(() => {
+        console.log('[AuthWrapper] Timer ejecutado, mostrando error');
         setShowAuthError(true);
       }, 800); // Delay para asegurar que otros banners se rendericen primero
       return () => clearTimeout(timer);
     } else {
       // Hay usuario y está autorizado
+      console.log('[AuthWrapper] Usuario autorizado, ocultando error');
       setShowAuthError(false);
     }
   }, [user, isPadreAutorizado, emailChangeBanner]);
