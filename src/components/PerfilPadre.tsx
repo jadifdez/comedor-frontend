@@ -111,6 +111,7 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
         }
       }
 
+      console.log('Intentando actualizar tabla padres...');
       // Actualizar datos en la tabla padres
       const { error: updateError } = await supabase
         .from('padres')
@@ -125,22 +126,26 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
         console.error('Error al actualizar padres:', updateError);
         throw new Error(`No se pudo actualizar el perfil: ${updateError.message}`);
       }
+      console.log('Tabla padres actualizada correctamente');
 
       // Si el email cambió, actualizar también en auth.users
       if (emailChanged) {
+        console.log('Email cambió, intentando actualizar auth.users...');
         const { error: authError } = await supabase.auth.updateUser({
           email: emailTrimmed
         });
 
         if (authError) {
+          console.error('Error al actualizar auth.users:', authError);
           // Si falla la actualización del email en auth, revertir el cambio en padres
           await supabase
             .from('padres')
             .update({ email: padreData.email })
             .eq('id', padreData.id);
 
-          throw new Error('No se pudo actualizar el email. Es posible que ya exista una cuenta con ese email en el sistema de autenticación.');
+          throw new Error(`No se pudo actualizar el email: ${authError.message}`);
         }
+        console.log('Auth.users actualizado correctamente');
 
         setSuccess('Perfil actualizado correctamente. Por favor, verifica tu nuevo email para confirmar el cambio. Serás redirigido para que inicies sesión nuevamente.');
 
