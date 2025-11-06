@@ -98,7 +98,7 @@ export function EnfermedadForm({
 
   // Verificar si un día está disponible para dieta blanda (persona inscrita ese día O con solicitud puntual aprobada)
   const isDayAvailableForDietaBlanda = (fechaId: string, personaId: string) => {
-    const date = new Date(fechaId);
+    const date = new Date(fechaId + 'T00:00:00');
     const diaSemana = date.getDay();
 
     // Verificar si es el padre o un hijo

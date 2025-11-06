@@ -90,7 +90,7 @@ export function SolicitudForm({ onSubmit, hijos, solicitudes, inscripciones, ins
   const isDayDisabled = (fechaId: string) => {
     if (!formData.hijoId) return false;
 
-    const date = new Date(fechaId);
+    const date = new Date(fechaId + 'T00:00:00');
     const diaSemana = date.getDay(); // 0=domingo, 1=lunes, etc.
 
     // Verificar si es el padre o un hijo

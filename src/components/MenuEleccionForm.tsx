@@ -87,7 +87,7 @@ export function MenuEleccionForm({
 
   // Verificar si un día está disponible para elección de menú (persona inscrita ese día O con solicitud puntual)
   const isDayAvailableForMenu = (fechaId: string, personaId: string) => {
-    const date = new Date(fechaId);
+    const date = new Date(fechaId + 'T00:00:00');
     const diaSemana = date.getDay(); // 0=domingo, 1=lunes, etc.
 
     // Verificar si es el padre o un hijo

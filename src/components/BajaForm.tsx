@@ -94,7 +94,7 @@ export function BajaForm({ onSubmit, hijos, bajas, inscripciones, inscripcionesP
   const isDayAvailableForBaja = (fechaId: string, id: string) => {
     const inscripcion = getInscripcionActiva(id);
     if (!inscripcion) return false;
-    const date = new Date(fechaId);
+    const date = new Date(fechaId + 'T00:00:00');
     const diaSemana = date.getDay(); // 0=domingo, 1=lunes, etc.
     return inscripcion.dias_semana.includes(diaSemana);
   };
@@ -104,9 +104,9 @@ export function BajaForm({ onSubmit, hijos, bajas, inscripciones, inscripcionesP
     
     // No disponible si el hijo no está inscrito ese día
     if (!isDayAvailableForBaja(fechaId, formData.hijoId)) return true;
-    
+
     // Convertir fechaId (YYYY-MM-DD) al formato usado en bajas (DD/MM/YYYY)
-    const date = new Date(fechaId);
+    const date = new Date(fechaId + 'T00:00:00');
     const fechaFormateada = date.toLocaleDateString('es-ES', {
       day: '2-digit',
       month: '2-digit', 
