@@ -1,5 +1,4 @@
-// src/components/admin/PadresManager.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase, Padre, Hijo } from '../../lib/supabase';
 import { sendAppEmail } from '../../lib/mail';
 import {
@@ -17,23 +16,37 @@ import {
   Key,
   Utensils,
   Send,
-  Shield
+  Shield,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { InscribirProfesorModal } from './InscribirProfesorModal';
 import { useInscripcionesPadresAdmin, InscripcionPadreAdmin } from '../../hooks/useInscripcionesPadresAdmin';
 
+interface PadreWithCounts extends Padre {
+  hijos_count: number;
+  tiene_inscripcion_activa: boolean;
+  inscripcion_id: string | null;
+}
+
+const ITEMS_PER_PAGE = 50;
+const SEARCH_DEBOUNCE_MS = 300;
+
 export function PadresManager() {
-  const [padres, setPadres] = useState<Padre[]>([]);
+  const [padres, setPadres] = useState<PadreWithCounts[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingPadre, setEditingPadre] = useState<Padre | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [hijosCount, setHijosCount] = useState<Record<string, number>>({});
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [expandedPadre, setExpandedPadre] = useState<string | null>(null);
   const [hijosDetails, setHijosDetails] = useState<Record<string, Hijo[]>>({});
-  const [onAddHijo, setOnAddHijo] = useState<((padreId: string, padreNombre: string) => void) | null>(null);
+  const [loadingHijos, setLoadingHijos] = useState<Record<string, boolean>>({});
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [padreToDelete, setPadreToDelete] = useState<Padre | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalCount, setTotalCount] = useState(0);
 
   const [showPasswordResetModal, setShowPasswordResetModal] = useState(false);
   const [passwordResetStatus, setPasswordResetStatus] = useState<{
@@ -42,7 +55,6 @@ export function PadresManager() {
     padre: Padre | null;
   }>({ success: false, message: '', padre: null });
 
-  // ===== Nuevo estado para enviar email desde backend =====
   const [showEmailModal, setShowEmailModal] = useState(false);
   const [emailTarget, setEmailTarget] = useState<Padre | null>(null);
   const [emailSubject, setEmailSubject] = useState('');
@@ -68,56 +80,43 @@ export function PadresManager() {
 
   const [showInscribirModal, setShowInscribirModal] = useState(false);
   const [profesorToInscribir, setProfesorToInscribir] = useState<Padre | null>(null);
-  const [inscripcionesActivas, setInscripcionesActivas] = useState<Record<string, InscripcionPadreAdmin>>({});
   const { crearInscripcion, verificarInscripcionActiva } = useInscripcionesPadresAdmin();
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchTerm);
+      setCurrentPage(0);
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timer);
+  }, [searchTerm]);
+
+  useEffect(() => {
     loadPadres();
-  }, []);
+  }, [currentPage, debouncedSearch]);
 
   const loadPadres = async () => {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
-        .from('padres')
-        .select('*')
-        .order('nombre');
+      const offset = currentPage * ITEMS_PER_PAGE;
+
+      const { data, error } = await supabase.rpc('get_padres_with_counts', {
+        search_term: debouncedSearch,
+        page_limit: ITEMS_PER_PAGE,
+        page_offset: offset
+      });
 
       if (error) throw error;
 
       setPadres(data || []);
 
-      // Inscripciones activas de Personal
-      if (data && data.length > 0) {
-        const profesores = data.filter(p => p.es_personal);
-        const inscripcionesMap: Record<string, InscripcionPadreAdmin> = {};
+      const { data: countData, error: countError } = await supabase.rpc('get_padres_total_count', {
+        search_term: debouncedSearch
+      });
 
-        for (const profesor of profesores) {
-          const inscripcion = await verificarInscripcionActiva(profesor.id);
-          if (inscripcion) inscripcionesMap[profesor.id] = inscripcion;
-        }
-        setInscripcionesActivas(inscripcionesMap);
-      }
-
-      // Hijos y conteos
-      if (data && data.length > 0) {
-        const { data: hijosData, error: hijosError } = await supabase
-          .from('hijos')
-          .select(`*, grado:grados(*)`)
-          .order('nombre');
-
-        if (!hijosError) {
-          const counts: Record<string, number> = {};
-          const details: Record<string, Hijo[]> = {};
-          hijosData?.forEach((hijo) => {
-            counts[hijo.padre_id] = (counts[hijo.padre_id] || 0) + 1;
-            if (!details[hijo.padre_id]) details[hijo.padre_id] = [];
-            details[hijo.padre_id].push(hijo);
-          });
-          setHijosCount(counts);
-          setHijosDetails(details);
-        }
+      if (!countError && countData !== null) {
+        setTotalCount(countData);
       }
     } catch (error) {
       console.error('Error in loadPadres:', error);
@@ -126,6 +125,33 @@ export function PadresManager() {
     }
   };
 
+  const loadHijosForPadre = useCallback(async (padreId: string) => {
+    if (hijosDetails[padreId]) {
+      return;
+    }
+
+    setLoadingHijos(prev => ({ ...prev, [padreId]: true }));
+
+    try {
+      const { data, error } = await supabase
+        .from('hijos')
+        .select(`*, grado:grados(*)`)
+        .eq('padre_id', padreId)
+        .order('nombre');
+
+      if (error) throw error;
+
+      setHijosDetails(prev => ({
+        ...prev,
+        [padreId]: data || []
+      }));
+    } catch (error) {
+      console.error('Error loading hijos:', error);
+    } finally {
+      setLoadingHijos(prev => ({ ...prev, [padreId]: false }));
+    }
+  }, [hijosDetails]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaveError(null);
@@ -133,7 +159,6 @@ export function PadresManager() {
     setIsSaving(true);
 
     try {
-      // Preparar datos: convertir strings vacías a null para fechas
       const dataToSave = {
         ...formData,
         fecha_inicio_exencion: formData.fecha_inicio_exencion || null,
@@ -141,18 +166,13 @@ export function PadresManager() {
       };
 
       if (editingPadre) {
-        console.log('Actualizando padre:', editingPadre.id, 'con datos:', dataToSave);
         const { data, error } = await supabase
           .from('padres')
           .update(dataToSave)
           .eq('id', editingPadre.id)
           .select();
 
-        if (error) {
-          console.error('Error de Supabase:', error);
-          throw error;
-        }
-        console.log('Padre actualizado exitosamente:', data);
+        if (error) throw error;
         setSaveSuccess('Padre actualizado exitosamente');
       } else {
         const { data, error } = await supabase
@@ -160,11 +180,7 @@ export function PadresManager() {
           .insert([dataToSave])
           .select();
 
-        if (error) {
-          console.error('Error de Supabase:', error);
-          throw error;
-        }
-        console.log('Padre creado exitosamente:', data);
+        if (error) throw error;
         setSaveSuccess('Padre creado exitosamente');
       }
 
@@ -182,7 +198,6 @@ export function PadresManager() {
 
       await loadPadres();
 
-      // Cerrar el formulario después de 1.5 segundos para que el usuario vea el mensaje
       setTimeout(() => {
         setShowForm(false);
         setEditingPadre(null);
@@ -197,7 +212,7 @@ export function PadresManager() {
     }
   };
 
-  const handleEdit = (padre: Padre) => {
+  const handleEdit = useCallback((padre: Padre) => {
     setEditingPadre(padre);
     setFormData({
       email: padre.email,
@@ -213,12 +228,12 @@ export function PadresManager() {
     setSaveError(null);
     setSaveSuccess(null);
     setShowForm(true);
-  };
+  }, []);
 
-  const handleDeleteClick = (padre: Padre) => {
+  const handleDeleteClick = useCallback((padre: Padre) => {
     setPadreToDelete(padre);
     setShowDeleteModal(true);
-  };
+  }, []);
 
   const handleDeleteConfirm = async () => {
     if (!padreToDelete) return;
@@ -234,15 +249,15 @@ export function PadresManager() {
     }
   };
 
-  const handleDeleteCancel = () => {
+  const handleDeleteCancel = useCallback(() => {
     setShowDeleteModal(false);
     setPadreToDelete(null);
-  };
+  }, []);
 
-  const handleInscribirProfesor = (padre: Padre) => {
+  const handleInscribirProfesor = useCallback((padre: Padre) => {
     setProfesorToInscribir(padre);
     setShowInscribirModal(true);
-  };
+  }, []);
 
   const handleInscripcionSubmit = async (diasSemana: number[], fechaInicio: string) => {
     if (!profesorToInscribir) {
@@ -253,17 +268,17 @@ export function PadresManager() {
     return result;
   };
 
-  const handleInscripcionSuccess = () => {
+  const handleInscripcionSuccess = useCallback(() => {
     setShowInscribirModal(false);
     setProfesorToInscribir(null);
-  };
+  }, []);
 
-  const handleInscripcionClose = () => {
+  const handleInscripcionClose = useCallback(() => {
     setShowInscribirModal(false);
     setProfesorToInscribir(null);
-  };
+  }, []);
 
-  const toggleActivo = async (padre: Padre) => {
+  const toggleActivo = useCallback(async (padre: Padre) => {
     try {
       const { error } = await supabase.from('padres').update({ activo: !padre.activo }).eq('id', padre.id);
       if (error) throw error;
@@ -271,58 +286,58 @@ export function PadresManager() {
     } catch (error) {
       console.error('Error updating padre status:', error);
     }
-  };
+  }, []);
 
-  const togglePadreExpansion = (padreId: string) => {
-    setExpandedPadre(expandedPadre === padreId ? null : padreId);
-  };
-
-  // ==== Supabase reset password (se mantiene como lo tenías) ====
-const handleSendPasswordReset = async (padre: Padre) => {
-  try {
-    // 1) sesión (para Bearer)
-    const { data, error } = await supabase.auth.getSession();
-    if (error) throw error;
-    const token = data.session?.access_token;
-    if (!token) throw new Error('Usuario no autenticado');
-
-    // 2) API propia → genera link + envía con tu SMTP
-    const res = await fetch(`${import.meta.env.VITE_MAIL_API_URL}/api/auth/recovery-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        email: padre.email,
-      }),
+  const togglePadreExpansion = useCallback((padreId: string) => {
+    setExpandedPadre(prev => {
+      const newExpanded = prev === padreId ? null : padreId;
+      if (newExpanded === padreId) {
+        loadHijosForPadre(padreId);
+      }
+      return newExpanded;
     });
+  }, [loadHijosForPadre]);
 
-    const json = await res.json();
-    if (!res.ok) throw new Error(json?.error || 'Error enviando recuperación');
+  const handleSendPasswordReset = useCallback(async (padre: Padre) => {
+    try {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) throw error;
+      const token = data.session?.access_token;
+      if (!token) throw new Error('Usuario no autenticado');
 
-    setPasswordResetStatus({
-      success: true,
-      message: 'Email enviado correctamente',
-      padre
-    });
-    setShowPasswordResetModal(true);
-  } catch (error: any) {
-    console.error('Error sending password reset email:', error);
-    setPasswordResetStatus({
-      success: false,
-      message: error.message || 'Error al enviar el correo',
-      padre
-    });
-    setShowPasswordResetModal(true);
-  }
-};
+      const res = await fetch(`${import.meta.env.VITE_MAIL_API_URL}/api/auth/recovery-email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          email: padre.email,
+        }),
+      });
 
+      const json = await res.json();
+      if (!res.ok) throw new Error(json?.error || 'Error enviando recuperación');
 
-  // ======= NUEVO: Enviar email a través de tu backend =======
-  const openEmailModal = (padre: Padre) => {
+      setPasswordResetStatus({
+        success: true,
+        message: 'Email enviado correctamente',
+        padre
+      });
+      setShowPasswordResetModal(true);
+    } catch (error: any) {
+      console.error('Error sending password reset email:', error);
+      setPasswordResetStatus({
+        success: false,
+        message: error.message || 'Error al enviar el correo',
+        padre
+      });
+      setShowPasswordResetModal(true);
+    }
+  }, []);
+
+  const openEmailModal = useCallback((padre: Padre) => {
     setEmailTarget(padre);
-    // Plantilla inicial (ajústala a tu caso)
     setEmailSubject(`[Comedor Escolar] Información importante`);
     setEmailBody(
 `Hola ${padre.nombre},
@@ -338,16 +353,16 @@ Equipo del Comedor`
     );
     setEmailResult(null);
     setShowEmailModal(true);
-  };
+  }, []);
 
-  const closeEmailModal = () => {
+  const closeEmailModal = useCallback(() => {
     if (sendingEmail) return;
     setShowEmailModal(false);
     setEmailTarget(null);
     setEmailSubject('');
     setEmailBody('');
     setEmailResult(null);
-  };
+  }, [sendingEmail]);
 
   const handleSendBackendEmail = async () => {
     if (!emailTarget) return;
@@ -355,7 +370,6 @@ Equipo del Comedor`
       setSendingEmail(true);
       setEmailResult(null);
 
-      // Convierte saltos de línea en br para un HTML simple
       const html = `<div style="font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; color:#222; line-height:1.5">
         ${emailBody.split('\n').map(p => `<p>${p.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`).join('')}
       </div>`;
@@ -364,10 +378,7 @@ Equipo del Comedor`
         to: emailTarget.email,
         subject: emailSubject,
         html,
-        // opcional: text en claro (útil para clientes que prefieren texto)
         text: emailBody,
-        // opcional: replyTo si quieres que contesten a otra dirección
-        // replyTo: 'secretaria@colegio.com'
       });
 
       setEmailResult({ ok: true, msg: `Enviado (ID: ${res?.messageId || '—'})` });
@@ -379,12 +390,18 @@ Equipo del Comedor`
     }
   };
 
-  const filteredPadres = padres.filter(padre =>
-    padre.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    padre.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const handleAddHijo = useCallback((padreId: string, padreNombre: string) => {
+    localStorage.setItem('selectedPadreForNewHijo', JSON.stringify({ id: padreId, nombre: padreNombre }));
+    window.dispatchEvent(new CustomEvent('addHijoToPadre', { detail: { padreId, padreNombre } }));
+    const event = new CustomEvent('changeAdminTab', { detail: { tab: 'hijos' } });
+    window.dispatchEvent(event);
+  }, []);
 
-  if (loading) {
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+  const hasNextPage = currentPage < totalPages - 1;
+  const hasPrevPage = currentPage > 0;
+
+  if (loading && padres.length === 0) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
@@ -394,11 +411,11 @@ Equipo del Comedor`
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <Users className="h-6 w-6 text-blue-600" />
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Padres</h2>
+          <span className="text-sm text-gray-500">({totalCount} total)</span>
         </div>
         <button
           onClick={() => {
@@ -413,7 +430,6 @@ Equipo del Comedor`
         </button>
       </div>
 
-      {/* Buscador */}
       <div className="relative">
         <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
         <input
@@ -425,7 +441,6 @@ Equipo del Comedor`
         />
       </div>
 
-      {/* Formulario alta/edición */}
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
@@ -499,7 +514,6 @@ Equipo del Comedor`
               </label>
             </div>
 
-            {/* Sección de Exención de Facturación */}
             <div className="md:col-span-2 border-t border-gray-200 pt-4 mt-2">
               <div className="flex items-center space-x-2 mb-4">
                 <Shield className="h-5 w-5 text-blue-600" />
@@ -601,7 +615,6 @@ Equipo del Comedor`
         </div>
       )}
 
-      {/* Tabla */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -615,7 +628,7 @@ Equipo del Comedor`
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredPadres.map((padre) => (
+              {padres.map((padre) => (
                 <React.Fragment key={padre.id}>
                   <tr className="hover:bg-gray-50">
                     <td className="px-6 py-4">
@@ -655,7 +668,7 @@ Equipo del Comedor`
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {hijosCount[padre.id] || 0} {hijosCount[padre.id] === 1 ? 'hijo' : 'hijos'}
+                          {padre.hijos_count} {padre.hijos_count === 1 ? 'hijo' : 'hijos'}
                         </span>
                       </div>
                     </td>
@@ -684,8 +697,8 @@ Equipo del Comedor`
                         {padre.es_personal && (
                           <button
                             onClick={() => handleInscribirProfesor(padre)}
-                            className={`${inscripcionesActivas[padre.id] ? 'text-green-600 hover:text-green-900' : 'text-orange-600 hover:text-orange-900'}`}
-                            title={inscripcionesActivas[padre.id] ? 'Ver inscripción al comedor' : 'Inscribir al comedor'}
+                            className={`${padre.tiene_inscripcion_activa ? 'text-green-600 hover:text-green-900' : 'text-orange-600 hover:text-orange-900'}`}
+                            title={padre.tiene_inscripcion_activa ? 'Ver inscripción al comedor' : 'Inscribir al comedor'}
                           >
                             <Utensils className="h-4 w-4" />
                           </button>
@@ -717,8 +730,12 @@ Equipo del Comedor`
 
                   {expandedPadre === padre.id && (
                     <tr>
-                      <td colSpan={4} className="px-6 py-2 bg-gray-50">
-                        {hijosDetails[padre.id]?.length > 0 ? (
+                      <td colSpan={5} className="px-6 py-2 bg-gray-50">
+                        {loadingHijos[padre.id] ? (
+                          <div className="flex items-center justify-center py-4">
+                            <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-600 border-t-transparent"></div>
+                          </div>
+                        ) : hijosDetails[padre.id]?.length > 0 ? (
                           <div className="space-y-2">
                             <div className="flex items-center justify-between">
                               <h4 className="text-sm font-medium text-gray-700 flex items-center">
@@ -773,15 +790,67 @@ Equipo del Comedor`
         </div>
       </div>
 
-      {filteredPadres.length === 0 && (
+      {padres.length === 0 && !loading && (
         <div className="text-center py-12">
           <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
           <h3 className="text-lg font-medium text-gray-900 mb-2">No hay padres registrados</h3>
-          <p className="text-gray-600">Comienza agregando el primer padre al sistema</p>
+          <p className="text-gray-600">
+            {debouncedSearch ? 'No se encontraron padres con ese criterio de búsqueda' : 'Comienza agregando el primer padre al sistema'}
+          </p>
         </div>
       )}
 
-      {/* Modal de confirmación de eliminación */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between border-t border-gray-200 bg-white px-4 py-3 sm:px-6 rounded-lg">
+          <div className="flex flex-1 justify-between sm:hidden">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+              disabled={!hasPrevPage}
+              className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Anterior
+            </button>
+            <button
+              onClick={() => setCurrentPage(p => p + 1)}
+              disabled={!hasNextPage}
+              className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Siguiente
+            </button>
+          </div>
+          <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm text-gray-700">
+                Mostrando <span className="font-medium">{currentPage * ITEMS_PER_PAGE + 1}</span> a{' '}
+                <span className="font-medium">{Math.min((currentPage + 1) * ITEMS_PER_PAGE, totalCount)}</span> de{' '}
+                <span className="font-medium">{totalCount}</span> resultados
+              </p>
+            </div>
+            <div>
+              <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(0, p - 1))}
+                  disabled={!hasPrevPage}
+                  className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </button>
+                <span className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-900 ring-1 ring-inset ring-gray-300">
+                  Página {currentPage + 1} de {totalPages}
+                </span>
+                <button
+                  onClick={() => setCurrentPage(p => p + 1)}
+                  disabled={!hasNextPage}
+                  className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <ChevronRight className="h-5 w-5" />
+                </button>
+              </nav>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
@@ -806,16 +875,16 @@ Equipo del Comedor`
                 </div>
               )}
 
-              {padreToDelete && hijosCount[padreToDelete.id] > 0 && (
+              {padreToDelete && (padres.find(p => p.id === padreToDelete.id)?.hijos_count || 0) > 0 && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
                   <div className="flex items-start space-x-3">
                     <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <h4 className="text-sm font-semibold text-red-800 mb-2">⚠️ ADVERTENCIA: Eliminación en cascada</h4>
+                      <h4 className="text-sm font-semibold text-red-800 mb-2">ADVERTENCIA: Eliminación en cascada</h4>
                       <div className="text-sm text-red-700 space-y-1">
                         <p>Al eliminar este padre también se eliminarán:</p>
                         <ul className="list-disc list-inside ml-2 space-y-1">
-                          <li><strong>{hijosCount[padreToDelete.id]} hijo{hijosCount[padreToDelete.id] !== 1 ? 's' : ''}</strong></li>
+                          <li><strong>{padres.find(p => p.id === padreToDelete.id)?.hijos_count || 0} hijo{(padres.find(p => p.id === padreToDelete.id)?.hijos_count || 0) !== 1 ? 's' : ''}</strong></li>
                           <li>Todas las <strong>bajas de comedor</strong> de sus hijos</li>
                           <li>Todas las <strong>solicitudes puntuales</strong> de sus hijos</li>
                           <li>Todas las <strong>elecciones de menú</strong> de sus hijos</li>
@@ -855,7 +924,6 @@ Equipo del Comedor`
         </div>
       )}
 
-      {/* Modal de confirmación de envío de email de reset (Supabase) */}
       {showPasswordResetModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
@@ -926,7 +994,6 @@ Equipo del Comedor`
         </div>
       )}
 
-      {/* NUEVO: Modal de enviar email (backend) */}
       {showEmailModal && emailTarget && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60]">
           <div className="bg-white rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
@@ -995,7 +1062,6 @@ Equipo del Comedor`
         </div>
       )}
 
-      {/* Modal de inscripción al comedor */}
       {showInscribirModal && profesorToInscribir && (
         <InscribirProfesorModal
           profesor={profesorToInscribir}
@@ -1006,13 +1072,4 @@ Equipo del Comedor`
       )}
     </div>
   );
-}
-
-// ======= helpers locales =======
-function handleAddHijo(padreId: string, padreNombre: string) {
-  // fallback de tu versión original
-  localStorage.setItem('selectedPadreForNewHijo', JSON.stringify({ id: padreId, nombre: padreNombre }));
-  window.dispatchEvent(new CustomEvent('addHijoToPadre', { detail: { padreId, padreNombre } }));
-  const event = new CustomEvent('changeAdminTab', { detail: { tab: 'hijos' } });
-  window.dispatchEvent(event);
 }

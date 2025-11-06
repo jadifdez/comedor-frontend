@@ -41,6 +41,30 @@ export function useInscripcionesPadresAdmin() {
     }
   };
 
+  const verificarInscripcionesPorLote = async (padreIds: string[]): Promise<Record<string, InscripcionPadreAdmin>> => {
+    try {
+      if (padreIds.length === 0) return {};
+
+      const { data, error: fetchError } = await supabase
+        .from('comedor_inscripciones_padres')
+        .select('*')
+        .in('padre_id', padreIds)
+        .eq('activo', true);
+
+      if (fetchError) throw fetchError;
+
+      const inscripcionesMap: Record<string, InscripcionPadreAdmin> = {};
+      data?.forEach(inscripcion => {
+        inscripcionesMap[inscripcion.padre_id] = inscripcion;
+      });
+
+      return inscripcionesMap;
+    } catch (err: any) {
+      console.error('Error verificando inscripciones por lote:', err);
+      return {};
+    }
+  };
+
   const cargarInscripciones = async (padreId: string): Promise<InscripcionPadreAdmin[]> => {
     try {
       const { data, error: fetchError } = await supabase
@@ -133,6 +157,7 @@ export function useInscripcionesPadresAdmin() {
     loading,
     error,
     verificarInscripcionActiva,
+    verificarInscripcionesPorLote,
     cargarInscripciones,
     crearInscripcion,
     desactivarInscripcion,
