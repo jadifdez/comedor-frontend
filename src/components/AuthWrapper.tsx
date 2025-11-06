@@ -100,6 +100,9 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     return null;
   });
 
+  // Control para mostrar error de autorización solo después de un pequeño delay (evita parpadeo con banner)
+  const [showAuthError, setShowAuthError] = useState(false);
+
   // Recuperación (solicitud)
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [resetEmail, setResetEmail] = useState('');
@@ -260,6 +263,25 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     }, 300);
     return () => clearTimeout(t);
   }, [showSetNewPassword]);
+
+  // 3.2) Control del error de autorización: solo mostrarlo si NO hay banner de email y después de un delay
+  useEffect(() => {
+    // Si hay banner de email, nunca mostrar error
+    if (emailChangeBanner) {
+      setShowAuthError(false);
+      return;
+    }
+
+    // Si no hay usuario o no está autorizado, esperar un poco antes de mostrar error
+    if (!user || isPadreAutorizado === false) {
+      const timer = setTimeout(() => {
+        setShowAuthError(true);
+      }, 100); // 100ms de delay para que el banner azul se renderice primero
+      return () => clearTimeout(timer);
+    } else {
+      setShowAuthError(false);
+    }
+  }, [user, isPadreAutorizado, emailChangeBanner]);
 
   const checkPadreAutorizado = async (usuario: User) => {
     try {
@@ -569,10 +591,10 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
             <p className="text-xs text-gray-400 mt-2">v1.0.1</p>
           </div>
 
-          {/* Banner azul para cambio de email - CON MÁXIMA PRIORIDAD */}
+          {/* Banner azul para cambio de email - CON MÁXIMA PRIORIDAD VISUAL */}
           {emailChangeBanner && (
-            <div className="mb-6">
-              <div className="w-full bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="mb-6 relative z-50">
+              <div className="w-full bg-blue-50 border-2 border-blue-300 rounded-lg p-4 shadow-md">
                 <div className="flex items-start space-x-3">
                   <Mail className="h-6 w-6 text-blue-600 flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
@@ -610,7 +632,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
             </div>
           )}
 
-          {isPadreAutorizado === false && !emailChangeBanner && (
+          {showAuthError && isPadreAutorizado === false && !emailChangeBanner && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
               <div className="flex items-start space-x-2">
                 <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
