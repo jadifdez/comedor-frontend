@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Euro, Calendar, User, Search, AlertCircle, Eye, ChevronDown, ChevronUp, Award, Users, XCircle, Download, FileSpreadsheet, CheckCircle, Shield } from 'lucide-react';
 import { useFacturacionAdmin, HijoFacturacionDetalle } from '../../hooks/useFacturacionAdmin';
 import { exportarFacturacionAExcel } from '../../utils/excelExport';
+import { FacturacionCalendario } from '../FacturacionCalendario';
 
 export function FacturacionAdminManager() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -510,36 +511,53 @@ export function FacturacionAdminManager() {
             </div>
 
             <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                  <p className="text-sm font-medium text-green-800">Total mes</p>
-                  <p className="text-2xl font-bold text-green-900">
-                    {hijoSeleccionado.totalImporte.toFixed(2)}€
-                  </p>
-                  {hijoSeleccionado.tieneDescuentoAsistencia80 && hijoSeleccionado.totalImporteSinDescuento && (
-                    <p className="text-xs text-green-700 mt-1">
-                      Antes: {hijoSeleccionado.totalImporteSinDescuento.toFixed(2)}€
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr,auto] gap-6 mb-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                    <p className="text-sm font-medium text-green-800">Total mes</p>
+                    <p className="text-2xl font-bold text-green-900">
+                      {hijoSeleccionado.totalImporte.toFixed(2)}€
                     </p>
-                  )}
+                    {hijoSeleccionado.tieneDescuentoAsistencia80 && hijoSeleccionado.totalImporteSinDescuento && (
+                      <p className="text-xs text-green-700 mt-1">
+                        Antes: {hijoSeleccionado.totalImporteSinDescuento.toFixed(2)}€
+                      </p>
+                    )}
+                  </div>
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
+                    <p className="text-sm font-medium text-blue-800">Días facturados</p>
+                    <p className="text-2xl font-bold text-blue-900">
+                      {hijoSeleccionado.diasFacturables.length}
+                    </p>
+                  </div>
+                  <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
+                    <p className="text-sm font-medium text-orange-800">
+                      {hijoSeleccionado.tieneDescuentoAsistencia80 ? 'Asistencia' : 'Precio promedio'}
+                    </p>
+                    <p className="text-2xl font-bold text-orange-900">
+                      {hijoSeleccionado.tieneDescuentoAsistencia80
+                        ? `${hijoSeleccionado.porcentajeAsistencia?.toFixed(0)}%`
+                        : hijoSeleccionado.diasFacturables.length > 0
+                          ? `${(hijoSeleccionado.totalImporte / hijoSeleccionado.diasFacturables.length).toFixed(2)}€`
+                          : '0.00€'
+                      }
+                    </p>
+                  </div>
                 </div>
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
-                  <p className="text-sm font-medium text-blue-800">Días facturados</p>
-                  <p className="text-2xl font-bold text-blue-900">
-                    {hijoSeleccionado.diasFacturables.length}
-                  </p>
-                </div>
-                <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
-                  <p className="text-sm font-medium text-orange-800">
-                    {hijoSeleccionado.tieneDescuentoAsistencia80 ? 'Asistencia' : 'Precio promedio'}
-                  </p>
-                  <p className="text-2xl font-bold text-orange-900">
-                    {hijoSeleccionado.tieneDescuentoAsistencia80
-                      ? `${hijoSeleccionado.porcentajeAsistencia?.toFixed(0)}%`
-                      : hijoSeleccionado.diasFacturables.length > 0
-                        ? `${(hijoSeleccionado.totalImporte / hijoSeleccionado.diasFacturables.length).toFixed(2)}€`
-                        : '0.00€'
-                    }
-                  </p>
+
+                <div className="flex items-start">
+                  <FacturacionCalendario
+                    mesSeleccionado={mesSeleccionado}
+                    diasFacturables={hijoSeleccionado.diasFacturables}
+                    desglose={{
+                      diasInscripcion: hijoSeleccionado.diasInscripcion,
+                      diasPuntuales: hijoSeleccionado.diasPuntuales,
+                      diasBaja: hijoSeleccionado.diasBaja,
+                      diasFestivos: 0,
+                      diasInvitacion: hijoSeleccionado.diasInvitacion
+                    }}
+                    hijoId={hijoSeleccionado.hijo.id}
+                  />
                 </div>
               </div>
 
