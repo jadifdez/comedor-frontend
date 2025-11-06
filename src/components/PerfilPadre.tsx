@@ -130,6 +130,17 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
 
       // Si el email cambió, actualizar DESPUÉS en auth.users para que se envíe el email de confirmación
       if (emailChanged) {
+        // CRÍTICO: Guardar en localStorage ANTES de updateUser porque Supabase cierra sesión inmediatamente
+        try {
+          localStorage.setItem('lp_email_change_pending', JSON.stringify({
+            newEmail: emailTrimmed,
+            oldEmail: padreData.email,
+            ts: Date.now()
+          }));
+        } catch (e) {
+          console.error('Error guardando en localStorage:', e);
+        }
+
         console.log('Email cambió, actualizando auth.users (se enviará email de confirmación)...');
         const { error: authError } = await supabase.auth.updateUser({
           email: emailTrimmed
@@ -137,6 +148,10 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
 
         if (authError) {
           console.error('Error al actualizar auth.users:', authError);
+          // Limpiar localStorage si hubo error
+          try {
+            localStorage.removeItem('lp_email_change_pending');
+          } catch {}
           // Revertir el cambio en padres
           await supabase
             .from('padres')
@@ -148,22 +163,15 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
       }
 
       if (emailChanged) {
-        // Guardar información del cambio de email para mostrar banner en login
-        try {
-          localStorage.setItem('lp_email_change_pending', JSON.stringify({
-            newEmail: emailTrimmed,
-            oldEmail: padreData.email,
-            ts: Date.now()
-          }));
-        } catch {}
-
         setSuccess('email_change_pending');
 
-        // Esperar 5 segundos y cerrar sesión para que el usuario confirme el nuevo email
+        // Esperar un momento para que el usuario vea el mensaje de éxito
+        // Luego Supabase cerrará sesión automáticamente y AuthWrapper redirigirá al login
+        // donde se mostrará el banner azul (localStorage ya fue guardado antes de updateUser)
         setTimeout(async () => {
           await supabase.auth.signOut();
-          window.location.href = '/';
-        }, 5000);
+          window.location.replace('/');
+        }, 2000);
       } else {
         setSuccess('Perfil actualizado correctamente');
         console.log('Perfil actualizado, recargando datos...');
