@@ -46,10 +46,15 @@ export function PerfilPadre({ user }: PerfilPadreProps) {
 
       // Ensure user_id is set for this padre
       if (!data.user_id) {
-        await supabase
+        const { error: updateUserIdError } = await supabase
           .from('padres')
           .update({ user_id: user.id })
           .eq('id', data.id);
+
+        if (!updateUserIdError) {
+          // Update local data with the new user_id
+          data.user_id = user.id;
+        }
       }
 
       setPadreData(data);
