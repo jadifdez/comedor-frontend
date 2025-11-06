@@ -79,7 +79,26 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
 
   // Banner tras reset o cambio de email (debajo del logo)
   const [loginBanner, setLoginBanner] = useState<string>('');
-  const [emailChangeBanner, setEmailChangeBanner] = useState<{ newEmail: string; oldEmail: string } | null>(null);
+
+  // Inicializar emailChangeBanner inmediatamente desde localStorage para evitar mostrar error primero
+  const [emailChangeBanner, setEmailChangeBanner] = useState<{ newEmail: string; oldEmail: string } | null>(() => {
+    try {
+      const raw = localStorage.getItem('lp_email_change_pending');
+      if (!raw) return null;
+      const obj = JSON.parse(raw) as { newEmail?: string; oldEmail?: string; ts?: number };
+      // 15 minutos de validez para el banner
+      if (obj?.ts && Date.now() - obj.ts < 15 * 60 * 1000) {
+        if (obj.newEmail && obj.oldEmail) {
+          return { newEmail: obj.newEmail, oldEmail: obj.oldEmail };
+        }
+      } else {
+        localStorage.removeItem('lp_email_change_pending');
+      }
+    } catch {
+      // no-op
+    }
+    return null;
+  });
 
   // Recuperación (solicitud)
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -171,24 +190,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
     }
   }, []);
 
-  // 1.2) Si venimos de un cambio de email, mostrar banner informativo
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('lp_email_change_pending');
-      if (!raw) return;
-      const obj = JSON.parse(raw) as { newEmail?: string; oldEmail?: string; ts?: number };
-      // 15 minutos de validez para el banner
-      if (obj?.ts && Date.now() - obj.ts < 15 * 60 * 1000) {
-        if (obj.newEmail && obj.oldEmail) {
-          setEmailChangeBanner({ newEmail: obj.newEmail, oldEmail: obj.oldEmail });
-        }
-      } else {
-        localStorage.removeItem('lp_email_change_pending');
-      }
-    } catch {
-      // no-op
-    }
-  }, []);
+  // 1.2) Ya no es necesario este useEffect porque emailChangeBanner se inicializa directamente en useState
 
   // 2) Sincroniza el candado entre pestañas
   useEffect(() => {
@@ -608,7 +610,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
             )}
           </div>
 
-          {isPadreAutorizado === false && (
+          {isPadreAutorizado === false && !emailChangeBanner && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
               <div className="flex items-start space-x-2">
                 <AlertCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
