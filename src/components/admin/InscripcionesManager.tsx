@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Plus, Edit2, Trash2, User, Users, X, Check } from 'lucide-react';
+import { Calendar, Plus, Edit2, Trash2, User, Users, X, Check, Download } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SearchableSelect } from '../SearchableSelect';
+import { exportarInscripcionesAExcel } from '../../utils/excelExport';
 
 interface Hijo {
   id: string;
@@ -58,6 +59,7 @@ export default function InscripcionesManager() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
+  const [exportando, setExportando] = useState(false);
 
   const [formData, setFormData] = useState({
     persona_id: '',
@@ -317,6 +319,49 @@ export default function InscripcionesManager() {
       .join(', ');
   };
 
+  const handleExportarExcel = async () => {
+    try {
+      setExportando(true);
+      setErrorMessage('');
+
+      const { data: alumnosData, error: errorAlumnos } = await supabase
+        .from('comedor_inscripciones')
+        .select(`
+          *,
+          hijo_details:hijos(
+            nombre,
+            grado:grados(nombre)
+          )
+        `);
+
+      if (errorAlumnos) throw errorAlumnos;
+
+      const { data: padresData, error: errorPadres } = await supabase
+        .from('comedor_inscripciones_padres')
+        .select(`
+          *,
+          padre:padres(
+            nombre,
+            exento_facturacion
+          )
+        `);
+
+      if (errorPadres) throw errorPadres;
+
+      const resultado = exportarInscripcionesAExcel({
+        inscripcionesAlumnos: alumnosData || [],
+        inscripcionesPadres: padresData || []
+      });
+
+      setSuccessMessage(`Excel exportado correctamente: ${resultado.nombreArchivo} (${resultado.totalInscripciones} inscripciones)`);
+    } catch (error: any) {
+      console.error('Error al exportar:', error);
+      setErrorMessage('Error al exportar las inscripciones a Excel');
+    } finally {
+      setExportando(false);
+    }
+  };
+
   const DiasSemanaIndicator = ({ diasSeleccionados }: { diasSeleccionados: number[] }) => {
     const diasAbreviados = [
       { value: 1, label: 'L' },
@@ -355,13 +400,23 @@ export default function InscripcionesManager() {
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Inscripciones</h2>
           <p className="text-gray-600">Administra las inscripciones al comedor de alumnos y personal</p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-        >
-          <Plus className="w-5 h-5" />
-          Nueva Inscripción
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={handleExportarExcel}
+            disabled={exportando}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+          >
+            <Download className="w-5 h-5" />
+            {exportando ? 'Exportando...' : 'Exportar a Excel'}
+          </button>
+          <button
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+          >
+            <Plus className="w-5 h-5" />
+            Nueva Inscripción
+          </button>
+        </div>
       </div>
 
       {successMessage && (

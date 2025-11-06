@@ -6,6 +6,40 @@ interface ExcelExportOptions {
   facturacion: FacturacionPadre[];
 }
 
+interface InscripcionAlumnoExport {
+  id: string;
+  hijo_id: string;
+  dias_semana: number[];
+  precio_diario: number;
+  activo: boolean;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  descuento_aplicado: number;
+  hijo_details: {
+    nombre: string;
+    grado: { nombre: string } | null;
+  };
+}
+
+interface InscripcionPadreExport {
+  id: string;
+  padre_id: string;
+  dias_semana: number[];
+  precio_diario: number;
+  activo: boolean;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  padre: {
+    nombre: string;
+    exento_facturacion: boolean;
+  };
+}
+
+interface InscripcionesExportOptions {
+  inscripcionesAlumnos: InscripcionAlumnoExport[];
+  inscripcionesPadres: InscripcionPadreExport[];
+}
+
 export function exportarFacturacionAExcel({ mesSeleccionado, facturacion }: ExcelExportOptions) {
   const workbook = XLSX.utils.book_new();
 
@@ -319,5 +353,146 @@ export function exportarFacturacionAExcel({ mesSeleccionado, facturacion }: Exce
     nombreArchivo,
     totalFamilias,
     totalGeneral
+  };
+}
+
+export function exportarInscripcionesAExcel({ inscripcionesAlumnos, inscripcionesPadres }: InscripcionesExportOptions) {
+  const workbook = XLSX.utils.book_new();
+
+  const totalInscripciones = inscripcionesAlumnos.length + inscripcionesPadres.length;
+  const alumnosActivos = inscripcionesAlumnos.filter(i => i.activo).length;
+  const alumnosInactivos = inscripcionesAlumnos.filter(i => !i.activo).length;
+  const personalActivo = inscripcionesPadres.filter(i => i.activo).length;
+  const personalInactivo = inscripcionesPadres.filter(i => !i.activo).length;
+
+  const resumenData = [
+    ['INSCRIPCIONES AL COMEDOR ESCOLAR'],
+    ['Fecha de exportación:', new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    })],
+    [],
+    ['RESUMEN GENERAL'],
+    ['Total inscripciones:', totalInscripciones],
+    ['Total alumnos inscritos:', inscripcionesAlumnos.length],
+    ['Total personal inscrito:', inscripcionesPadres.length],
+    [],
+    ['INSCRIPCIONES DE ALUMNOS'],
+    ['Inscripciones activas:', alumnosActivos],
+    ['Inscripciones inactivas:', alumnosInactivos],
+    [],
+    ['INSCRIPCIONES DE PERSONAL'],
+    ['Inscripciones activas:', personalActivo],
+    ['Inscripciones inactivas:', personalInactivo],
+  ];
+
+  const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+  wsResumen['!cols'] = [
+    { wch: 30 },
+    { wch: 20 }
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen');
+
+  const diasSemanaMap: { [key: number]: string } = {
+    1: 'L',
+    2: 'M',
+    3: 'X',
+    4: 'J',
+    5: 'V'
+  };
+
+  const getDiasText = (dias: number[]): string => {
+    return [1, 2, 3, 4, 5].map(d => dias.includes(d) ? diasSemanaMap[d] : '-').join(' ');
+  };
+
+  const alumnosData: any[][] = [
+    ['INSCRIPCIONES DE ALUMNOS'],
+    [],
+    ['Nombre', 'Grado', 'Días Semana', 'Precio Diario', 'Descuento', 'Fecha Inicio', 'Fecha Fin', 'Estado']
+  ];
+
+  const alumnosOrdenados = [...inscripcionesAlumnos].sort((a, b) => {
+    const nombreA = a.hijo_details?.nombre || '';
+    const nombreB = b.hijo_details?.nombre || '';
+    return nombreA.localeCompare(nombreB);
+  });
+
+  alumnosOrdenados.forEach(insc => {
+    const fechaInicio = new Date(insc.fecha_inicio).toLocaleDateString('es-ES');
+    const fechaFin = insc.fecha_fin ? new Date(insc.fecha_fin).toLocaleDateString('es-ES') : 'Indefinida';
+
+    alumnosData.push([
+      insc.hijo_details?.nombre || 'Sin nombre',
+      insc.hijo_details?.grado?.nombre || 'Sin grado',
+      getDiasText(insc.dias_semana),
+      insc.precio_diario.toFixed(2) + ' €',
+      insc.descuento_aplicado > 0 ? '-' + insc.descuento_aplicado.toFixed(2) + ' €' : 'Sin descuento',
+      fechaInicio,
+      fechaFin,
+      insc.activo ? 'ACTIVA' : 'INACTIVA'
+    ]);
+  });
+
+  const wsAlumnos = XLSX.utils.aoa_to_sheet(alumnosData);
+  wsAlumnos['!cols'] = [
+    { wch: 30 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 12 }
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsAlumnos, 'Alumnos');
+
+  const personalData: any[][] = [
+    ['INSCRIPCIONES DE PERSONAL'],
+    [],
+    ['Nombre', 'Días Semana', 'Precio Diario', 'Exento', 'Fecha Inicio', 'Fecha Fin', 'Estado']
+  ];
+
+  const personalOrdenado = [...inscripcionesPadres].sort((a, b) => {
+    const nombreA = a.padre?.nombre || '';
+    const nombreB = b.padre?.nombre || '';
+    return nombreA.localeCompare(nombreB);
+  });
+
+  personalOrdenado.forEach(insc => {
+    const fechaInicio = new Date(insc.fecha_inicio).toLocaleDateString('es-ES');
+    const fechaFin = insc.fecha_fin ? new Date(insc.fecha_fin).toLocaleDateString('es-ES') : 'Indefinida';
+
+    personalData.push([
+      insc.padre?.nombre || 'Sin nombre',
+      getDiasText(insc.dias_semana),
+      insc.padre?.exento_facturacion ? 'EXENTO' : insc.precio_diario.toFixed(2) + ' €',
+      insc.padre?.exento_facturacion ? 'SÍ' : 'NO',
+      fechaInicio,
+      fechaFin,
+      insc.activo ? 'ACTIVA' : 'INACTIVA'
+    ]);
+  });
+
+  const wsPersonal = XLSX.utils.aoa_to_sheet(personalData);
+  wsPersonal['!cols'] = [
+    { wch: 30 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 10 },
+    { wch: 15 },
+    { wch: 15 },
+    { wch: 12 }
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsPersonal, 'Personal');
+
+  const fechaActual = new Date().toISOString().split('T')[0];
+  const nombreArchivo = `Inscripciones_Comedor_${fechaActual}.xlsx`;
+
+  XLSX.writeFile(workbook, nombreArchivo);
+
+  return {
+    nombreArchivo,
+    totalInscripciones
   };
 }
