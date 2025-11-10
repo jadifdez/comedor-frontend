@@ -31,7 +31,7 @@ function VideoCard({ video, onPlay }: VideoCardProps) {
       className="group bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-lg transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
       onClick={() => onPlay(video)}
     >
-      <div className="relative aspect-video bg-gray-100 overflow-hidden">
+      <div className="relative bg-gray-100 overflow-hidden" style={{ aspectRatio: '9/16' }}>
         {!imageLoaded && !imageError && (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-600 border-t-transparent"></div>
@@ -183,7 +183,7 @@ export default function VideoTutoriales() {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
           {videosToShow.map((video) => (
             <VideoCard
               key={video.id}

@@ -34,12 +34,12 @@ export function VideoPlayerModal({ videoUrl, titulo, onClose }: VideoPlayerModal
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4 animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4 animate-fadeIn"
       onClick={handleBackdropClick}
     >
-      <div className="relative w-full max-w-5xl bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
+      <div className="relative w-full max-w-md bg-gray-900 rounded-lg shadow-2xl overflow-hidden">
         <div className="flex items-center justify-between px-4 py-3 bg-gray-800 border-b border-gray-700">
-          <h3 className="text-lg font-semibold text-white truncate pr-4">{titulo}</h3>
+          <h3 className="text-base font-semibold text-white truncate pr-4">{titulo}</h3>
           <button
             onClick={onClose}
             className="flex-shrink-0 p-1 rounded-lg text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
@@ -49,10 +49,10 @@ export function VideoPlayerModal({ videoUrl, titulo, onClose }: VideoPlayerModal
           </button>
         </div>
 
-        <div className="relative bg-black" style={{ aspectRatio: '16/9' }}>
+        <div className="relative bg-black" style={{ aspectRatio: '9/16' }}>
           <video
             ref={videoRef}
-            className="w-full h-full"
+            className="w-full h-full object-contain"
             controls
             autoPlay
             preload="metadata"
@@ -62,7 +62,7 @@ export function VideoPlayerModal({ videoUrl, titulo, onClose }: VideoPlayerModal
           </video>
         </div>
 
-        <div className="px-4 py-3 bg-gray-800 text-sm text-gray-400">
+        <div className="px-4 py-3 bg-gray-800 text-xs text-gray-400">
           <p>Presiona ESC o haz clic fuera del video para cerrar</p>
         </div>
       </div>
