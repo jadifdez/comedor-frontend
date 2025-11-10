@@ -34,6 +34,7 @@ import { User } from '@supabase/supabase-js';
 import { formatDateForDisplay } from './utils/dateUtils';
 
 import ResetPassword from './pages/ResetPassword';
+import VideoTutoriales from './pages/VideoTutoriales';
 
 function AppContent({ user }: { user: User }) {
   const isOnline = useOnlineStatus();
@@ -590,6 +591,7 @@ export default function App() {
     <ErrorBoundary>
       <PWAInstallPrompt />
       <Routes>
+        <Route path="/tutoriales" element={<VideoTutoriales />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/*" element={<ProtectedApp />} />
       </Routes>

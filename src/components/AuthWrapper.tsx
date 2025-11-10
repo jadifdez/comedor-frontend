@@ -1,8 +1,9 @@
 // src/components/AuthWrapper.tsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
-import { LogIn, LogOut, AlertCircle, Mail, ArrowLeft, Shield, Lock, CheckCircle2 } from 'lucide-react';
+import { LogIn, LogOut, AlertCircle, Mail, ArrowLeft, Shield, Lock, CheckCircle2, PlayCircle } from 'lucide-react';
 
 interface AuthWrapperProps {
   children: (user: User) => React.ReactNode;
@@ -54,6 +55,7 @@ function isRecoveryInProgress(): boolean {
 }
 
 export function AuthWrapper({ children }: AuthWrapperProps) {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPadreAutorizado, setIsPadreAutorizado] = useState<boolean | null>(null);
@@ -845,11 +847,20 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
             </form>
           )}
 
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-4">
+            <button
+              type="button"
+              onClick={() => navigate('/tutoriales')}
+              className="w-full flex items-center justify-center space-x-2 px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-sm"
+            >
+              <PlayCircle className="h-5 w-5" />
+              <span>Ver videotutoriales de ayuda</span>
+            </button>
+
             <p className="text-xs text-gray-500">
               Solo los padres pre-registrados por el colegio pueden crear una cuenta.
             </p>
-            <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="pt-4 border-t border-gray-200">
               <a href="/admin.html" className="inline-flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
                 <Shield className="h-4 w-4" />
                 <span>Acceso para administradores</span>
