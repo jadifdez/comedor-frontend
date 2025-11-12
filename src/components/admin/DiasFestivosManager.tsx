@@ -11,6 +11,7 @@ export function DiasFestivosManager() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [diaToDelete, setDiaToDelete] = useState<DiaFestivo | null>(null);
   const [isPeriodo, setIsPeriodo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     fecha: '',
     fechaInicio: '',
@@ -43,6 +44,7 @@ export function DiasFestivosManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
 
     try {
       if (editingDia) {
@@ -61,12 +63,20 @@ export function DiasFestivosManager() {
           const inicio = new Date(formData.fechaInicio + 'T00:00:00');
           const fin = new Date(formData.fechaFin + 'T00:00:00');
 
-          for (let d = new Date(inicio); d <= fin; d.setDate(d.getDate() + 1)) {
+          // Create a new Date object for each iteration
+          let currentDate = new Date(inicio);
+          while (currentDate <= fin) {
             fechas.push({
-              fecha: d.toISOString().split('T')[0],
+              fecha: currentDate.toISOString().split('T')[0],
               nombre: formData.nombre,
               activo: formData.activo
             });
+            currentDate = new Date(currentDate);
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+
+          if (fechas.length === 0) {
+            throw new Error('No se generaron fechas. Verifica que la fecha de inicio sea anterior a la fecha de fin.');
           }
 
           const { error } = await supabase
@@ -91,9 +101,11 @@ export function DiasFestivosManager() {
       setIsPeriodo(false);
       setShowForm(false);
       setEditingDia(null);
+      setError(null);
       loadDiasFestivos();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving día festivo:', error);
+      setError(error.message || 'Error al guardar el día festivo. Por favor, intenta de nuevo.');
     }
   };
 
@@ -214,6 +226,17 @@ export function DiasFestivosManager() {
             {editingDia ? 'Editar Día Festivo' : 'Nuevo Día Festivo'}
           </h3>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                <div className="flex items-start space-x-2">
+                  <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Error</p>
+                    <p className="text-sm text-red-700 mt-1">{error}</p>
+                  </div>
+                </div>
+              </div>
+            )}
             {!editingDia && (
               <div className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
                 <label className="flex items-center space-x-2 cursor-pointer">
