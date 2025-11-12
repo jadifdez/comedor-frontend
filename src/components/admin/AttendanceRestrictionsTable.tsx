@@ -6,6 +6,7 @@ interface AttendanceData {
   grupo: string;
   tipo: 'curso' | 'personal' | 'externo';
   restricciones: Map<string, number>;
+  sinRestricciones: number;
   total: number;
 }
 
@@ -16,6 +17,19 @@ interface AttendanceRestrictionsTableProps {
 
 export function AttendanceRestrictionsTable({ comensales, restriccionesActivas }: AttendanceRestrictionsTableProps) {
   const comensalesActivos = comensales.filter(c => !c.cancelado_ultimo_momento);
+
+  if (comensalesActivos.length === 0) {
+    return (
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center space-x-2">
+          <AlertCircle className="h-5 w-5 text-blue-600" />
+          <span className="text-blue-800 font-medium">
+            No hay comensales activos para este día
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   const restriccionesEncontradas = new Set<string>();
   comensalesActivos.forEach(comensal => {
@@ -28,30 +42,19 @@ export function AttendanceRestrictionsTable({ comensales, restriccionesActivas }
     restriccionesEncontradas.has(r.nombre)
   );
 
-  if (restriccionesDelDia.length === 0) {
-    return (
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <div className="flex items-center space-x-2">
-          <AlertCircle className="h-5 w-5 text-blue-600" />
-          <span className="text-blue-800 font-medium">
-            No hay comensales con restricciones dietéticas para este día
-          </span>
-        </div>
-      </div>
-    );
-  }
-
   const gruposPorCurso = new Map<string, AttendanceData>();
   const grupoPersonal: AttendanceData = {
     grupo: 'Personal',
     tipo: 'personal',
     restricciones: new Map(),
+    sinRestricciones: 0,
     total: 0
   };
   const grupoExternos: AttendanceData = {
     grupo: 'Externos',
     tipo: 'externo',
     restricciones: new Map(),
+    sinRestricciones: 0,
     total: 0
   };
 
@@ -61,24 +64,30 @@ export function AttendanceRestrictionsTable({ comensales, restriccionesActivas }
   });
 
   comensalesActivos.forEach(comensal => {
-    if (comensal.restricciones.length === 0) return;
-
     if (comensal.tipo === 'padre') {
       grupoPersonal.total++;
-      comensal.restricciones.forEach(restriccion => {
-        if (restriccionesEncontradas.has(restriccion)) {
-          const current = grupoPersonal.restricciones.get(restriccion) || 0;
-          grupoPersonal.restricciones.set(restriccion, current + 1);
-        }
-      });
+      if (comensal.restricciones.length === 0) {
+        grupoPersonal.sinRestricciones++;
+      } else {
+        comensal.restricciones.forEach(restriccion => {
+          if (restriccionesEncontradas.has(restriccion)) {
+            const current = grupoPersonal.restricciones.get(restriccion) || 0;
+            grupoPersonal.restricciones.set(restriccion, current + 1);
+          }
+        });
+      }
     } else if (comensal.tipo === 'externo') {
       grupoExternos.total++;
-      comensal.restricciones.forEach(restriccion => {
-        if (restriccionesEncontradas.has(restriccion)) {
-          const current = grupoExternos.restricciones.get(restriccion) || 0;
-          grupoExternos.restricciones.set(restriccion, current + 1);
-        }
-      });
+      if (comensal.restricciones.length === 0) {
+        grupoExternos.sinRestricciones++;
+      } else {
+        comensal.restricciones.forEach(restriccion => {
+          if (restriccionesEncontradas.has(restriccion)) {
+            const current = grupoExternos.restricciones.get(restriccion) || 0;
+            grupoExternos.restricciones.set(restriccion, current + 1);
+          }
+        });
+      }
     } else {
       const curso = comensal.curso || 'Sin curso';
 
@@ -90,6 +99,7 @@ export function AttendanceRestrictionsTable({ comensales, restriccionesActivas }
           grupo: curso,
           tipo: 'curso',
           restricciones: restriccionesMap,
+          sinRestricciones: 0,
           total: 0
         });
       }
@@ -97,12 +107,16 @@ export function AttendanceRestrictionsTable({ comensales, restriccionesActivas }
       const grupo = gruposPorCurso.get(curso)!;
       grupo.total++;
 
-      comensal.restricciones.forEach(restriccion => {
-        if (restriccionesEncontradas.has(restriccion)) {
-          const current = grupo.restricciones.get(restriccion) || 0;
-          grupo.restricciones.set(restriccion, current + 1);
-        }
-      });
+      if (comensal.restricciones.length === 0) {
+        grupo.sinRestricciones++;
+      } else {
+        comensal.restricciones.forEach(restriccion => {
+          if (restriccionesEncontradas.has(restriccion)) {
+            const current = grupo.restricciones.get(restriccion) || 0;
+            grupo.restricciones.set(restriccion, current + 1);
+          }
+        });
+      }
     }
   });
 
@@ -120,11 +134,13 @@ export function AttendanceRestrictionsTable({ comensales, restriccionesActivas }
   const totalesPorRestriccion = new Map<string, number>();
   restriccionesDelDia.forEach(r => totalesPorRestriccion.set(r.nombre, 0));
 
+  let totalSinRestricciones = 0;
   todosLosGrupos.forEach(grupo => {
     grupo.restricciones.forEach((count, restriccion) => {
       const currentTotal = totalesPorRestriccion.get(restriccion) || 0;
       totalesPorRestriccion.set(restriccion, currentTotal + count);
     });
+    totalSinRestricciones += grupo.sinRestricciones;
   });
 
   const totalGeneral = todosLosGrupos.reduce((sum, g) => sum + g.total, 0);
@@ -136,6 +152,9 @@ export function AttendanceRestrictionsTable({ comensales, restriccionesActivas }
           <tr className="bg-gray-100 border-b-2 border-gray-300">
             <th className="px-4 py-3 text-left text-sm font-semibold text-gray-700 border-r border-gray-300">
               Curso
+            </th>
+            <th className="px-4 py-3 text-center text-sm font-semibold text-gray-700 border-r border-gray-300 bg-green-50">
+              Sin Restricciones
             </th>
             {restriccionesDelDia.map(restriccion => (
               <th
@@ -159,6 +178,11 @@ export function AttendanceRestrictionsTable({ comensales, restriccionesActivas }
               <td className="px-4 py-3 text-sm font-medium text-gray-900 border-r border-gray-300">
                 {grupo.grupo}
               </td>
+              <td className={`px-4 py-3 text-center text-sm border-r border-gray-300 bg-green-50 ${
+                grupo.sinRestricciones > 0 ? 'font-semibold text-gray-900' : 'text-gray-400'
+              }`}>
+                {grupo.sinRestricciones > 0 ? grupo.sinRestricciones : '-'}
+              </td>
               {restriccionesDelDia.map(restriccion => {
                 const count = grupo.restricciones.get(restriccion.nombre) || 0;
                 return (
@@ -180,6 +204,11 @@ export function AttendanceRestrictionsTable({ comensales, restriccionesActivas }
           <tr className="bg-gray-200 border-t-2 border-gray-400 font-bold">
             <td className="px-4 py-3 text-sm text-gray-900 border-r border-gray-300">
               TOTAL
+            </td>
+            <td className={`px-4 py-3 text-center text-sm border-r border-gray-300 bg-green-100 ${
+              totalSinRestricciones > 0 ? 'text-gray-900' : 'text-gray-500'
+            }`}>
+              {totalSinRestricciones > 0 ? totalSinRestricciones : '-'}
             </td>
             {restriccionesDelDia.map(restriccion => {
               const total = totalesPorRestriccion.get(restriccion.nombre) || 0;
