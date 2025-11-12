@@ -44,53 +44,31 @@ export function PersonalManager() {
     try {
       setLoading(true);
 
+      // Use optimized RPC function that returns personal with counts in a single query
       const { data, error } = await supabase
-        .from('padres')
-        .select('*')
-        .eq('es_personal', true)
-        .order('nombre');
+        .rpc('get_personal_with_counts');
 
       if (error) {
         throw error;
       }
 
-      setPadres(data || []);
+      if (data) {
+        // Extract counts and inscriptions from the RPC result
+        const counts: Record<string, number> = {};
+        const inscripciones: Record<string, InscripcionPadreAdmin> = {};
 
-      if (data && data.length > 0) {
-        const { data: hijosData, error: hijosError } = await supabase
-          .from('hijos')
-          .select(`
-            *,
-            grado:grados(*)
-          `)
-          .order('nombre');
+        data.forEach((personal: any) => {
+          counts[personal.id] = personal.hijos_count || 0;
 
-        if (hijosError) {
-          console.error('Error loading hijos:', hijosError);
-        } else {
-          const counts: Record<string, number> = {};
-          const details: Record<string, Hijo[]> = {};
-
-          hijosData?.forEach(hijo => {
-            counts[hijo.padre_id] = (counts[hijo.padre_id] || 0) + 1;
-            if (!details[hijo.padre_id]) {
-              details[hijo.padre_id] = [];
-            }
-            details[hijo.padre_id].push(hijo);
-          });
-
-          setHijosCount(counts);
-          setHijosDetails(details);
-        }
-
-        const inscripcionesMap: Record<string, InscripcionPadreAdmin> = {};
-        for (const profesor of data) {
-          const inscripcion = await verificarInscripcionActiva(profesor.id);
-          if (inscripcion) {
-            inscripcionesMap[profesor.id] = inscripcion;
+          // Mark which personal have active inscriptions
+          if (personal.tiene_inscripcion_activa) {
+            inscripciones[personal.id] = { padre_id: personal.id } as InscripcionPadreAdmin;
           }
-        }
-        setInscripcionesActivas(inscripcionesMap);
+        });
+
+        setPadres(data);
+        setHijosCount(counts);
+        setInscripcionesActivas(inscripciones);
       }
     } catch (error) {
       console.error('Error in loadPadres:', error);
@@ -182,8 +160,40 @@ export function PersonalManager() {
     }
   };
 
-  const togglePadreExpansion = (padreId: string) => {
-    setExpandedPadre(expandedPadre === padreId ? null : padreId);
+  const togglePadreExpansion = async (padreId: string) => {
+    // If closing, just close
+    if (expandedPadre === padreId) {
+      setExpandedPadre(null);
+      return;
+    }
+
+    // If opening and we don't have the details yet, load them
+    if (!hijosDetails[padreId]) {
+      try {
+        const { data, error } = await supabase
+          .from('hijos')
+          .select(`
+            *,
+            grado:grados(*)
+          `)
+          .eq('padre_id', padreId)
+          .eq('activo', true)
+          .order('nombre');
+
+        if (error) throw error;
+
+        if (data) {
+          setHijosDetails(prev => ({
+            ...prev,
+            [padreId]: data
+          }));
+        }
+      } catch (error) {
+        console.error('Error loading hijos details:', error);
+      }
+    }
+
+    setExpandedPadre(padreId);
   };
 
   const handleSendPasswordReset = async (padre: Padre) => {
