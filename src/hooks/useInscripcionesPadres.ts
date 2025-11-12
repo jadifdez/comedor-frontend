@@ -33,9 +33,11 @@ export function useInscripcionesPadres(user: User) {
   const loadPadre = async () => {
     try {
       // RLS automatically filters by email = auth.email()
+      // Adding explicit email filter to ensure single row
       const { data, error: fetchError } = await supabase
         .from('padres')
         .select('*')
+        .eq('email', user.email)
         .eq('activo', true)
         .maybeSingle();
 
