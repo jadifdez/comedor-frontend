@@ -91,7 +91,7 @@ export function useFacturacion(user: User) {
       const { data: padreData, error: padreError } = await supabase
         .from('padres')
         .select('id')
-        .eq('auth_user_id', user.id)
+        .eq('user_id', user.id)
         .maybeSingle();
 
       if (padreError) throw padreError;
