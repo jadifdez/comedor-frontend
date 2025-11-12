@@ -87,6 +87,20 @@ export function useFacturacion(user: User) {
     const fechaFinMes = `${year}-${String(month).padStart(2, '0')}-${String(ultimoDiaMes).padStart(2, '0')}`;
 
     try {
+      // Primero obtener el padre_id del usuario autenticado
+      const { data: padreData, error: padreError } = await supabase
+        .from('padres')
+        .select('id')
+        .eq('auth_user_id', user.id)
+        .maybeSingle();
+
+      if (padreError) throw padreError;
+      if (!padreData) {
+        throw new Error('No se encontró información del padre');
+      }
+
+      const padreId = padreData.id;
+
       // Cargar todos los datos necesarios
       const [hijosResult, inscripcionesResult, bajasResult, solicitudesResult, padreResult, inscripcionesPadreResult, invitacionesResult] = await Promise.all([
         supabase
@@ -99,6 +113,7 @@ export function useFacturacion(user: User) {
             fecha_inicio_exencion,
             fecha_fin_exencion
           `)
+          .eq('padre_id', padreId)
           .eq('activo', true)
           .order('nombre'),
 
@@ -106,35 +121,40 @@ export function useFacturacion(user: User) {
         // Esto permite facturar proporcionalmente cuando una inscripción se desactiva a mitad de mes
         supabase
           .from('comedor_inscripciones')
-          .select('*')
+          .select('*, hijo:hijos!inner(padre_id)')
+          .eq('hijo.padre_id', padreId)
           .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
 
         supabase
           .from('comedor_bajas')
           .select('*')
+          .or(`hijo_id.in.(select id from hijos where padre_id = ${padreId}),padre_id.eq.${padreId}`)
           .order('fecha_creacion'),
 
         supabase
           .from('comedor_altaspuntuales')
           .select('*')
+          .or(`hijo_id.in.(select id from hijos where padre_id = ${padreId}),padre_id.eq.${padreId}`)
           .eq('estado', 'aprobada')
           .order('fecha_creacion'),
 
         supabase
           .from('padres')
           .select('*')
-          .eq('auth_user_id', user.id)
-          .maybeSingle(),
+          .eq('id', padreId)
+          .single(),
 
         // IMPORTANTE: Incluir inscripciones de padres activas Y desactivadas que estuvieron activas durante el mes
         supabase
           .from('comedor_inscripciones_padres')
           .select('*')
+          .eq('padre_id', padreId)
           .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
 
         supabase
           .from('invitaciones_comedor')
           .select('*')
+          .or(`hijo_id.in.(select id from hijos where padre_id = ${padreId}),padre_id.eq.${padreId}`)
           .gte('fecha', fechaInicioMes)
           .lte('fecha', fechaFinMes)
       ]);
