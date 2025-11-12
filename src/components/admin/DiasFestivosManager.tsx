@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase, DiaFestivo } from '../../lib/supabase';
 import { Calendar, Plus, Trash2, ChevronLeft, ChevronRight, AlertTriangle, X, Check, Search } from 'lucide-react';
 
@@ -17,7 +17,6 @@ export function DiasFestivosManager() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [diaToDelete, setDiaToDelete] = useState<DiaFestivo | null>(null);
   const [hoveredDay, setHoveredDay] = useState<string | null>(null);
-  const [isTooltipHovered, setIsTooltipHovered] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPeriodo, setIsPeriodo] = useState(false);
@@ -27,6 +26,7 @@ export function DiasFestivosManager() {
     nombre: '',
     activo: true
   });
+  const hoverTimeoutRef = useRef<number | null>(null);
 
   const months = [
     'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -392,13 +392,22 @@ export function DiasFestivosManager() {
                     <div
                       key={idx}
                       onClick={() => dayInfo.isCurrentMonth && handleDayClick(dayInfo.date, dayInfo.festivo)}
-                      onMouseEnter={() => dayInfo.festivo && setHoveredDay(dayInfo.date)}
+                      onMouseEnter={() => {
+                        if (hoverTimeoutRef.current) {
+                          clearTimeout(hoverTimeoutRef.current);
+                          hoverTimeoutRef.current = null;
+                        }
+                        if (dayInfo.festivo) {
+                          setHoveredDay(dayInfo.date);
+                        }
+                      }}
                       onMouseLeave={() => {
-                        setTimeout(() => {
-                          if (!isTooltipHovered) {
-                            setHoveredDay(null);
-                          }
-                        }, 100);
+                        if (hoverTimeoutRef.current) {
+                          clearTimeout(hoverTimeoutRef.current);
+                        }
+                        hoverTimeoutRef.current = window.setTimeout(() => {
+                          setHoveredDay(null);
+                        }, 200);
                       }}
                       className={`
                         relative aspect-square flex items-center justify-center text-xs rounded
@@ -418,11 +427,20 @@ export function DiasFestivosManager() {
                       {/* Hover Tooltip */}
                       {isHovered && dayInfo.festivo && (
                         <div
-                          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50"
-                          onMouseEnter={() => setIsTooltipHovered(true)}
+                          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50 pointer-events-auto"
+                          onMouseEnter={() => {
+                            if (hoverTimeoutRef.current) {
+                              clearTimeout(hoverTimeoutRef.current);
+                              hoverTimeoutRef.current = null;
+                            }
+                          }}
                           onMouseLeave={() => {
-                            setIsTooltipHovered(false);
-                            setHoveredDay(null);
+                            if (hoverTimeoutRef.current) {
+                              clearTimeout(hoverTimeoutRef.current);
+                            }
+                            hoverTimeoutRef.current = window.setTimeout(() => {
+                              setHoveredDay(null);
+                            }, 200);
                           }}
                         >
                           <div className="bg-gray-900 text-white text-xs rounded-lg py-2 px-3 shadow-lg whitespace-nowrap">
@@ -433,7 +451,10 @@ export function DiasFestivosManager() {
                                   e.stopPropagation();
                                   toggleActivo(dayInfo.festivo!);
                                   setHoveredDay(null);
-                                  setIsTooltipHovered(false);
+                                  if (hoverTimeoutRef.current) {
+                                    clearTimeout(hoverTimeoutRef.current);
+                                    hoverTimeoutRef.current = null;
+                                  }
                                 }}
                                 className="text-xs px-2 py-0.5 bg-white text-gray-900 rounded hover:bg-gray-100"
                               >
@@ -444,7 +465,10 @@ export function DiasFestivosManager() {
                                   e.stopPropagation();
                                   handleDeleteClick(dayInfo.festivo!);
                                   setHoveredDay(null);
-                                  setIsTooltipHovered(false);
+                                  if (hoverTimeoutRef.current) {
+                                    clearTimeout(hoverTimeoutRef.current);
+                                    hoverTimeoutRef.current = null;
+                                  }
                                 }}
                                 className="text-xs px-2 py-0.5 bg-red-600 text-white rounded hover:bg-red-700"
                               >
