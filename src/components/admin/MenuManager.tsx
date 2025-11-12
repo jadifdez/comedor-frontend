@@ -14,6 +14,7 @@ export function MenuManager() {
   const [formData, setFormData] = useState({
     nombre: '',
     dia_semana: 1,
+    dias_semana_multi: [] as number[],
     orden: 0,
     activo: true
   });
@@ -81,7 +82,7 @@ export function MenuManager() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     try {
       if (editingOpcion) {
         // Use RPC functions for updates to bypass RLS
@@ -108,14 +109,26 @@ export function MenuManager() {
       } else {
         // Use RPC functions for new items to bypass RLS
         if (activeTab === 'principales') {
-          const { error } = await supabase
-            .rpc('admin_insert_opcion_principal', {
-              new_nombre: formData.nombre,
-              new_dia_semana: formData.dia_semana,
-              new_orden: formData.orden,
-              new_activo: formData.activo
-            });
-          if (error) throw error;
+          // Check if using multi-day selection
+          if (formData.dias_semana_multi.length > 0) {
+            const { error } = await supabase
+              .rpc('admin_insert_opcion_principal_multi_dias', {
+                new_nombre: formData.nombre,
+                new_dias_semana: formData.dias_semana_multi,
+                new_orden: formData.orden,
+                new_activo: formData.activo
+              });
+            if (error) throw error;
+          } else {
+            const { error } = await supabase
+              .rpc('admin_insert_opcion_principal', {
+                new_nombre: formData.nombre,
+                new_dia_semana: formData.dia_semana,
+                new_orden: formData.orden,
+                new_activo: formData.activo
+              });
+            if (error) throw error;
+          }
         } else {
           const { error } = await supabase
             .rpc('admin_insert_opcion_guarnicion', {
@@ -127,7 +140,7 @@ export function MenuManager() {
         }
       }
 
-      setFormData({ nombre: '', dia_semana: 1, orden: 0, activo: true });
+      setFormData({ nombre: '', dia_semana: 1, dias_semana_multi: [], orden: 0, activo: true });
       setShowForm(false);
       setEditingOpcion(null);
       loadData();
@@ -141,6 +154,7 @@ export function MenuManager() {
     setFormData({
       nombre: opcion.nombre,
       dia_semana: 'dia_semana' in opcion ? opcion.dia_semana : 1,
+      dias_semana_multi: [],
       orden: opcion.orden,
       activo: opcion.activo
     });
@@ -230,7 +244,7 @@ export function MenuManager() {
           onClick={() => {
             setShowForm(true);
             setEditingOpcion(null);
-            setFormData({ nombre: '', dia_semana: 1, orden: 0, activo: true });
+            setFormData({ nombre: '', dia_semana: 1, dias_semana_multi: [], orden: 0, activo: true });
           }}
           className="flex items-center space-x-2 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors"
         >
@@ -286,20 +300,66 @@ export function MenuManager() {
               />
             </div>
             {activeTab === 'principales' && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Día de la semana</label>
-                <select
-                  value={formData.dia_semana}
-                  onChange={(e) => setFormData(prev => ({ ...prev, dia_semana: parseInt(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  required
-                >
-                  {diasSemana.map((dia) => (
-                    <option key={dia.value} value={dia.value}>
-                      {dia.label}
-                    </option>
-                  ))}
-                </select>
+              <div className="md:col-span-2">
+                {editingOpcion ? (
+                  // When editing, show single day selector
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Día de la semana</label>
+                    <select
+                      value={formData.dia_semana}
+                      onChange={(e) => setFormData(prev => ({ ...prev, dia_semana: parseInt(e.target.value) }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                      required
+                    >
+                      {diasSemana.map((dia) => (
+                        <option key={dia.value} value={dia.value}>
+                          {dia.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                ) : (
+                  // When creating new, allow multi-day selection
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Días de la semana (selecciona uno o varios)
+                    </label>
+                    <div className="grid grid-cols-5 gap-2">
+                      {diasSemana.map((dia) => {
+                        const isSelected = formData.dias_semana_multi.includes(dia.value);
+                        return (
+                          <button
+                            key={dia.value}
+                            type="button"
+                            onClick={() => {
+                              setFormData(prev => ({
+                                ...prev,
+                                dias_semana_multi: isSelected
+                                  ? prev.dias_semana_multi.filter(d => d !== dia.value)
+                                  : [...prev.dias_semana_multi, dia.value].sort()
+                              }));
+                            }}
+                            className={`px-3 py-2 rounded-lg border-2 transition-all duration-200 text-sm font-medium ${
+                              isSelected
+                                ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                                : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                            }`}
+                          >
+                            {dia.label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    {formData.dias_semana_multi.length === 0 && (
+                      <p className="mt-2 text-sm text-red-600">Debes seleccionar al menos un día</p>
+                    )}
+                    {formData.dias_semana_multi.length > 0 && (
+                      <p className="mt-2 text-sm text-green-600">
+                        Se creará esta opción para {formData.dias_semana_multi.length} día{formData.dias_semana_multi.length > 1 ? 's' : ''}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             )}
             <div>
@@ -372,8 +432,36 @@ export function MenuManager() {
             <tbody className="bg-white divide-y divide-gray-200">
               {currentOptions.map((opcion) => (
                 <tr key={opcion.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4">
                     <div className="text-sm font-medium text-gray-900">{opcion.nombre}</div>
+                    {activeTab === 'principales' && (() => {
+                      const nombreOpcion = opcion.nombre;
+                      const diasConMismoNombre = opcionesPrincipales.filter(
+                        o => o.nombre === nombreOpcion && o.id !== opcion.id
+                      );
+                      if (diasConMismoNombre.length > 0) {
+                        const todosDias = [
+                          (opcion as OpcionMenuPrincipal).dia_semana,
+                          ...diasConMismoNombre.map(o => o.dia_semana)
+                        ].sort();
+                        return (
+                          <div className="flex flex-wrap gap-1 mt-1">
+                            {todosDias.map(dia => {
+                              const diaLabel = diasSemana.find(d => d.value === dia)?.label || '';
+                              return (
+                                <span
+                                  key={dia}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {diaLabel}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </td>
                   {activeTab === 'principales' && (
                     <td className="px-6 py-4 whitespace-nowrap">
