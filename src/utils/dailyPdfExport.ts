@@ -1,6 +1,14 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { DailyData, DailyDiner } from '../hooks/useDailyManagement';
+import { DailyData, DailyDiner, RestriccionDietetica } from '../hooks/useDailyManagement';
+
+interface AttendanceData {
+  grupo: string;
+  tipo: 'curso' | 'personal' | 'externo';
+  restricciones: Map<string, number>;
+  sinRestricciones: number;
+  total: number;
+}
 
 export function generateDailyPDF(data: DailyData, selectedDate: Date) {
   const doc = new jsPDF();
@@ -26,6 +34,200 @@ export function generateDailyPDF(data: DailyData, selectedDate: Date) {
     });
     return Array.from(grouped.entries()).sort((a, b) => a[0].localeCompare(b[0]));
   };
+
+  const generateAttendanceSummary = () => {
+    const comensalesActivos = data.comensales.filter(c => !c.cancelado_ultimo_momento);
+
+    const restriccionesEncontradas = new Set<string>();
+    comensalesActivos.forEach(comensal => {
+      comensal.restricciones.forEach(restriccion => {
+        restriccionesEncontradas.add(restriccion);
+      });
+    });
+
+    const restriccionesDelDia = data.restricciones_activas.filter(r =>
+      restriccionesEncontradas.has(r.nombre)
+    );
+
+    const gruposPorCurso = new Map<string, AttendanceData>();
+    const grupoPersonal: AttendanceData = {
+      grupo: 'Personal',
+      tipo: 'personal',
+      restricciones: new Map(),
+      sinRestricciones: 0,
+      total: 0
+    };
+    const grupoExternos: AttendanceData = {
+      grupo: 'Externos',
+      tipo: 'externo',
+      restricciones: new Map(),
+      sinRestricciones: 0,
+      total: 0
+    };
+
+    restriccionesDelDia.forEach(r => {
+      grupoPersonal.restricciones.set(r.nombre, 0);
+      grupoExternos.restricciones.set(r.nombre, 0);
+    });
+
+    comensalesActivos.forEach(comensal => {
+      if (comensal.tipo === 'padre') {
+        grupoPersonal.total++;
+        if (comensal.restricciones.length === 0) {
+          grupoPersonal.sinRestricciones++;
+        } else {
+          comensal.restricciones.forEach(restriccion => {
+            if (restriccionesEncontradas.has(restriccion)) {
+              const current = grupoPersonal.restricciones.get(restriccion) || 0;
+              grupoPersonal.restricciones.set(restriccion, current + 1);
+            }
+          });
+        }
+      } else if (comensal.tipo === 'externo') {
+        grupoExternos.total++;
+        if (comensal.restricciones.length === 0) {
+          grupoExternos.sinRestricciones++;
+        } else {
+          comensal.restricciones.forEach(restriccion => {
+            if (restriccionesEncontradas.has(restriccion)) {
+              const current = grupoExternos.restricciones.get(restriccion) || 0;
+              grupoExternos.restricciones.set(restriccion, current + 1);
+            }
+          });
+        }
+      } else {
+        const curso = comensal.curso || 'Sin curso';
+
+        if (!gruposPorCurso.has(curso)) {
+          const restriccionesMap = new Map<string, number>();
+          restriccionesDelDia.forEach(r => restriccionesMap.set(r.nombre, 0));
+
+          gruposPorCurso.set(curso, {
+            grupo: curso,
+            tipo: 'curso',
+            restricciones: restriccionesMap,
+            sinRestricciones: 0,
+            total: 0
+          });
+        }
+
+        const grupo = gruposPorCurso.get(curso)!;
+        grupo.total++;
+
+        if (comensal.restricciones.length === 0) {
+          grupo.sinRestricciones++;
+        } else {
+          comensal.restricciones.forEach(restriccion => {
+            if (restriccionesEncontradas.has(restriccion)) {
+              const current = grupo.restricciones.get(restriccion) || 0;
+              grupo.restricciones.set(restriccion, current + 1);
+            }
+          });
+        }
+      }
+    });
+
+    const cursosOrdenados = Array.from(gruposPorCurso.values())
+      .sort((a, b) => a.grupo.localeCompare(b.grupo));
+
+    const todosLosGrupos: AttendanceData[] = [...cursosOrdenados];
+    if (grupoPersonal.total > 0) {
+      todosLosGrupos.push(grupoPersonal);
+    }
+    if (grupoExternos.total > 0) {
+      todosLosGrupos.push(grupoExternos);
+    }
+
+    return { todosLosGrupos, restriccionesDelDia };
+  };
+
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Resumen de Asistencia por Curso y Restricciones', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Fecha: ${selectedDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 10;
+
+  const { todosLosGrupos, restriccionesDelDia } = generateAttendanceSummary();
+
+  if (todosLosGrupos.length > 0) {
+    const headers = ['Curso', 'Sin Restricciones', ...restriccionesDelDia.map(r => r.nombre), 'Total'];
+    const summaryData: any[][] = [];
+
+    let totalSinRestricciones = 0;
+    const totalesPorRestriccion = new Map<string, number>();
+    restriccionesDelDia.forEach(r => totalesPorRestriccion.set(r.nombre, 0));
+
+    todosLosGrupos.forEach(grupo => {
+      const row = [
+        grupo.grupo,
+        grupo.sinRestricciones > 0 ? grupo.sinRestricciones.toString() : '-'
+      ];
+
+      restriccionesDelDia.forEach(restriccion => {
+        const count = grupo.restricciones.get(restriccion.nombre) || 0;
+        row.push(count > 0 ? count.toString() : '-');
+        const currentTotal = totalesPorRestriccion.get(restriccion.nombre) || 0;
+        totalesPorRestriccion.set(restriccion.nombre, currentTotal + count);
+      });
+
+      row.push(grupo.total.toString());
+      summaryData.push(row);
+      totalSinRestricciones += grupo.sinRestricciones;
+    });
+
+    const totalRow = ['TOTAL', totalSinRestricciones > 0 ? totalSinRestricciones.toString() : '-'];
+    restriccionesDelDia.forEach(restriccion => {
+      const total = totalesPorRestriccion.get(restriccion.nombre) || 0;
+      totalRow.push(total > 0 ? total.toString() : '-');
+    });
+    const totalGeneral = todosLosGrupos.reduce((sum, g) => sum + g.total, 0);
+    totalRow.push(totalGeneral.toString());
+    summaryData.push(totalRow);
+
+    autoTable(doc, {
+      startY: yPosition,
+      head: [headers],
+      body: summaryData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [251, 146, 60],
+        fontStyle: 'bold',
+        fontSize: 9,
+        halign: 'center'
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2,
+        halign: 'center'
+      },
+      columnStyles: {
+        0: { halign: 'left', fontStyle: 'bold' },
+        1: { fillColor: [240, 253, 244] }
+      },
+      didParseCell: (data) => {
+        if (data.row.index === summaryData.length - 1) {
+          data.cell.styles.fillColor = [229, 231, 235];
+          data.cell.styles.fontStyle = 'bold';
+        }
+        if (data.column.index === headers.length - 1) {
+          data.cell.styles.fillColor = [243, 244, 246];
+          data.cell.styles.fontStyle = 'bold';
+        }
+      },
+      margin: { left: 14, right: 14 }
+    });
+  } else {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'italic');
+    doc.text('No hay datos de asistencia disponibles', pageWidth / 2, yPosition, { align: 'center' });
+  }
+
+  doc.addPage();
+  yPosition = 20;
 
   const alumnos = data.comensales.filter(c => c.tipo === 'hijo');
   const gradosAgrupados = groupByGrado(alumnos);
