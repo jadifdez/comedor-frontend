@@ -57,6 +57,12 @@ export interface Invitado {
   motivo: string;
 }
 
+export interface RestriccionDietetica {
+  id: string;
+  nombre: string;
+  tipo: 'alergia' | 'restriccion';
+}
+
 export interface DailyData {
   fecha: string;
   dia_semana: number;
@@ -76,6 +82,7 @@ export interface DailyData {
   menu_summary: MenuSummary[];
   sin_eleccion: DailyDiner[];
   menu_rancho: DailyDiner[];
+  restricciones_activas: RestriccionDietetica[];
 }
 
 export function useDailyManagement(fecha: string) {
@@ -110,7 +117,8 @@ export function useDailyManagement(fecha: string) {
         dietasBlandasResult,
         festivosResult,
         restriccionesResult,
-        cancelacionesResult
+        cancelacionesResult,
+        restriccionesActivasResult
       ] = await Promise.all([
         supabase
           .from('comedor_inscripciones')
@@ -208,7 +216,13 @@ export function useDailyManagement(fecha: string) {
         supabase
           .from('comedor_cancelaciones_ultimo_momento')
           .select('*')
-          .eq('fecha', selectedDate)
+          .eq('fecha', selectedDate),
+
+        supabase
+          .from('restricciones_dieteticas')
+          .select('id, nombre, tipo')
+          .eq('activo', true)
+          .order('nombre', { ascending: true })
       ]);
 
       if (inscripcionesResult.error) throw inscripcionesResult.error;
@@ -222,6 +236,7 @@ export function useDailyManagement(fecha: string) {
       if (festivosResult.error) throw festivosResult.error;
       if (restriccionesResult.error) throw restriccionesResult.error;
       if (cancelacionesResult.error) throw cancelacionesResult.error;
+      if (restriccionesActivasResult.error) throw restriccionesActivasResult.error;
 
       const inscripcionesRaw = inscripcionesResult.data || [];
       const inscripcionesPadreRaw = inscripcionesPadreResult.data || [];
@@ -234,6 +249,7 @@ export function useDailyManagement(fecha: string) {
       const festivo = festivosResult.data;
       const restriccionesData = restriccionesResult.data || [];
       const cancelaciones = cancelacionesResult.data || [];
+      const restriccionesActivas = restriccionesActivasResult.data || [];
 
       // Filtrar inscripciones por fecha
       const inscripciones = inscripcionesRaw.filter(insc => {
@@ -581,7 +597,8 @@ export function useDailyManagement(fecha: string) {
         dietas_blandas: dietasBlandasFormatted,
         menu_summary: Array.from(menuSummaryMap.values()),
         sin_eleccion: sinEleccion,
-        menu_rancho: menuRancho
+        menu_rancho: menuRancho,
+        restricciones_activas: restriccionesActivas
       };
 
       setData(dailyData);

@@ -1,14 +1,15 @@
 import React, { useState } from 'react';
-import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, GraduationCap, Briefcase, UserPlus, ChevronDown, ChevronUp, Clock, UserCheck, Ban, RotateCcw, Plus, X, DollarSign } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Download, Users, AlertCircle, GraduationCap, Briefcase, UserPlus, ChevronDown, ChevronUp, Clock, UserCheck, Ban, RotateCcw, Plus, X, DollarSign, UtensilsCrossed } from 'lucide-react';
 import { useDailyManagement, DailyDiner } from '../../hooks/useDailyManagement';
 import { generateDailyPDF } from '../../utils/dailyPdfExport';
 import { supabase } from '../../lib/supabase';
 import { useAltasPuntualesAdmin } from '../../hooks/useAltasPuntualesAdmin';
 import { NotificationModal } from '../NotificationModal';
+import { AttendanceRestrictionsTable } from './AttendanceRestrictionsTable';
 
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['restricciones']));
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedComensal, setSelectedComensal] = useState<DailyDiner | null>(null);
@@ -818,6 +819,35 @@ export function DailyManagementView() {
 
       {!loading && data && !isWeekend(selectedDate) && (
         <>
+          {/* Tabla de Asistencia por Restricciones */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <button
+              onClick={() => toggleSection('restricciones')}
+              className="w-full flex items-center justify-between mb-4 group"
+            >
+              <div className="flex items-center space-x-3">
+                <UtensilsCrossed className="h-6 w-6 text-orange-600" />
+                <h2 className="text-xl font-bold text-gray-900">
+                  Resumen de Asistencia por Curso y Restricciones
+                </h2>
+              </div>
+              {expandedSections.has('restricciones') ? (
+                <ChevronUp className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
+              )}
+            </button>
+
+            {expandedSections.has('restricciones') && (
+              <div className="mt-4">
+                <AttendanceRestrictionsTable
+                  comensales={data.comensales}
+                  restriccionesActivas={data.restricciones_activas}
+                />
+              </div>
+            )}
+          </div>
+
           {/* Listado Completo */}
           <div className="space-y-6">
             {/* Comensales Recurrentes */}
