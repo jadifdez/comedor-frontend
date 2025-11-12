@@ -123,6 +123,7 @@ export function useFacturacion(user: User) {
         supabase
           .from('padres')
           .select('*')
+          .eq('auth_user_id', user.id)
           .maybeSingle(),
 
         // IMPORTANTE: Incluir inscripciones de padres activas Y desactivadas que estuvieron activas durante el mes
