@@ -101,6 +101,17 @@ export function useFacturacion(user: User) {
 
       const padreId = padreData.id;
 
+      // Primero obtener los IDs de los hijos del padre
+      const { data: hijosIds, error: hijosIdsError } = await supabase
+        .from('hijos')
+        .select('id')
+        .eq('padre_id', padreId)
+        .eq('activo', true);
+
+      if (hijosIdsError) throw hijosIdsError;
+
+      const hijoIdsList = hijosIds?.map(h => h.id) || [];
+
       // Cargar todos los datos necesarios
       const [hijosResult, inscripcionesResult, bajasResult, solicitudesResult, padreResult, inscripcionesPadreResult, invitacionesResult] = await Promise.all([
         supabase
@@ -119,24 +130,39 @@ export function useFacturacion(user: User) {
 
         // IMPORTANTE: Incluir inscripciones activas Y desactivadas que estuvieron activas durante el mes
         // Esto permite facturar proporcionalmente cuando una inscripción se desactiva a mitad de mes
-        supabase
-          .from('comedor_inscripciones')
-          .select('*, hijo:hijos!inner(padre_id)')
-          .eq('hijo.padre_id', padreId)
-          .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
+        hijoIdsList.length > 0
+          ? supabase
+              .from('comedor_inscripciones')
+              .select('*')
+              .in('hijo_id', hijoIdsList)
+              .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`)
+          : Promise.resolve({ data: [], error: null }),
 
-        supabase
-          .from('comedor_bajas')
-          .select('*')
-          .or(`hijo_id.in.(select id from hijos where padre_id = ${padreId}),padre_id.eq.${padreId}`)
-          .order('fecha_creacion'),
+        hijoIdsList.length > 0
+          ? supabase
+              .from('comedor_bajas')
+              .select('*')
+              .or(`hijo_id.in.(${hijoIdsList.join(',')}),padre_id.eq.${padreId}`)
+              .order('fecha_creacion')
+          : supabase
+              .from('comedor_bajas')
+              .select('*')
+              .eq('padre_id', padreId)
+              .order('fecha_creacion'),
 
-        supabase
-          .from('comedor_altaspuntuales')
-          .select('*')
-          .or(`hijo_id.in.(select id from hijos where padre_id = ${padreId}),padre_id.eq.${padreId}`)
-          .eq('estado', 'aprobada')
-          .order('fecha_creacion'),
+        hijoIdsList.length > 0
+          ? supabase
+              .from('comedor_altaspuntuales')
+              .select('*')
+              .or(`hijo_id.in.(${hijoIdsList.join(',')}),padre_id.eq.${padreId}`)
+              .eq('estado', 'aprobada')
+              .order('fecha_creacion')
+          : supabase
+              .from('comedor_altaspuntuales')
+              .select('*')
+              .eq('padre_id', padreId)
+              .eq('estado', 'aprobada')
+              .order('fecha_creacion'),
 
         supabase
           .from('padres')
@@ -151,12 +177,19 @@ export function useFacturacion(user: User) {
           .eq('padre_id', padreId)
           .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
 
-        supabase
-          .from('invitaciones_comedor')
-          .select('*')
-          .or(`hijo_id.in.(select id from hijos where padre_id = ${padreId}),padre_id.eq.${padreId}`)
-          .gte('fecha', fechaInicioMes)
-          .lte('fecha', fechaFinMes)
+        hijoIdsList.length > 0
+          ? supabase
+              .from('invitaciones_comedor')
+              .select('*')
+              .or(`hijo_id.in.(${hijoIdsList.join(',')}),padre_id.eq.${padreId}`)
+              .gte('fecha', fechaInicioMes)
+              .lte('fecha', fechaFinMes)
+          : supabase
+              .from('invitaciones_comedor')
+              .select('*')
+              .eq('padre_id', padreId)
+              .gte('fecha', fechaInicioMes)
+              .lte('fecha', fechaFinMes)
       ]);
 
       if (hijosResult.error) throw hijosResult.error;
