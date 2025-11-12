@@ -166,9 +166,33 @@ export function MenuEleccionForm({
     }));
   };
 
-  // Si no hay personas con inscripciones activas, no mostrar el formulario
+  // Si no hay personas con inscripciones activas, mostrar mensaje informativo
   if (personasUnificadas.length === 0) {
-    return null;
+    return (
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center space-x-2 mb-4">
+          <ChefHat className="h-6 w-6 text-orange-600" />
+          <h2 className="text-xl font-semibold text-gray-900">Elegir menú semanal</h2>
+        </div>
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+          <div className="flex items-start space-x-3">
+            <AlertTriangle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div>
+              <h3 className="text-lg font-semibold text-yellow-800 mb-2">
+                No hay inscripciones activas
+              </h3>
+              <p className="text-sm text-yellow-700 mb-3">
+                Para poder elegir el menú semanal, necesitas tener una inscripción activa al comedor.
+              </p>
+              <ul className="text-sm text-yellow-700 space-y-1 list-disc list-inside">
+                <li>Si eres padre/madre: debes tener hijos con inscripción activa al comedor</li>
+                <li>Si eres personal del colegio: debes inscribirte en la sección de "Inscripción al Comedor"</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
