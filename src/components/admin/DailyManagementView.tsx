@@ -9,7 +9,7 @@ import { AttendanceRestrictionsTable } from './AttendanceRestrictionsTable';
 
 export function DailyManagementView() {
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set(['restricciones']));
+  const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [selectedComensal, setSelectedComensal] = useState<DailyDiner | null>(null);
