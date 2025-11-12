@@ -132,12 +132,40 @@ export function DiasFestivosManager() {
           throw new Error('No se generaron fechas. Verifica que la fecha de inicio sea anterior a la fecha de fin.');
         }
 
+        const fechasStr = fechas.map(f => f.fecha);
+        const { data: existingFechas } = await supabase
+          .from('dias_festivos')
+          .select('fecha')
+          .in('fecha', fechasStr);
+
+        const existingFechasSet = new Set((existingFechas || []).map(f => f.fecha));
+        const fechasToInsert = fechas.filter(f => !existingFechasSet.has(f.fecha));
+
+        if (fechasToInsert.length === 0) {
+          throw new Error('Todas las fechas seleccionadas ya existen como días festivos.');
+        }
+
         const { error } = await supabase
           .from('dias_festivos')
-          .insert(fechas);
+          .insert(fechasToInsert);
 
         if (error) throw error;
+
+        if (fechasToInsert.length < fechas.length) {
+          const skipped = fechas.length - fechasToInsert.length;
+          setError(`Se crearon ${fechasToInsert.length} días festivos. ${skipped} fecha(s) ya existían y fueron omitidas.`);
+        }
       } else {
+        const { data: existing } = await supabase
+          .from('dias_festivos')
+          .select('id')
+          .eq('fecha', formData.fechaInicio)
+          .maybeSingle();
+
+        if (existing) {
+          throw new Error('Ya existe un día festivo para esta fecha.');
+        }
+
         const { error } = await supabase
           .from('dias_festivos')
           .insert([{
@@ -152,7 +180,7 @@ export function DiasFestivosManager() {
       setFormData({ fechaInicio: '', fechaFin: '', nombre: '', activo: true });
       setIsPeriodo(false);
       setShowModal(false);
-      setError(null);
+      setTimeout(() => setError(null), 5000);
       loadDiasFestivos();
     } catch (error: any) {
       console.error('Error saving día festivo:', error);
