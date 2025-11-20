@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import * as XLSX from 'xlsx-js-style';
 import { FacturacionPadre } from '../hooks/useFacturacionAdmin';
 import { supabase } from '../lib/supabase';
 
@@ -1064,43 +1064,74 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
 
       const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
 
-      for (let R = 3; R <= range.e.r; R++) {
-        for (let C = 3; C <= range.e.c; C++) {
+      for (let R = 0; R <= range.e.r; R++) {
+        for (let C = 0; C <= range.e.c; C++) {
           const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          if (!ws[cellAddress]) continue;
           const cell = ws[cellAddress];
 
-          if (cell && cell.v) {
-            if (!cell.s) cell.s = {};
+          if (R === 0 || R === 1 || R === 2) {
+            cell.s = {
+              fill: { fgColor: { rgb: "2C3E50" } },
+              font: { color: { rgb: "FFFFFF" }, bold: true, sz: 12 },
+              alignment: { horizontal: "center", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "000000" } },
+                bottom: { style: "thin", color: { rgb: "000000" } },
+                left: { style: "thin", color: { rgb: "000000" } },
+                right: { style: "thin", color: { rgb: "000000" } }
+              }
+            };
+          } else if (cell.v) {
+            const baseStyle = {
+              alignment: { horizontal: "center", vertical: "center" },
+              border: {
+                top: { style: "thin", color: { rgb: "CCCCCC" } },
+                bottom: { style: "thin", color: { rgb: "CCCCCC" } },
+                left: { style: "thin", color: { rgb: "CCCCCC" } },
+                right: { style: "thin", color: { rgb: "CCCCCC" } }
+              }
+            };
 
             switch (cell.v) {
               case 'X':
                 cell.s = {
+                  ...baseStyle,
                   fill: { fgColor: { rgb: "4A90E2" } },
-                  font: { color: { rgb: "FFFFFF" }, bold: true },
-                  alignment: { horizontal: "center", vertical: "center" }
+                  font: { color: { rgb: "FFFFFF" }, bold: true, sz: 11 }
                 };
                 break;
               case 'C':
                 cell.s = {
+                  ...baseStyle,
                   fill: { fgColor: { rgb: "E74C3C" } },
-                  font: { color: { rgb: "FFFFFF" }, bold: true },
-                  alignment: { horizontal: "center", vertical: "center" }
+                  font: { color: { rgb: "FFFFFF" }, bold: true, sz: 11 }
                 };
                 break;
               case 'P':
                 cell.s = {
+                  ...baseStyle,
                   fill: { fgColor: { rgb: "27AE60" } },
-                  font: { color: { rgb: "FFFFFF" }, bold: true },
-                  alignment: { horizontal: "center", vertical: "center" }
+                  font: { color: { rgb: "FFFFFF" }, bold: true, sz: 11 }
                 };
                 break;
               case 'I':
                 cell.s = {
+                  ...baseStyle,
                   fill: { fgColor: { rgb: "9B59B6" } },
-                  font: { color: { rgb: "FFFFFF" }, bold: true },
-                  alignment: { horizontal: "center", vertical: "center" }
+                  font: { color: { rgb: "FFFFFF" }, bold: true, sz: 11 }
                 };
                 break;
+              default:
+                if (C < 3) {
+                  cell.s = {
+                    ...baseStyle,
+                    alignment: { horizontal: "left", vertical: "center" },
+                    font: { sz: 10 }
+                  };
+                } else {
+                  cell.s = baseStyle;
+                }
             }
           }
         }
