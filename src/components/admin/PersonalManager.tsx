@@ -84,20 +84,47 @@ export function PersonalManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validación adicional para exención
+    if (formData.exento_facturacion && !formData.motivo_exencion.trim()) {
+      alert('Por favor, indica el motivo de la exención');
+      return;
+    }
+
     try {
+      // Preparar datos: si exento_facturacion es false, limpiar campos relacionados
+      const dataToSave = {
+        email: formData.email,
+        nombre: formData.nombre,
+        telefono: formData.telefono || null,
+        activo: formData.activo,
+        es_personal: formData.es_personal,
+        exento_facturacion: formData.exento_facturacion,
+        motivo_exencion: formData.exento_facturacion && formData.motivo_exencion ? formData.motivo_exencion : null,
+        fecha_inicio_exencion: formData.exento_facturacion && formData.fecha_inicio_exencion ? formData.fecha_inicio_exencion : null,
+        fecha_fin_exencion: formData.exento_facturacion && formData.fecha_fin_exencion ? formData.fecha_fin_exencion : null
+      };
+
       if (editingPadre) {
         const { error } = await supabase
           .from('padres')
-          .update(formData)
+          .update(dataToSave)
           .eq('id', editingPadre.id);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error al actualizar:', error);
+          alert(`Error al actualizar: ${error.message}`);
+          throw error;
+        }
       } else {
         const { error } = await supabase
           .from('padres')
-          .insert([formData]);
+          .insert([dataToSave]);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Error al crear:', error);
+          alert(`Error al crear: ${error.message}`);
+          throw error;
+        }
       }
 
       setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
