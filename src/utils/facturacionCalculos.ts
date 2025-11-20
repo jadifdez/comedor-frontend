@@ -16,12 +16,16 @@ export async function getDiasLaborablesMes(year: number, month: number): Promise
   const diasLaborables: string[] = [];
   const diasEnMes = new Date(year, month, 0).getDate();
 
+  // Calcular el mes siguiente manejando diciembre correctamente
+  const siguienteMes = month === 12 ? 1 : month + 1;
+  const siguienteAño = month === 12 ? year + 1 : year;
+
   const { data: diasFestivos, error } = await supabase
     .from('dias_festivos')
     .select('fecha')
     .eq('activo', true)
     .gte('fecha', `${year}-${String(month).padStart(2, '0')}-01`)
-    .lt('fecha', `${year}-${String(month + 1).padStart(2, '0')}-01`);
+    .lt('fecha', `${siguienteAño}-${String(siguienteMes).padStart(2, '0')}-01`);
 
   if (error) {
     console.error('Error loading días festivos:', error);
