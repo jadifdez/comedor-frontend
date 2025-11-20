@@ -47,17 +47,34 @@ export const useInvitaciones = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error: fetchError } = await supabase
-        .from('invitaciones_comedor')
-        .select(`
-          *,
-          hijo:hijos(id, nombre, grado:grados(nombre)),
-          padre:padres(id, nombre, es_personal)
-        `)
-        .order('fecha', { ascending: false });
+      let allInvitaciones: any[] = [];
+      let page = 0;
+      const pageSize = 1000;
+      let hasMore = true;
 
-      if (fetchError) throw fetchError;
-      setInvitaciones(data || []);
+      while (hasMore) {
+        const { data, error: fetchError } = await supabase
+          .from('invitaciones_comedor')
+          .select(`
+            *,
+            hijo:hijos(id, nombre, grado:grados(nombre)),
+            padre:padres(id, nombre, es_personal)
+          `)
+          .order('fecha', { ascending: false })
+          .range(page * pageSize, (page + 1) * pageSize - 1);
+
+        if (fetchError) throw fetchError;
+
+        if (data && data.length > 0) {
+          allInvitaciones = [...allInvitaciones, ...data];
+          hasMore = data.length === pageSize;
+          page++;
+        } else {
+          hasMore = false;
+        }
+      }
+
+      setInvitaciones(allInvitaciones);
     } catch (err) {
       console.error('Error fetching invitaciones:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar invitaciones');
