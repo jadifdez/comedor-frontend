@@ -141,6 +141,63 @@ export function generateDailyPDF(data: DailyData, selectedDate: Date) {
     return { todosLosGrupos, restriccionesDelDia };
   };
 
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Menús Personalizados del Día', pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 8;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text(`Fecha: ${selectedDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`, pageWidth / 2, yPosition, { align: 'center' });
+  yPosition += 12;
+
+  if (data.menu_summary.length > 0) {
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Resumen de Menús Personalizados', 14, yPosition);
+    yPosition += 8;
+
+    const menuTableData = data.menu_summary.map(menu => [
+      menu.opcion_principal,
+      menu.opcion_guarnicion,
+      menu.cantidad.toString(),
+      menu.comensales.join(', ')
+    ]);
+
+    autoTable(doc, {
+      startY: yPosition,
+      head: [['Plato Principal', 'Guarnición', 'Cantidad', 'Comensales']],
+      body: menuTableData,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [139, 92, 246],
+        fontStyle: 'bold',
+        fontSize: 10
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 3
+      },
+      columnStyles: {
+        0: { cellWidth: 45, fontStyle: 'bold' },
+        1: { cellWidth: 45, fontStyle: 'bold' },
+        2: { cellWidth: 20, halign: 'center', fillColor: [243, 244, 246], fontStyle: 'bold', fontSize: 10 },
+        3: { cellWidth: 75 }
+      },
+      margin: { left: 14, right: 14 }
+    });
+
+    yPosition = (doc as any).lastAutoTable.finalY + 15;
+  } else {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'italic');
+    doc.text('No hay menús personalizados para este día', pageWidth / 2, yPosition, { align: 'center' });
+    yPosition += 20;
+  }
+
+  doc.addPage();
+  yPosition = 20;
+
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('Resumen de Asistencia por Curso y Restricciones', pageWidth / 2, yPosition, { align: 'center' });
