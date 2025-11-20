@@ -17,9 +17,10 @@ import { DailyManagementView } from './components/admin/DailyManagementView';
 import { RestriccionesDieteticasManager } from './components/admin/RestriccionesDieteticasManager';
 import { CambiarPasswordAdmin } from './components/admin/CambiarPasswordAdmin';
 import InscripcionesManager from './components/admin/InscripcionesManager';
+import RLSLogsViewer from './components/admin/RLSLogsViewer';
 import { User } from '@supabase/supabase-js';
 
-type TabType = 'administradores' | 'padres' | 'personal' | 'hijos' | 'grados' | 'menu' | 'festivos' | 'facturacion' | 'configuracion' | 'invitaciones' | 'gestion-diaria' | 'restricciones' | 'inscripciones' | 'cambiar-password';
+type TabType = 'administradores' | 'padres' | 'personal' | 'hijos' | 'grados' | 'menu' | 'festivos' | 'facturacion' | 'configuracion' | 'invitaciones' | 'gestion-diaria' | 'restricciones' | 'inscripciones' | 'cambiar-password' | 'rls-logs';
 
 function AdminContent({ user, activeTab, setActiveTab }: { user: User; activeTab: TabType; setActiveTab: (tab: TabType) => void }) {
   const isOnline = useOnlineStatus();
@@ -55,6 +56,7 @@ function AdminContent({ user, activeTab, setActiveTab }: { user: User; activeTab
         {activeTab === 'configuracion' && <ConfiguracionPreciosManager />}
         {activeTab === 'invitaciones' && <InvitacionesManager />}
         {activeTab === 'restricciones' && <RestriccionesDieteticasManager />}
+        {activeTab === 'rls-logs' && <RLSLogsViewer />}
         {activeTab === 'cambiar-password' && <CambiarPasswordAdmin />}
       </main>
     </>

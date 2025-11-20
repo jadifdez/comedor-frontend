@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Users, GraduationCap, ChefHat, Calendar, Euro, Settings, Gift, ChevronDown, ClipboardList, AlertCircle, UserPlus } from 'lucide-react';
+import { Users, GraduationCap, ChefHat, Calendar, Euro, Settings, Gift, ChevronDown, ClipboardList, AlertCircle, UserPlus, FileText } from 'lucide-react';
 
-type TabType = 'administradores' | 'padres' | 'personal' | 'hijos' | 'grados' | 'menu' | 'festivos' | 'facturacion' | 'configuracion' | 'invitaciones' | 'gestion-diaria' | 'restricciones' | 'inscripciones' | 'cambiar-password';
+type TabType = 'administradores' | 'padres' | 'personal' | 'hijos' | 'grados' | 'menu' | 'festivos' | 'facturacion' | 'configuracion' | 'invitaciones' | 'gestion-diaria' | 'restricciones' | 'inscripciones' | 'cambiar-password' | 'rls-logs';
 
 interface AdminHeaderProps {
   activeTab: TabType;
@@ -40,7 +40,7 @@ export function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps) {
   };
 
   const isPersonasActive = ['administradores', 'padres', 'personal', 'hijos'].includes(activeTab);
-  const isConfiguracionActive = ['festivos', 'menu', 'configuracion', 'grados', 'restricciones'].includes(activeTab);
+  const isConfiguracionActive = ['festivos', 'menu', 'configuracion', 'grados', 'restricciones', 'rls-logs'].includes(activeTab);
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-50">
@@ -228,6 +228,19 @@ export function AdminHeader({ activeTab, onTabChange }: AdminHeaderProps) {
                     }`}
                   >
                     Restricciones Dietéticas
+                  </button>
+                  <button
+                    onClick={() => handleSubItemClick('rls-logs')}
+                    className={`w-full text-left px-4 py-2 text-sm transition-colors ${
+                      activeTab === 'rls-logs'
+                        ? 'bg-blue-50 text-blue-700 font-medium'
+                        : 'text-gray-700 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-2">
+                      <FileText className="h-3 w-3" />
+                      <span>Logs RLS</span>
+                    </div>
                   </button>
                 </div>
               )}
