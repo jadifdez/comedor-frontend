@@ -625,6 +625,7 @@ export default function InscripcionesManager() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                       required
                     />
+                    <p className="text-xs text-gray-500 mt-1">Los administradores pueden crear inscripciones con fechas pasadas</p>
                   </div>
 
                   <div>
