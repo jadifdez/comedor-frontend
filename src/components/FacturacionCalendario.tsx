@@ -12,14 +12,15 @@ interface FacturacionCalendarioProps {
     diasFestivos: number;
     diasInvitacion: number;
   };
-  hijoId: string;
+  hijoId?: string;
+  padreId?: string;
 }
 
 interface Semana {
   dias: (Date | null)[];
 }
 
-export function FacturacionCalendario({ mesSeleccionado, diasFacturables, desglose, hijoId }: FacturacionCalendarioProps) {
+export function FacturacionCalendario({ mesSeleccionado, diasFacturables, desglose, hijoId, padreId }: FacturacionCalendarioProps) {
   const diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie'];
   const [bajas, setBajas] = useState<Set<string>>(new Set());
   const [festivos, setFestivos] = useState<Set<string>>(new Set());
@@ -37,27 +38,39 @@ export function FacturacionCalendario({ mesSeleccionado, diasFacturables, desglo
       const ultimoDia = new Date(year, month, 0).getDate();
       const fechaFin = `${year}-${String(month).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
 
-      const [bajasData, festivosData, invitacionesData] = await Promise.all([
-        supabase
-          .from('comedor_bajas')
-          .select('dias')
-          .eq('hijo_id', hijoId)
-          .gte('fecha_creacion', fechaInicio)
-          .lte('fecha_creacion', fechaFin),
+      const bajasQuery = supabase
+        .from('comedor_bajas')
+        .select('dias')
+        .gte('fecha_creacion', fechaInicio)
+        .lte('fecha_creacion', fechaFin);
 
+      if (hijoId) {
+        bajasQuery.eq('hijo_id', hijoId);
+      } else if (padreId) {
+        bajasQuery.eq('padre_id', padreId);
+      }
+
+      const invitacionesQuery = supabase
+        .from('invitaciones_comedor')
+        .select('fecha')
+        .gte('fecha', fechaInicio)
+        .lte('fecha', fechaFin);
+
+      if (hijoId) {
+        invitacionesQuery.eq('hijo_id', hijoId);
+      } else if (padreId) {
+        invitacionesQuery.eq('padre_id', padreId);
+      }
+
+      const [bajasData, festivosData, invitacionesData] = await Promise.all([
+        bajasQuery,
         supabase
           .from('dias_festivos')
           .select('fecha')
           .eq('activo', true)
           .gte('fecha', fechaInicio)
           .lte('fecha', fechaFin),
-
-        supabase
-          .from('invitaciones_comedor')
-          .select('fecha')
-          .eq('hijo_id', hijoId)
-          .gte('fecha', fechaInicio)
-          .lte('fecha', fechaFin)
+        invitacionesQuery
       ]);
 
       const parseBajaFecha = (fechaStr: string): string => {
@@ -87,7 +100,7 @@ export function FacturacionCalendario({ mesSeleccionado, diasFacturables, desglo
     };
 
     loadDatosCalendario();
-  }, [mesSeleccionado, hijoId, year, month]);
+  }, [mesSeleccionado, hijoId, padreId, year, month]);
 
   const semanas = useMemo(() => {
     const semanasArray: Semana[] = [];

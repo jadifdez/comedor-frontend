@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
 import { Euro, Calendar, User, Search, AlertCircle, Eye, ChevronDown, ChevronUp, Award, Users, XCircle, Download, FileSpreadsheet, CheckCircle, Shield } from 'lucide-react';
-import { useFacturacionAdmin, HijoFacturacionDetalle } from '../../hooks/useFacturacionAdmin';
+import { useFacturacionAdmin, HijoFacturacionDetalle, PadreFacturacionDetalle } from '../../hooks/useFacturacionAdmin';
 import { exportarFacturacionAExcel } from '../../utils/excelExport';
 import { FacturacionCalendario } from '../FacturacionCalendario';
+
+type PersonaSeleccionada =
+  | { tipo: 'hijo'; data: HijoFacturacionDetalle }
+  | { tipo: 'padre'; data: PadreFacturacionDetalle; nombre: string; padreId: string };
 
 export function FacturacionAdminManager() {
   const [searchTerm, setSearchTerm] = useState('');
   const [expandedPadre, setExpandedPadre] = useState<string | null>(null);
   const [showDetalleModal, setShowDetalleModal] = useState(false);
-  const [hijoSeleccionado, setHijoSeleccionado] = useState<HijoFacturacionDetalle | null>(null);
+  const [personaSeleccionada, setPersonaSeleccionada] = useState<PersonaSeleccionada | null>(null);
   const [mesSeleccionado, setMesSeleccionado] = useState(() => {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
@@ -42,8 +46,8 @@ export function FacturacionAdminManager() {
     setExpandedPadre(expandedPadre === padreId ? null : padreId);
   };
 
-  const mostrarDetalle = (hijo: HijoFacturacionDetalle) => {
-    setHijoSeleccionado(hijo);
+  const mostrarDetalle = (persona: PersonaSeleccionada) => {
+    setPersonaSeleccionada(persona);
     setShowDetalleModal(true);
   };
 
@@ -320,19 +324,33 @@ export function FacturacionAdminManager() {
                                 </span>
                               )}
                             </div>
-                            <div className="text-right">
-                              <p className={`font-bold ${facturacionPadre.padreComedor.estaExento ? 'text-green-700' : 'text-blue-600'}`}>
-                                {facturacionPadre.padreComedor.totalImporte.toFixed(2)}€
-                                {facturacionPadre.padreComedor.estaExento && ' (EXENTO)'}
-                              </p>
-                              {(facturacionPadre.padreComedor.tieneDescuentoAsistencia80 || facturacionPadre.padreComedor.estaExento) && facturacionPadre.padreComedor.totalImporteSinDescuento && (
-                                <p className="text-xs text-gray-500 line-through">
-                                  {facturacionPadre.padreComedor.totalImporteSinDescuento.toFixed(2)}€
+                            <div className="flex items-center space-x-2">
+                              <div className="text-right">
+                                <p className={`font-bold ${facturacionPadre.padreComedor.estaExento ? 'text-green-700' : 'text-blue-600'}`}>
+                                  {facturacionPadre.padreComedor.totalImporte.toFixed(2)}€
+                                  {facturacionPadre.padreComedor.estaExento && ' (EXENTO)'}
                                 </p>
-                              )}
-                              <p className="text-sm text-gray-600">
-                                {facturacionPadre.padreComedor.diasFacturables.length} días
-                              </p>
+                                {(facturacionPadre.padreComedor.tieneDescuentoAsistencia80 || facturacionPadre.padreComedor.estaExento) && facturacionPadre.padreComedor.totalImporteSinDescuento && (
+                                  <p className="text-xs text-gray-500 line-through">
+                                    {facturacionPadre.padreComedor.totalImporteSinDescuento.toFixed(2)}€
+                                  </p>
+                                )}
+                                <p className="text-sm text-gray-600">
+                                  {facturacionPadre.padreComedor.diasFacturables.length} días
+                                </p>
+                              </div>
+                              <button
+                                onClick={() => mostrarDetalle({
+                                  tipo: 'padre',
+                                  data: facturacionPadre.padreComedor!,
+                                  nombre: facturacionPadre.padre.nombre,
+                                  padreId: facturacionPadre.padre.id
+                                })}
+                                className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-colors"
+                              >
+                                <Eye className="h-3 w-3" />
+                                <span>Ver</span>
+                              </button>
                             </div>
                           </div>
 
@@ -426,7 +444,7 @@ export function FacturacionAdminManager() {
                                 </p>
                               </div>
                               <button
-                                onClick={() => mostrarDetalle(hijoData)}
+                                onClick={() => mostrarDetalle({ tipo: 'hijo', data: hijoData })}
                                 className="flex items-center space-x-1 bg-blue-600 hover:bg-blue-700 text-white px-2 py-1 rounded text-xs transition-colors"
                               >
                                 <Eye className="h-3 w-3" />
@@ -477,33 +495,39 @@ export function FacturacionAdminManager() {
         </div>
       )}
 
-      {showDetalleModal && hijoSeleccionado && (
+      {showDetalleModal && personaSeleccionada && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden">
             <div className="flex items-center justify-between p-6 border-b border-gray-200">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">
-                  Detalle de facturación - {hijoSeleccionado.hijo.nombre}
+                  Detalle de facturación - {personaSeleccionada.tipo === 'hijo' ? personaSeleccionada.data.hijo.nombre : `${personaSeleccionada.nombre} (Personal)`}
                 </h3>
                 <p className="text-sm text-gray-600">
                   {opcionesMeses.find(o => o.valor === mesSeleccionado)?.etiqueta}
                 </p>
                 <div className="flex items-center space-x-2 mt-2">
-                  {hijoSeleccionado.esHijoDePersonal && (
+                  {personaSeleccionada.tipo === 'hijo' && personaSeleccionada.data.esHijoDePersonal && (
                     <span className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
                       Hijo de Personal
                     </span>
                   )}
-                  {hijoSeleccionado.tieneDescuentoFamiliaNumerosa && (
+                  {personaSeleccionada.tipo === 'hijo' && personaSeleccionada.data.tieneDescuentoFamiliaNumerosa && (
                     <span className="inline-flex items-center space-x-1 px-2 py-1 bg-orange-100 text-orange-700 rounded text-xs">
                       <Award className="h-3 w-3" />
-                      <span>Descuento Familia Numerosa: {hijoSeleccionado.porcentajeDescuento}%</span>
+                      <span>Descuento Familia Numerosa: {personaSeleccionada.data.porcentajeDescuento}%</span>
                     </span>
                   )}
-                  {hijoSeleccionado.tieneDescuentoAsistencia80 && (
+                  {personaSeleccionada.data.tieneDescuentoAsistencia80 && (
                     <span className="inline-flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs">
                       <CheckCircle className="h-3 w-3" />
-                      <span>Descuento Asistencia 80%: {hijoSeleccionado.porcentajeDescuentoAsistencia80}%</span>
+                      <span>Descuento Asistencia 80%: {personaSeleccionada.data.porcentajeDescuentoAsistencia80}%</span>
+                    </span>
+                  )}
+                  {personaSeleccionada.data.estaExento && (
+                    <span className="inline-flex items-center space-x-1 px-2 py-1 bg-green-100 text-green-700 rounded text-xs font-medium" title={personaSeleccionada.data.motivoExencion}>
+                      <Shield className="h-3 w-3" />
+                      <span>EXENTO</span>
                     </span>
                   )}
                 </div>
@@ -522,29 +546,29 @@ export function FacturacionAdminManager() {
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                     <p className="text-sm font-medium text-green-800">Total mes</p>
                     <p className="text-2xl font-bold text-green-900">
-                      {hijoSeleccionado.totalImporte.toFixed(2)}€
+                      {personaSeleccionada.data.totalImporte.toFixed(2)}€
                     </p>
-                    {hijoSeleccionado.tieneDescuentoAsistencia80 && hijoSeleccionado.totalImporteSinDescuento && (
+                    {personaSeleccionada.data.tieneDescuentoAsistencia80 && personaSeleccionada.data.totalImporteSinDescuento && (
                       <p className="text-xs text-green-700 mt-1">
-                        Antes: {hijoSeleccionado.totalImporteSinDescuento.toFixed(2)}€
+                        Antes: {personaSeleccionada.data.totalImporteSinDescuento.toFixed(2)}€
                       </p>
                     )}
                   </div>
                   <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                     <p className="text-sm font-medium text-blue-800">Días facturados</p>
                     <p className="text-2xl font-bold text-blue-900">
-                      {hijoSeleccionado.diasFacturables.length}
+                      {personaSeleccionada.data.diasFacturables.length}
                     </p>
                   </div>
                   <div className="bg-orange-50 border border-orange-200 rounded-lg p-4 text-center">
                     <p className="text-sm font-medium text-orange-800">
-                      {hijoSeleccionado.tieneDescuentoAsistencia80 ? 'Asistencia' : 'Precio promedio'}
+                      {personaSeleccionada.data.tieneDescuentoAsistencia80 ? 'Asistencia' : 'Precio promedio'}
                     </p>
                     <p className="text-2xl font-bold text-orange-900">
-                      {hijoSeleccionado.tieneDescuentoAsistencia80
-                        ? `${hijoSeleccionado.porcentajeAsistencia?.toFixed(0)}%`
-                        : hijoSeleccionado.diasFacturables.length > 0
-                          ? `${(hijoSeleccionado.totalImporte / hijoSeleccionado.diasFacturables.length).toFixed(2)}€`
+                      {personaSeleccionada.data.tieneDescuentoAsistencia80
+                        ? `${personaSeleccionada.data.porcentajeAsistencia?.toFixed(0)}%`
+                        : personaSeleccionada.data.diasFacturables.length > 0
+                          ? `${(personaSeleccionada.data.totalImporte / personaSeleccionada.data.diasFacturables.length).toFixed(2)}€`
                           : '0.00€'
                       }
                     </p>
@@ -554,21 +578,21 @@ export function FacturacionAdminManager() {
                 <div className="flex items-start">
                   <FacturacionCalendario
                     mesSeleccionado={mesSeleccionado}
-                    diasFacturables={hijoSeleccionado.diasFacturables}
+                    diasFacturables={personaSeleccionada.data.diasFacturables}
                     desglose={{
-                      diasInscripcion: hijoSeleccionado.diasInscripcion,
-                      diasPuntuales: hijoSeleccionado.diasPuntuales,
-                      diasBaja: hijoSeleccionado.diasBaja,
+                      diasInscripcion: personaSeleccionada.data.diasInscripcion,
+                      diasPuntuales: personaSeleccionada.data.diasPuntuales,
+                      diasBaja: personaSeleccionada.data.diasBaja,
                       diasFestivos: 0,
-                      diasInvitacion: hijoSeleccionado.diasInvitacion
+                      diasInvitacion: personaSeleccionada.data.diasInvitacion
                     }}
-                    hijoId={hijoSeleccionado.hijo.id}
+                    hijoId={personaSeleccionada.tipo === 'hijo' ? personaSeleccionada.data.hijo.id : undefined}
+                    padreId={personaSeleccionada.tipo === 'padre' ? personaSeleccionada.padreId : undefined}
                   />
                 </div>
               </div>
 
-              {/* Mostrar información del descuento del 80% en el modal */}
-              {hijoSeleccionado.tieneDescuentoAsistencia80 && (
+              {personaSeleccionada.data.tieneDescuentoAsistencia80 && (
                 <div className="mb-6 p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="flex items-center space-x-2 mb-2">
                     <CheckCircle className="h-5 w-5 text-green-600" />
@@ -576,12 +600,12 @@ export function FacturacionAdminManager() {
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
-                      <p className="text-green-700">Porcentaje de asistencia: <strong>{hijoSeleccionado.porcentajeAsistencia?.toFixed(0)}%</strong></p>
-                      <p className="text-green-700">Descuento aplicado: <strong>{hijoSeleccionado.porcentajeDescuentoAsistencia80}%</strong></p>
+                      <p className="text-green-700">Porcentaje de asistencia: <strong>{personaSeleccionada.data.porcentajeAsistencia?.toFixed(0)}%</strong></p>
+                      <p className="text-green-700">Descuento aplicado: <strong>{personaSeleccionada.data.porcentajeDescuentoAsistencia80}%</strong></p>
                     </div>
                     <div>
-                      <p className="text-green-700">Subtotal sin descuento: <strong>{hijoSeleccionado.totalImporteSinDescuento?.toFixed(2)}€</strong></p>
-                      <p className="text-green-700">Ahorro: <strong>{((hijoSeleccionado.totalImporteSinDescuento || 0) - hijoSeleccionado.totalImporte).toFixed(2)}€</strong></p>
+                      <p className="text-green-700">Subtotal sin descuento: <strong>{personaSeleccionada.data.totalImporteSinDescuento?.toFixed(2)}€</strong></p>
+                      <p className="text-green-700">Ahorro: <strong>{((personaSeleccionada.data.totalImporteSinDescuento || 0) - personaSeleccionada.data.totalImporte).toFixed(2)}€</strong></p>
                     </div>
                   </div>
                 </div>
@@ -589,7 +613,7 @@ export function FacturacionAdminManager() {
 
               <h4 className="font-semibold text-gray-900 mb-4">Todos los días facturables</h4>
               <div className="space-y-2 max-h-96 overflow-y-auto">
-                {hijoSeleccionado.diasFacturables.map((dia, index) => (
+                {personaSeleccionada.data.diasFacturables.map((dia, index) => (
                   <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-center space-x-3">
                       <div>
