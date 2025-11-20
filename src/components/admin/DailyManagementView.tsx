@@ -135,7 +135,20 @@ export function DailyManagementView() {
     const menuCounts: { [key: string]: number } = {};
 
     activeDiners.forEach(comensal => {
-      const menuType = getMenuText(comensal);
+      let menuType: string;
+
+      if (comensal.tiene_dieta_blanda) {
+        menuType = 'Dieta Blanda';
+      } else if (comensal.tiene_menu_personalizado && comensal.tiene_eleccion) {
+        menuType = `Menú Personalizado: ${comensal.opcion_principal} + ${comensal.opcion_guarnicion}`;
+      } else if (comensal.tiene_menu_personalizado) {
+        menuType = 'Menú Personalizado (sin detalle)';
+      } else if (comensal.tiene_eleccion) {
+        menuType = `${comensal.opcion_principal} + ${comensal.opcion_guarnicion}`;
+      } else {
+        menuType = 'Menú Rancho';
+      }
+
       menuCounts[menuType] = (menuCounts[menuType] || 0) + 1;
     });
 
