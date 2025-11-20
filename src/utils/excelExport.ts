@@ -863,53 +863,50 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
 
     const hijosIds = hijos.map(h => h.id);
 
-    const { data: todasInscripciones, error: inscripcionesError } = await supabase
-      .from('comedor_inscripciones')
-      .select('*')
-      .in('hijo_id', hijosIds);
+    const BATCH_SIZE = 100;
+    const batches = [];
+    for (let i = 0; i < hijosIds.length; i += BATCH_SIZE) {
+      batches.push(hijosIds.slice(i, i + BATCH_SIZE));
+    }
 
-    if (inscripcionesError) throw inscripcionesError;
+    let todasInscripciones: any[] = [];
+    let todasBajas: any[] = [];
+    let todasSolicitudes: any[] = [];
+    let todasInvitaciones: any[] = [];
+    let todasRestricciones: any[] = [];
 
-    const inscripciones = todasInscripciones?.filter(i => {
+    for (const batch of batches) {
+      const [inscripRes, bajasRes, solicitudesRes, invitacionesRes, restriccionesRes] = await Promise.all([
+        supabase.from('comedor_inscripciones').select('*').in('hijo_id', batch),
+        supabase.from('comedor_bajas').select('*').in('hijo_id', batch).gte('fecha', fechaInicio).lte('fecha', fechaFin),
+        supabase.from('comedor_solicitudes').select('*').in('hijo_id', batch).gte('fecha', fechaInicio).lte('fecha', fechaFin).eq('aprobada', true),
+        supabase.from('comedor_invitaciones').select('*').in('hijo_id', batch).gte('fecha', fechaInicio).lte('fecha', fechaFin),
+        supabase.from('comedor_restricciones_dieteticas').select('hijo_id, tipo_restriccion, descripcion').in('hijo_id', batch)
+      ]);
+
+      if (inscripRes.error) throw inscripRes.error;
+      if (bajasRes.error) throw bajasRes.error;
+      if (solicitudesRes.error) throw solicitudesRes.error;
+      if (invitacionesRes.error) throw invitacionesRes.error;
+      if (restriccionesRes.error) throw restriccionesRes.error;
+
+      todasInscripciones = todasInscripciones.concat(inscripRes.data || []);
+      todasBajas = todasBajas.concat(bajasRes.data || []);
+      todasSolicitudes = todasSolicitudes.concat(solicitudesRes.data || []);
+      todasInvitaciones = todasInvitaciones.concat(invitacionesRes.data || []);
+      todasRestricciones = todasRestricciones.concat(restriccionesRes.data || []);
+    }
+
+    const inscripciones = todasInscripciones.filter(i => {
       const inicio = new Date(i.fecha_inicio);
       const fin = i.fecha_fin ? new Date(i.fecha_fin) : null;
       return inicio <= ultimoDia && (!fin || fin >= primerDia);
     });
 
-    const { data: bajas, error: bajasError } = await supabase
-      .from('comedor_bajas')
-      .select('*')
-      .in('hijo_id', hijosIds)
-      .gte('fecha', fechaInicio)
-      .lte('fecha', fechaFin);
-
-    if (bajasError) throw bajasError;
-
-    const { data: solicitudes, error: solicitudesError } = await supabase
-      .from('comedor_solicitudes')
-      .select('*')
-      .in('hijo_id', hijosIds)
-      .gte('fecha', fechaInicio)
-      .lte('fecha', fechaFin)
-      .eq('aprobada', true);
-
-    if (solicitudesError) throw solicitudesError;
-
-    const { data: invitaciones, error: invitacionesError } = await supabase
-      .from('comedor_invitaciones')
-      .select('*')
-      .in('hijo_id', hijosIds)
-      .gte('fecha', fechaInicio)
-      .lte('fecha', fechaFin);
-
-    if (invitacionesError) throw invitacionesError;
-
-    const { data: restricciones, error: restriccionesError } = await supabase
-      .from('comedor_restricciones_dieteticas')
-      .select('hijo_id, tipo_restriccion, descripcion')
-      .in('hijo_id', hijosIds);
-
-    if (restriccionesError) throw restriccionesError;
+    const bajas = todasBajas;
+    const solicitudes = todasSolicitudes;
+    const invitaciones = todasInvitaciones;
+    const restricciones = todasRestricciones;
 
     const restriccionesPorHijo: Record<string, string[]> = {};
     restricciones?.forEach(r => {
