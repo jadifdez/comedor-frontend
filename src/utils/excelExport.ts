@@ -1150,8 +1150,8 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
               case 'S':
                 cell.s = {
                   ...baseStyle,
-                  fill: { fgColor: { rgb: "FFE0B2" } },
-                  font: { color: { rgb: "E65100" }, bold: true, sz: 11 }
+                  fill: { fgColor: { rgb: "FFF9C4" } },
+                  font: { color: { rgb: "F57C00" }, bold: true, sz: 11 }
                 };
                 break;
               default:
