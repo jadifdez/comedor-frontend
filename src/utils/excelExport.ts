@@ -942,6 +942,17 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
       }
     });
 
+    const { data: festivos, error: festivosError } = await supabase
+      .from('dias_festivos')
+      .select('fecha')
+      .gte('fecha', fechaInicio)
+      .lte('fecha', fechaFin)
+      .eq('activo', true);
+
+    if (festivosError) throw festivosError;
+
+    const festivosSet = new Set(festivos?.map(f => f.fecha) || []);
+
     const workbook = XLSX.utils.book_new();
 
     const mesNombre = primerDia.toLocaleDateString('es-ES', {
@@ -1008,6 +1019,13 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
           }
 
           const fechaStr = `${year}-${month.padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
+
+          const esFestivo = festivosSet.has(fechaStr);
+
+          if (esFestivo) {
+            row.push('F');
+            continue;
+          }
 
           const tieneInvitacion = invitaciones?.some(inv =>
             inv.hijo_id === hijo.id && inv.fecha === fechaStr
@@ -1119,6 +1137,13 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
                 cell.s = {
                   ...baseStyle,
                   fill: { fgColor: { rgb: "9B59B6" } },
+                  font: { color: { rgb: "FFFFFF" }, bold: true, sz: 11 }
+                };
+                break;
+              case 'F':
+                cell.s = {
+                  ...baseStyle,
+                  fill: { fgColor: { rgb: "F39C12" } },
                   font: { color: { rgb: "FFFFFF" }, bold: true, sz: 11 }
                 };
                 break;
