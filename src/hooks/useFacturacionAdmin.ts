@@ -162,8 +162,6 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
 
       // Filtrar inscripciones de padres que aplican al mes seleccionado
       const todasInscripcionesPadre = inscripcionesPadreResult.data || [];
-      console.log('[DEBUG] Total inscripciones padres cargadas:', todasInscripcionesPadre.length);
-
       const inscripcionesPadre = todasInscripcionesPadre.filter(insc => {
         const fechaInicioInsc = new Date(insc.fecha_inicio);
         const fechaFinInsc = insc.fecha_fin ? new Date(insc.fecha_fin) : null;
@@ -174,10 +172,6 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         return fechaInicioInsc <= fechaFinMesDate &&
                (!fechaFinInsc || fechaFinInsc >= fechaInicioMesDate);
       });
-
-      console.log('[DEBUG] Inscripciones padres filtradas para el mes:', inscripcionesPadre.length);
-      const patriciaInsc = inscripcionesPadre.find(i => i.padre_id === '296bb796-f27f-4aee-b502-c6bd6b56bb77');
-      console.log('[DEBUG] Patricia en inscripciones:', patriciaInsc ? 'SÍ ENCONTRADA' : 'NO ENCONTRADA');
 
       const diasLaborables = await getDiasLaborablesMes(year, month);
       const configuracionPrecios = await obtenerConfiguracionPrecios();
@@ -352,12 +346,6 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
           const bajasPadre = bajas.filter(b => b.padre_id === padre.id);
           const solicitudesPadre = solicitudes.filter(s => s.padre_id === padre.id);
 
-          if (padre.id === '296bb796-f27f-4aee-b502-c6bd6b56bb77') {
-            console.log('[DEBUG PATRICIA] Procesando padre:', padre.nombre);
-            console.log('[DEBUG PATRICIA] inscripcionesPadreDelPadre:', inscripcionesPadreDelPadre.length);
-            console.log('[DEBUG PATRICIA] Inscripción:', inscripcionesPadreDelPadre[0]);
-          }
-
           const diasFacturables: DiaFacturable[] = [];
           let diasInscripcion = 0;
           let diasPuntuales = 0;
@@ -463,15 +451,6 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             totalImporte = 0;
           }
 
-          if (padre.id === '296bb796-f27f-4aee-b502-c6bd6b56bb77') {
-            console.log('[DEBUG PATRICIA] diasFacturables:', diasFacturables.length);
-            console.log('[DEBUG PATRICIA] diasInscripcion:', diasInscripcion);
-            console.log('[DEBUG PATRICIA] totalImporte:', totalImporte);
-            console.log('[DEBUG PATRICIA] diasInvitacion:', diasInvitacion);
-            console.log('[DEBUG PATRICIA] estaExentoPadre:', estaExentoPadre);
-            console.log('[DEBUG PATRICIA] Condición para crear padreComedor:', (totalImporte > 0 || diasInvitacion > 0 || estaExentoPadre));
-          }
-
           if (totalImporte > 0 || diasInvitacion > 0 || estaExentoPadre) {
             // Para mostrar en el resumen, usar la primera inscripción o null
             const inscripcionRepresentativaPadre = inscripcionesPadreDelPadre.length > 0 ? inscripcionesPadreDelPadre[0] : null;
@@ -491,12 +470,6 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
               estaExento: estaExentoPadre,
               motivoExencion: estaExentoPadre ? padre.motivo_exencion : undefined
             };
-
-            if (padre.id === '296bb796-f27f-4aee-b502-c6bd6b56bb77') {
-              console.log('[DEBUG PATRICIA] ✅ padreComedor CREADO:', padreComedor);
-            }
-          } else if (padre.id === '296bb796-f27f-4aee-b502-c6bd6b56bb77') {
-            console.log('[DEBUG PATRICIA] ❌ padreComedor NO creado - no cumple condiciones');
           }
         }
 
@@ -511,11 +484,13 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         // Incluir familia si:
         // - Tiene importe a pagar (totalGeneral > 0), O
         // - Tiene hijos exentos CON días de servicio, O
-        // - El padre está exento CON días de servicio
+        // - El padre está exento CON días de servicio, O
+        // - El padre tiene invitaciones (para mostrar su calendario aunque no pague)
         const tieneHijosExentosConServicio = hijosFacturacion.some(h => h.estaExento && h.diasFacturables.length > 0);
         const tienePadreExentoConServicio = padreComedor?.estaExento && (padreComedor?.diasFacturables.length > 0) || false;
+        const tienePadreConInvitaciones = padreComedor && padreComedor.diasInvitacion > 0;
 
-        if (totalGeneral > 0 || tieneHijosExentosConServicio || tienePadreExentoConServicio) {
+        if (totalGeneral > 0 || tieneHijosExentosConServicio || tienePadreExentoConServicio || tienePadreConInvitaciones) {
           facturacionPadres.push({
             padre,
             hijos: hijosFacturacion,
