@@ -863,13 +863,18 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
 
     const hijosIds = hijos.map(h => h.id);
 
-    const { data: inscripciones, error: inscripcionesError } = await supabase
+    const { data: todasInscripciones, error: inscripcionesError } = await supabase
       .from('comedor_inscripciones')
       .select('*')
-      .in('hijo_id', hijosIds)
-      .or(`fecha_inicio.lte.${fechaFin},and(fecha_fin.gte.${fechaInicio},fecha_fin.is.null)`);
+      .in('hijo_id', hijosIds);
 
     if (inscripcionesError) throw inscripcionesError;
+
+    const inscripciones = todasInscripciones?.filter(i => {
+      const inicio = new Date(i.fecha_inicio);
+      const fin = i.fecha_fin ? new Date(i.fecha_fin) : null;
+      return inicio <= ultimoDia && (!fin || fin >= primerDia);
+    });
 
     const { data: bajas, error: bajasError } = await supabase
       .from('comedor_bajas')
