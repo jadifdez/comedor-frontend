@@ -1014,7 +1014,7 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
           const diaSemana = fecha.getDay();
 
           if (diaSemana === 0 || diaSemana === 6) {
-            row.push('');
+            row.push('S');
             continue;
           }
 
@@ -1145,6 +1145,13 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
                   ...baseStyle,
                   fill: { fgColor: { rgb: "F39C12" } },
                   font: { color: { rgb: "FFFFFF" }, bold: true, sz: 11 }
+                };
+                break;
+              case 'S':
+                cell.s = {
+                  ...baseStyle,
+                  fill: { fgColor: { rgb: "FFE0B2" } },
+                  font: { color: { rgb: "E65100" }, bold: true, sz: 11 }
                 };
                 break;
               default:
