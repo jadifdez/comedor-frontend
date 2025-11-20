@@ -329,11 +329,9 @@ export function PersonalManager() {
         tiene_inscripcion_activa: !!inscripcionesActivas[p.id]
       }));
 
-      const result = exportarPersonalAExcel({ personal: personalData });
-      alert(`Excel generado correctamente: ${result.nombreArchivo}\nTotal personal: ${result.totalPersonal}`);
+      exportarPersonalAExcel({ personal: personalData });
     } catch (error) {
       console.error('Error al exportar Excel:', error);
-      alert('Error al generar el archivo Excel. Por favor, intenta de nuevo.');
     }
   };
 
