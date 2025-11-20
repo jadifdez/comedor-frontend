@@ -133,10 +133,12 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
           .order('fecha_creacion'),
 
         // IMPORTANTE: Incluir inscripciones de padres activas Y desactivadas que estuvieron activas durante el mes
+        // Simplificado: obtener todas las que empezaron antes del fin del mes y (no tienen fin o terminaron después del inicio)
         supabase
           .from('comedor_inscripciones_padres')
           .select('*')
-          .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
+          .lte('fecha_inicio', fechaFinMes)
+          .or(`fecha_fin.is.null,fecha_fin.gte.${fechaInicioMes}`),
 
         supabase
           .from('invitaciones_comedor')
