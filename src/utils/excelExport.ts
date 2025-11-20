@@ -1,5 +1,6 @@
 import * as XLSX from 'xlsx';
 import { FacturacionPadre } from '../hooks/useFacturacionAdmin';
+import { supabase } from '../lib/supabase';
 
 interface ExcelExportOptions {
   mesSeleccionado: string;
@@ -824,4 +825,275 @@ export function exportarPadresAExcel({ padres }: PadresExportOptions) {
     nombreArchivo,
     totalPadres
   };
+}
+
+export async function exportarParteDiarioMensual(mesSeleccionado: string) {
+  try {
+    const [year, month] = mesSeleccionado.split('-');
+    const yearNum = parseInt(year);
+    const monthNum = parseInt(month);
+
+    const primerDia = new Date(yearNum, monthNum - 1, 1);
+    const ultimoDia = new Date(yearNum, monthNum, 0);
+    const diasDelMes = ultimoDia.getDate();
+
+    const fechaInicio = `${year}-${month}-01`;
+    const fechaFin = `${year}-${month}-${diasDelMes.toString().padStart(2, '0')}`;
+
+    const { data: grados, error: gradosError } = await supabase
+      .from('grados')
+      .select('id, nombre')
+      .order('nombre');
+
+    if (gradosError) throw gradosError;
+
+    const { data: hijos, error: hijosError } = await supabase
+      .from('hijos')
+      .select(`
+        id,
+        nombre,
+        grado_id,
+        padre_id,
+        grados!inner(nombre)
+      `)
+      .eq('activo', true)
+      .order('nombre');
+
+    if (hijosError) throw hijosError;
+
+    const hijosIds = hijos.map(h => h.id);
+
+    const { data: inscripciones, error: inscripcionesError } = await supabase
+      .from('comedor_inscripciones')
+      .select('*')
+      .in('hijo_id', hijosIds)
+      .or(`fecha_inicio.lte.${fechaFin},and(fecha_fin.gte.${fechaInicio},fecha_fin.is.null)`);
+
+    if (inscripcionesError) throw inscripcionesError;
+
+    const { data: bajas, error: bajasError } = await supabase
+      .from('comedor_bajas')
+      .select('*')
+      .in('hijo_id', hijosIds)
+      .gte('fecha', fechaInicio)
+      .lte('fecha', fechaFin);
+
+    if (bajasError) throw bajasError;
+
+    const { data: solicitudes, error: solicitudesError } = await supabase
+      .from('comedor_solicitudes')
+      .select('*')
+      .in('hijo_id', hijosIds)
+      .gte('fecha', fechaInicio)
+      .lte('fecha', fechaFin)
+      .eq('aprobada', true);
+
+    if (solicitudesError) throw solicitudesError;
+
+    const { data: invitaciones, error: invitacionesError } = await supabase
+      .from('comedor_invitaciones')
+      .select('*')
+      .in('hijo_id', hijosIds)
+      .gte('fecha', fechaInicio)
+      .lte('fecha', fechaFin);
+
+    if (invitacionesError) throw invitacionesError;
+
+    const { data: restricciones, error: restriccionesError } = await supabase
+      .from('comedor_restricciones_dieteticas')
+      .select('hijo_id, tipo_restriccion, descripcion')
+      .in('hijo_id', hijosIds);
+
+    if (restriccionesError) throw restriccionesError;
+
+    const restriccionesPorHijo: Record<string, string[]> = {};
+    restricciones?.forEach(r => {
+      if (!restriccionesPorHijo[r.hijo_id]) {
+        restriccionesPorHijo[r.hijo_id] = [];
+      }
+      restriccionesPorHijo[r.hijo_id].push(r.tipo_restriccion || r.descripcion);
+    });
+
+    const workbook = XLSX.utils.book_new();
+
+    const mesNombre = primerDia.toLocaleDateString('es-ES', {
+      month: 'long',
+      year: 'numeric'
+    });
+
+    const hijosPorGrado: Record<string, any[]> = {};
+    hijos.forEach(hijo => {
+      const gradoNombre = hijo.grados?.nombre || 'Sin grado';
+      if (!hijosPorGrado[gradoNombre]) {
+        hijosPorGrado[gradoNombre] = [];
+      }
+      hijosPorGrado[gradoNombre].push(hijo);
+    });
+
+    Object.keys(hijosPorGrado).sort().forEach(gradoNombre => {
+      const hijosGrado = hijosPorGrado[gradoNombre];
+
+      const headers = ['Alumno', 'Grado', 'Inscripción'];
+      for (let dia = 1; dia <= diasDelMes; dia++) {
+        headers.push(dia.toString());
+      }
+
+      const sheetData: any[][] = [
+        [`PARTE DIARIO - ${mesNombre.toUpperCase()} - ${gradoNombre}`],
+        [],
+        headers
+      ];
+
+      hijosGrado.forEach(hijo => {
+        const inscripcion = inscripciones?.find(i =>
+          i.hijo_id === hijo.id &&
+          i.activo &&
+          new Date(i.fecha_inicio) <= ultimoDia &&
+          (!i.fecha_fin || new Date(i.fecha_fin) >= primerDia)
+        );
+
+        const diasInscripcion = inscripcion?.dias_semana || [];
+        const diasTexto = ['', 'L', 'M', 'X', 'J', 'V'];
+        const inscripcionTexto = [1, 2, 3, 4, 5]
+          .filter(d => diasInscripcion.includes(d))
+          .map(d => diasTexto[d])
+          .join('-');
+
+        const alergenos = restriccionesPorHijo[hijo.id] || [];
+        const nombreConAlergenos = alergenos.length > 0
+          ? `${hijo.nombre} (${alergenos.join(', ')})`
+          : hijo.nombre;
+
+        const row = [
+          nombreConAlergenos,
+          hijo.grados?.nombre || 'Sin grado',
+          inscripcionTexto || '-'
+        ];
+
+        for (let dia = 1; dia <= diasDelMes; dia++) {
+          const fecha = new Date(yearNum, monthNum - 1, dia);
+          const diaSemana = fecha.getDay();
+
+          if (diaSemana === 0 || diaSemana === 6) {
+            row.push('');
+            continue;
+          }
+
+          const fechaStr = `${year}-${month.padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
+
+          const tieneInvitacion = invitaciones?.some(inv =>
+            inv.hijo_id === hijo.id && inv.fecha === fechaStr
+          );
+
+          if (tieneInvitacion) {
+            row.push('I');
+            continue;
+          }
+
+          const tieneBaja = bajas?.some(b =>
+            b.hijo_id === hijo.id && b.fecha === fechaStr
+          );
+
+          if (tieneBaja) {
+            row.push('C');
+            continue;
+          }
+
+          const tieneSolicitudPuntual = solicitudes?.some(s =>
+            s.hijo_id === hijo.id && s.fecha === fechaStr
+          );
+
+          if (tieneSolicitudPuntual) {
+            row.push('P');
+            continue;
+          }
+
+          const diaSemanaSistema = diaSemana === 0 ? 7 : diaSemana;
+          const estaInscrito = inscripcion &&
+            diasInscripcion.includes(diaSemanaSistema) &&
+            new Date(inscripcion.fecha_inicio) <= fecha &&
+            (!inscripcion.fecha_fin || new Date(inscripcion.fecha_fin) >= fecha);
+
+          if (estaInscrito) {
+            row.push('X');
+          } else {
+            row.push('');
+          }
+        }
+
+        sheetData.push(row);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+      const colWidths = [
+        { wch: 35 },
+        { wch: 15 },
+        { wch: 15 }
+      ];
+      for (let i = 0; i < diasDelMes; i++) {
+        colWidths.push({ wch: 4 });
+      }
+      ws['!cols'] = colWidths;
+
+      const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+
+      for (let R = 3; R <= range.e.r; R++) {
+        for (let C = 3; C <= range.e.c; C++) {
+          const cellAddress = XLSX.utils.encode_cell({ r: R, c: C });
+          const cell = ws[cellAddress];
+
+          if (cell && cell.v) {
+            if (!cell.s) cell.s = {};
+
+            switch (cell.v) {
+              case 'X':
+                cell.s = {
+                  fill: { fgColor: { rgb: "4A90E2" } },
+                  font: { color: { rgb: "FFFFFF" }, bold: true },
+                  alignment: { horizontal: "center", vertical: "center" }
+                };
+                break;
+              case 'C':
+                cell.s = {
+                  fill: { fgColor: { rgb: "E74C3C" } },
+                  font: { color: { rgb: "FFFFFF" }, bold: true },
+                  alignment: { horizontal: "center", vertical: "center" }
+                };
+                break;
+              case 'P':
+                cell.s = {
+                  fill: { fgColor: { rgb: "27AE60" } },
+                  font: { color: { rgb: "FFFFFF" }, bold: true },
+                  alignment: { horizontal: "center", vertical: "center" }
+                };
+                break;
+              case 'I':
+                cell.s = {
+                  fill: { fgColor: { rgb: "9B59B6" } },
+                  font: { color: { rgb: "FFFFFF" }, bold: true },
+                  alignment: { horizontal: "center", vertical: "center" }
+                };
+                break;
+            }
+          }
+        }
+      }
+
+      const nombreHoja = gradoNombre.substring(0, 31);
+      XLSX.utils.book_append_sheet(workbook, ws, nombreHoja);
+    });
+
+    const nombreArchivo = `Parte_Diario_${mesNombre.replace(' ', '_')}.xlsx`;
+    XLSX.writeFile(workbook, nombreArchivo);
+
+    return {
+      nombreArchivo,
+      totalGrados: Object.keys(hijosPorGrado).length,
+      totalAlumnos: hijos.length
+    };
+  } catch (error) {
+    console.error('Error exportando parte diario:', error);
+    throw error;
+  }
 }

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Calendar, Plus, Edit2, Trash2, User, Users, X, Check, Download } from 'lucide-react';
+import { Calendar, Plus, Edit2, Trash2, User, Users, X, Check, Download, FileSpreadsheet } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { SearchableSelect } from '../SearchableSelect';
-import { exportarInscripcionesAExcel } from '../../utils/excelExport';
+import { exportarInscripcionesAExcel, exportarParteDiarioMensual } from '../../utils/excelExport';
 
 interface Hijo {
   id: string;
@@ -60,6 +60,10 @@ export default function InscripcionesManager() {
   const [successMessage, setSuccessMessage] = useState('');
   const [errorMessage, setErrorMessage] = useState('');
   const [exportando, setExportando] = useState(false);
+  const [mesSeleccionado, setMesSeleccionado] = useState(() => {
+    const hoy = new Date();
+    return `${hoy.getFullYear()}-${(hoy.getMonth() + 1).toString().padStart(2, '0')}`;
+  });
 
   const [formData, setFormData] = useState({
     persona_id: '',
@@ -362,6 +366,28 @@ export default function InscripcionesManager() {
     }
   };
 
+  const handleExportarParteDiario = async () => {
+    if (!mesSeleccionado) {
+      setErrorMessage('Por favor, selecciona un mes');
+      return;
+    }
+
+    try {
+      setExportando(true);
+      setErrorMessage('');
+      setSuccessMessage('');
+
+      await exportarParteDiarioMensual(mesSeleccionado);
+
+      setSuccessMessage('Parte diario exportado correctamente');
+    } catch (error: any) {
+      console.error('Error al exportar parte diario:', error);
+      setErrorMessage('Error al exportar el parte diario');
+    } finally {
+      setExportando(false);
+    }
+  };
+
   const DiasSemanaIndicator = ({ diasSeleccionados }: { diasSeleccionados: number[] }) => {
     const diasAbreviados = [
       { value: 1, label: 'L' },
@@ -417,6 +443,36 @@ export default function InscripcionesManager() {
             Nueva Inscripción
           </button>
         </div>
+      </div>
+
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+            <span className="font-semibold text-gray-900">Parte Diario Mensual:</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <label className="text-sm text-gray-700">Selecciona mes:</label>
+            <input
+              type="month"
+              value={mesSeleccionado}
+              onChange={(e) => setMesSeleccionado(e.target.value)}
+              className="px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            />
+            <button
+              onClick={handleExportarParteDiario}
+              disabled={exportando || !mesSeleccionado}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              title="Exportar parte diario con columnas por día del mes, organizado por grados"
+            >
+              <FileSpreadsheet className="w-4 h-4" />
+              {exportando ? 'Exportando...' : 'Exportar Parte Diario'}
+            </button>
+          </div>
+        </div>
+        <p className="text-xs text-gray-600 mt-2 ml-7">
+          Genera un Excel con una hoja por grado/clase. Incluye alumnos con sus alergias, inscripciones, y columnas para cada día del mes (X=Inscrito, C=Cancelado, P=Puntual, I=Invitado)
+        </p>
       </div>
 
       {successMessage && (
