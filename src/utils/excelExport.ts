@@ -878,10 +878,16 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
     for (const batch of batches) {
       const [inscripRes, bajasRes, solicitudesRes, invitacionesRes, restriccionesRes] = await Promise.all([
         supabase.from('comedor_inscripciones').select('*').in('hijo_id', batch),
-        supabase.from('comedor_bajas').select('*').in('hijo_id', batch).gte('fecha', fechaInicio).lte('fecha', fechaFin),
-        supabase.from('comedor_solicitudes').select('*').in('hijo_id', batch).gte('fecha', fechaInicio).lte('fecha', fechaFin).eq('aprobada', true),
-        supabase.from('comedor_invitaciones').select('*').in('hijo_id', batch).gte('fecha', fechaInicio).lte('fecha', fechaFin),
-        supabase.from('comedor_restricciones_dieteticas').select('hijo_id, tipo_restriccion, descripcion').in('hijo_id', batch)
+        supabase.from('comedor_bajas').select('*').in('hijo_id', batch),
+        supabase.from('comedor_altaspuntuales').select('*').in('hijo_id', batch).eq('estado', 'aprobada'),
+        supabase.from('invitaciones_comedor').select('*').in('hijo_id', batch).gte('fecha', fechaInicio).lte('fecha', fechaFin),
+        supabase.from('hijos_restricciones_dieteticas').select(`
+          hijo_id,
+          restricciones_dieteticas (
+            nombre,
+            tipo
+          )
+        `).in('hijo_id', batch)
       ]);
 
       if (inscripRes.error) throw inscripRes.error;
@@ -903,17 +909,37 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
       return inicio <= ultimoDia && (!fin || fin >= primerDia);
     });
 
-    const bajas = todasBajas;
-    const solicitudes = todasSolicitudes;
+    const solicitudesFiltradas = todasSolicitudes.filter(s => {
+      const fechaSolicitud = s.fecha;
+      return fechaSolicitud >= fechaInicio && fechaSolicitud <= fechaFin;
+    });
+
+    const bajasPorHijoYFecha: Record<string, Set<string>> = {};
+    todasBajas.forEach(baja => {
+      if (!baja.dias || !Array.isArray(baja.dias)) return;
+      baja.dias.forEach((fechaBaja: string) => {
+        if (fechaBaja >= fechaInicio && fechaBaja <= fechaFin) {
+          const key = `${baja.hijo_id}_${fechaBaja}`;
+          if (!bajasPorHijoYFecha[baja.hijo_id]) {
+            bajasPorHijoYFecha[baja.hijo_id] = new Set();
+          }
+          bajasPorHijoYFecha[baja.hijo_id].add(fechaBaja);
+        }
+      });
+    });
+
+    const bajas = bajasPorHijoYFecha;
+    const solicitudes = solicitudesFiltradas;
     const invitaciones = todasInvitaciones;
-    const restricciones = todasRestricciones;
 
     const restriccionesPorHijo: Record<string, string[]> = {};
-    restricciones?.forEach(r => {
+    todasRestricciones.forEach((r: any) => {
       if (!restriccionesPorHijo[r.hijo_id]) {
         restriccionesPorHijo[r.hijo_id] = [];
       }
-      restriccionesPorHijo[r.hijo_id].push(r.tipo_restriccion || r.descripcion);
+      if (r.restricciones_dieteticas?.nombre) {
+        restriccionesPorHijo[r.hijo_id].push(r.restricciones_dieteticas.nombre);
+      }
     });
 
     const workbook = XLSX.utils.book_new();
@@ -992,9 +1018,7 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
             continue;
           }
 
-          const tieneBaja = bajas?.some(b =>
-            b.hijo_id === hijo.id && b.fecha === fechaStr
-          );
+          const tieneBaja = bajas[hijo.id]?.has(fechaStr);
 
           if (tieneBaja) {
             row.push('C');
