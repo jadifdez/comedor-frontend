@@ -128,6 +128,22 @@ export function DailyManagementView() {
     });
   };
 
+  const getMenuSummary = () => {
+    if (!data) return null;
+
+    const activeDiners = data.comensales.filter(c => !c.cancelado_ultimo_momento);
+    const menuCounts: { [key: string]: number } = {};
+
+    activeDiners.forEach(comensal => {
+      const menuType = getMenuText(comensal);
+      menuCounts[menuType] = (menuCounts[menuType] || 0) + 1;
+    });
+
+    return Object.entries(menuCounts)
+      .sort((a, b) => b[1] - a[1])
+      .map(([menu, count]) => ({ menu, count }));
+  };
+
   const handleCancelClick = (comensal: DailyDiner) => {
     setSelectedComensal(comensal);
     setCancelMotivo('');
@@ -844,6 +860,59 @@ export function DailyManagementView() {
                   comensales={data.comensales}
                   restriccionesActivas={data.restricciones_activas}
                 />
+              </div>
+            )}
+          </div>
+
+          {/* Resumen de Menús Elegidos */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+            <button
+              onClick={() => toggleSection('menus')}
+              className="w-full flex items-center justify-between mb-4 group"
+            >
+              <div className="flex items-center space-x-3">
+                <UtensilsCrossed className="h-6 w-6 text-green-600" />
+                <h2 className="text-xl font-bold text-gray-900">
+                  Resumen de Menús Elegidos
+                </h2>
+              </div>
+              {expandedSections.has('menus') ? (
+                <ChevronUp className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
+              ) : (
+                <ChevronDown className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
+              )}
+            </button>
+
+            {expandedSections.has('menus') && (
+              <div className="mt-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {getMenuSummary()?.map((item, index) => (
+                    <div
+                      key={index}
+                      className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg p-4 border border-blue-200"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <h3 className="text-sm font-medium text-gray-600 mb-1">
+                            {item.menu}
+                          </h3>
+                          <p className="text-3xl font-bold text-blue-900">
+                            {item.count}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            {((item.count / data.comensales.filter(c => !c.cancelado_ultimo_momento).length) * 100).toFixed(1)}% del total
+                          </p>
+                        </div>
+                        <UtensilsCrossed className="h-8 w-8 text-blue-400" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {(!getMenuSummary() || getMenuSummary()?.length === 0) && (
+                  <div className="text-center py-8 text-gray-500">
+                    No hay datos de menús para mostrar
+                  </div>
+                )}
               </div>
             )}
           </div>
