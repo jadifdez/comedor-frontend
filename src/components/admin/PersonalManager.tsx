@@ -484,12 +484,20 @@ export function PersonalManager() {
                   <tr className="hover:bg-gray-50">
                   <td className="px-6 py-4">
                     <div className="max-w-xs">
-                      <button
-                        onClick={() => togglePadreExpansion(padre.id)}
-                        className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left truncate"
-                      >
-                        {padre.nombre}
-                      </button>
+                      <div className="flex items-center space-x-2 mb-1">
+                        <button
+                          onClick={() => togglePadreExpansion(padre.id)}
+                          className="text-sm font-medium text-gray-900 hover:text-blue-600 transition-colors text-left truncate"
+                        >
+                          {padre.nombre}
+                        </button>
+                        {padre.exento_facturacion && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800 flex-shrink-0" title={padre.motivo_exencion || 'Exento de facturación'}>
+                            <Shield className="h-3 w-3 mr-1" />
+                            EXENTO
+                          </span>
+                        )}
+                      </div>
                       <div className="text-sm text-gray-500 flex items-center">
                         <Mail className="h-3 w-3 mr-1 flex-shrink-0" />
                         <span className="truncate" title={padre.email}>{padre.email}</span>
@@ -512,34 +520,26 @@ export function PersonalManager() {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-col space-y-1">
-                      <button
-                        onClick={() => toggleActivo(padre)}
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          padre.activo
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}
-                      >
-                        {padre.activo ? (
-                          <>
-                            <Check className="h-3 w-3 mr-1" />
-                            Activo
-                          </>
-                        ) : (
-                          <>
-                            <X className="h-3 w-3 mr-1" />
-                            Inactivo
-                          </>
-                        )}
-                      </button>
-                      {padre.exento_facturacion && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800" title={padre.motivo_exencion || 'Exento de facturación'}>
-                          <Shield className="h-3 w-3 mr-1" />
-                          EXENTO
-                        </span>
+                    <button
+                      onClick={() => toggleActivo(padre)}
+                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        padre.activo
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-red-100 text-red-800'
+                      }`}
+                    >
+                      {padre.activo ? (
+                        <>
+                          <Check className="h-3 w-3 mr-1" />
+                          Activo
+                        </>
+                      ) : (
+                        <>
+                          <X className="h-3 w-3 mr-1" />
+                          Inactivo
+                        </>
                       )}
-                    </div>
+                    </button>
                   </td>
                   <td className="px-6 py-4 text-sm font-medium w-32">
                     <div className="flex space-x-2 flex-shrink-0">
