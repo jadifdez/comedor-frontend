@@ -133,12 +133,10 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
           .order('fecha_creacion'),
 
         // IMPORTANTE: Incluir inscripciones de padres activas Y desactivadas que estuvieron activas durante el mes
-        // Simplificado: obtener todas las que empezaron antes del fin del mes y (no tienen fin o terminaron después del inicio)
+        // Obtener todas sin filtros complejos - filtraremos en el código
         supabase
           .from('comedor_inscripciones_padres')
-          .select('*')
-          .lte('fecha_inicio', fechaFinMes)
-          .or(`fecha_fin.is.null,fecha_fin.gte.${fechaInicioMes}`),
+          .select('*'),
 
         supabase
           .from('invitaciones_comedor')
@@ -160,8 +158,20 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
       const inscripciones = inscripcionesResult.data || [];
       const bajas = bajasResult.data || [];
       const solicitudes = solicitudesResult.data || [];
-      const inscripcionesPadre = inscripcionesPadreResult.data || [];
       const invitaciones = invitacionesResult.data || [];
+
+      // Filtrar inscripciones de padres que aplican al mes seleccionado
+      const todasInscripcionesPadre = inscripcionesPadreResult.data || [];
+      const inscripcionesPadre = todasInscripcionesPadre.filter(insc => {
+        const fechaInicioInsc = new Date(insc.fecha_inicio);
+        const fechaFinInsc = insc.fecha_fin ? new Date(insc.fecha_fin) : null;
+        const fechaInicioMesDate = new Date(fechaInicioMes);
+        const fechaFinMesDate = new Date(fechaFinMes);
+
+        // Incluir si: empezó antes del fin del mes Y (no tiene fin O termina después del inicio del mes)
+        return fechaInicioInsc <= fechaFinMesDate &&
+               (!fechaFinInsc || fechaFinInsc >= fechaInicioMesDate);
+      });
 
       const diasLaborables = await getDiasLaborablesMes(year, month);
       const configuracionPrecios = await obtenerConfiguracionPrecios();
