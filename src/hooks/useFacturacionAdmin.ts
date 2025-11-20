@@ -162,6 +162,8 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
 
       // Filtrar inscripciones de padres que aplican al mes seleccionado
       const todasInscripcionesPadre = inscripcionesPadreResult.data || [];
+      console.log('[DEBUG] Total inscripciones padres cargadas:', todasInscripcionesPadre.length);
+
       const inscripcionesPadre = todasInscripcionesPadre.filter(insc => {
         const fechaInicioInsc = new Date(insc.fecha_inicio);
         const fechaFinInsc = insc.fecha_fin ? new Date(insc.fecha_fin) : null;
@@ -172,6 +174,10 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         return fechaInicioInsc <= fechaFinMesDate &&
                (!fechaFinInsc || fechaFinInsc >= fechaInicioMesDate);
       });
+
+      console.log('[DEBUG] Inscripciones padres filtradas para el mes:', inscripcionesPadre.length);
+      const patriciaInsc = inscripcionesPadre.find(i => i.padre_id === '296bb796-f27f-4aee-b502-c6bd6b56bb77');
+      console.log('[DEBUG] Patricia en inscripciones:', patriciaInsc ? 'SÍ ENCONTRADA' : 'NO ENCONTRADA');
 
       const diasLaborables = await getDiasLaborablesMes(year, month);
       const configuracionPrecios = await obtenerConfiguracionPrecios();
