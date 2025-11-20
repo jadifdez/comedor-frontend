@@ -352,6 +352,12 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
           const bajasPadre = bajas.filter(b => b.padre_id === padre.id);
           const solicitudesPadre = solicitudes.filter(s => s.padre_id === padre.id);
 
+          if (padre.id === '296bb796-f27f-4aee-b502-c6bd6b56bb77') {
+            console.log('[DEBUG PATRICIA] Procesando padre:', padre.nombre);
+            console.log('[DEBUG PATRICIA] inscripcionesPadreDelPadre:', inscripcionesPadreDelPadre.length);
+            console.log('[DEBUG PATRICIA] Inscripción:', inscripcionesPadreDelPadre[0]);
+          }
+
           const diasFacturables: DiaFacturable[] = [];
           let diasInscripcion = 0;
           let diasPuntuales = 0;
@@ -457,6 +463,15 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
             totalImporte = 0;
           }
 
+          if (padre.id === '296bb796-f27f-4aee-b502-c6bd6b56bb77') {
+            console.log('[DEBUG PATRICIA] diasFacturables:', diasFacturables.length);
+            console.log('[DEBUG PATRICIA] diasInscripcion:', diasInscripcion);
+            console.log('[DEBUG PATRICIA] totalImporte:', totalImporte);
+            console.log('[DEBUG PATRICIA] diasInvitacion:', diasInvitacion);
+            console.log('[DEBUG PATRICIA] estaExentoPadre:', estaExentoPadre);
+            console.log('[DEBUG PATRICIA] Condición para crear padreComedor:', (totalImporte > 0 || diasInvitacion > 0 || estaExentoPadre));
+          }
+
           if (totalImporte > 0 || diasInvitacion > 0 || estaExentoPadre) {
             // Para mostrar en el resumen, usar la primera inscripción o null
             const inscripcionRepresentativaPadre = inscripcionesPadreDelPadre.length > 0 ? inscripcionesPadreDelPadre[0] : null;
@@ -476,6 +491,12 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
               estaExento: estaExentoPadre,
               motivoExencion: estaExentoPadre ? padre.motivo_exencion : undefined
             };
+
+            if (padre.id === '296bb796-f27f-4aee-b502-c6bd6b56bb77') {
+              console.log('[DEBUG PATRICIA] ✅ padreComedor CREADO:', padreComedor);
+            }
+          } else if (padre.id === '296bb796-f27f-4aee-b502-c6bd6b56bb77') {
+            console.log('[DEBUG PATRICIA] ❌ padreComedor NO creado - no cumple condiciones');
           }
         }
 
