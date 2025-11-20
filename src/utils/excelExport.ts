@@ -496,3 +496,172 @@ export function exportarInscripcionesAExcel({ inscripcionesAlumnos, inscripcione
     totalInscripciones
   };
 }
+
+interface PersonalExportData {
+  id: string;
+  nombre: string;
+  email: string;
+  telefono: string | null;
+  activo: boolean;
+  exento_facturacion: boolean;
+  motivo_exencion: string | null;
+  fecha_inicio_exencion: string | null;
+  fecha_fin_exencion: string | null;
+  hijos_count?: number;
+  tiene_inscripcion_activa?: boolean;
+}
+
+interface PersonalExportOptions {
+  personal: PersonalExportData[];
+}
+
+export function exportarPersonalAExcel({ personal }: PersonalExportOptions) {
+  const workbook = XLSX.utils.book_new();
+
+  const totalPersonal = personal.length;
+  const personalActivo = personal.filter(p => p.activo).length;
+  const personalInactivo = personal.filter(p => !p.activo).length;
+  const personalConHijos = personal.filter(p => (p.hijos_count || 0) > 0).length;
+  const personalInscrito = personal.filter(p => p.tiene_inscripcion_activa).length;
+  const personalExento = personal.filter(p => p.exento_facturacion).length;
+
+  const resumenData = [
+    ['LISTADO DE PERSONAL DEL COLEGIO'],
+    ['Fecha de exportación:', new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    })],
+    [],
+    ['RESUMEN GENERAL'],
+    ['Total personal:', totalPersonal],
+    ['Personal activo:', personalActivo],
+    ['Personal inactivo:', personalInactivo],
+    [],
+    ['DETALLES'],
+    ['Personal con hijos:', personalConHijos],
+    ['Personal con inscripción al comedor:', personalInscrito],
+    ['Personal exento de facturación:', personalExento],
+  ];
+
+  const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+  wsResumen['!cols'] = [
+    { wch: 35 },
+    { wch: 20 }
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen');
+
+  const personalData: any[][] = [
+    ['LISTADO COMPLETO DE PERSONAL'],
+    [],
+    ['Nombre', 'Email', 'Teléfono', 'Estado', 'Hijos', 'Inscrito Comedor', 'Exento Facturación', 'Motivo Exención']
+  ];
+
+  const personalOrdenado = [...personal].sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  personalOrdenado.forEach(p => {
+    personalData.push([
+      p.nombre,
+      p.email,
+      p.telefono || 'Sin teléfono',
+      p.activo ? 'ACTIVO' : 'INACTIVO',
+      (p.hijos_count || 0).toString(),
+      p.tiene_inscripcion_activa ? 'SÍ' : 'NO',
+      p.exento_facturacion ? 'SÍ' : 'NO',
+      p.exento_facturacion ? (p.motivo_exencion || 'No especificado') : '-'
+    ]);
+  });
+
+  const wsPersonal = XLSX.utils.aoa_to_sheet(personalData);
+  wsPersonal['!cols'] = [
+    { wch: 30 },
+    { wch: 35 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 8 },
+    { wch: 18 },
+    { wch: 20 },
+    { wch: 40 }
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsPersonal, 'Personal');
+
+  // Hoja de personal exento
+  if (personalExento > 0) {
+    const exentosData: any[][] = [
+      ['PERSONAL EXENTO DE FACTURACIÓN'],
+      [],
+      ['Nombre', 'Email', 'Motivo Exención', 'Fecha Inicio', 'Fecha Fin']
+    ];
+
+    personal
+      .filter(p => p.exento_facturacion)
+      .forEach(p => {
+        const fechaInicio = p.fecha_inicio_exencion
+          ? new Date(p.fecha_inicio_exencion).toLocaleDateString('es-ES')
+          : 'No especificada';
+        const fechaFin = p.fecha_fin_exencion
+          ? new Date(p.fecha_fin_exencion).toLocaleDateString('es-ES')
+          : 'Permanente';
+
+        exentosData.push([
+          p.nombre,
+          p.email,
+          p.motivo_exencion || 'No especificado',
+          fechaInicio,
+          fechaFin
+        ]);
+      });
+
+    const wsExentos = XLSX.utils.aoa_to_sheet(exentosData);
+    wsExentos['!cols'] = [
+      { wch: 30 },
+      { wch: 35 },
+      { wch: 40 },
+      { wch: 15 },
+      { wch: 15 }
+    ];
+    XLSX.utils.book_append_sheet(workbook, wsExentos, 'Exentos');
+  }
+
+  // Hoja de contactos (Personal con hijos)
+  if (personalConHijos > 0) {
+    const contactosData: any[][] = [
+      ['PERSONAL CON HIJOS - CONTACTOS'],
+      [],
+      ['Nombre', 'Email', 'Teléfono', 'Número de Hijos', 'Estado']
+    ];
+
+    personal
+      .filter(p => (p.hijos_count || 0) > 0)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre))
+      .forEach(p => {
+        contactosData.push([
+          p.nombre,
+          p.email,
+          p.telefono || 'Sin teléfono',
+          (p.hijos_count || 0).toString(),
+          p.activo ? 'ACTIVO' : 'INACTIVO'
+        ]);
+      });
+
+    const wsContactos = XLSX.utils.aoa_to_sheet(contactosData);
+    wsContactos['!cols'] = [
+      { wch: 30 },
+      { wch: 35 },
+      { wch: 15 },
+      { wch: 15 },
+      { wch: 12 }
+    ];
+    XLSX.utils.book_append_sheet(workbook, wsContactos, 'Con Hijos');
+  }
+
+  const fechaActual = new Date().toISOString().split('T')[0];
+  const nombreArchivo = `Personal_Colegio_${fechaActual}.xlsx`;
+
+  XLSX.writeFile(workbook, nombreArchivo);
+
+  return {
+    nombreArchivo,
+    totalPersonal
+  };
+}

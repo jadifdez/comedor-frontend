@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, Padre, Hijo } from '../../lib/supabase';
-import { Users, Plus, CreditCard as Edit, Trash2, Mail, Phone, Check, X, Search, GraduationCap, AlertTriangle, Key, Utensils, Shield } from 'lucide-react';
+import { Users, Plus, CreditCard as Edit, Trash2, Mail, Phone, Check, X, Search, GraduationCap, AlertTriangle, Key, Utensils, Shield, FileDown } from 'lucide-react';
 import { InscribirProfesorModal } from './InscribirProfesorModal';
 import { useInscripcionesPadresAdmin, InscripcionPadreAdmin } from '../../hooks/useInscripcionesPadresAdmin';
 import { useConfiguracionPrecios } from '../../hooks/useConfiguracionPrecios';
+import { exportarPersonalAExcel } from '../../utils/excelExport';
 
 export function PersonalManager() {
   const { configuraciones } = useConfiguracionPrecios();
@@ -312,6 +313,30 @@ export function PersonalManager() {
     return `${inscripcion.dias_semana.length} días (${diasTexto})`;
   };
 
+  const handleExportExcel = async () => {
+    try {
+      const personalData = padres.map(p => ({
+        id: p.id,
+        nombre: p.nombre,
+        email: p.email,
+        telefono: p.telefono || null,
+        activo: p.activo,
+        exento_facturacion: p.exento_facturacion || false,
+        motivo_exencion: p.motivo_exencion || null,
+        fecha_inicio_exencion: p.fecha_inicio_exencion || null,
+        fecha_fin_exencion: p.fecha_fin_exencion || null,
+        hijos_count: hijosCount[p.id] || 0,
+        tiene_inscripcion_activa: !!inscripcionesActivas[p.id]
+      }));
+
+      const result = exportarPersonalAExcel({ personal: personalData });
+      alert(`Excel generado correctamente: ${result.nombreArchivo}\nTotal personal: ${result.totalPersonal}`);
+    } catch (error) {
+      console.error('Error al exportar Excel:', error);
+      alert('Error al generar el archivo Excel. Por favor, intenta de nuevo.');
+    }
+  };
+
   const filteredPadres = padres.filter(padre =>
     padre.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     padre.email.toLowerCase().includes(searchTerm.toLowerCase())
@@ -332,17 +357,27 @@ export function PersonalManager() {
           <Users className="h-6 w-6 text-blue-600" />
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Personal</h2>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditingPadre(null);
-            setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
-          }}
-          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Nuevo Personal</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            title="Exportar listado de personal a Excel"
+          >
+            <FileDown className="h-4 w-4" />
+            <span>Exportar Excel</span>
+          </button>
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setEditingPadre(null);
+              setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
+            }}
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Nuevo Personal</span>
+          </button>
+        </div>
       </div>
 
       <div className="relative">
