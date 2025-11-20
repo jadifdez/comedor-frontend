@@ -665,3 +665,163 @@ export function exportarPersonalAExcel({ personal }: PersonalExportOptions) {
     totalPersonal
   };
 }
+
+interface PadresExportData {
+  id: string;
+  nombre: string;
+  email: string;
+  telefono: string | null;
+  activo: boolean;
+  hijos_count?: number;
+  hijos_activos?: number;
+  tiene_inscripcion_activa?: boolean;
+}
+
+interface PadresExportOptions {
+  padres: PadresExportData[];
+}
+
+export function exportarPadresAExcel({ padres }: PadresExportOptions) {
+  const workbook = XLSX.utils.book_new();
+
+  const totalPadres = padres.length;
+  const padresActivos = padres.filter(p => p.activo).length;
+  const padresInactivos = padres.filter(p => !p.activo).length;
+  const padresConHijos = padres.filter(p => (p.hijos_count || 0) > 0).length;
+  const padresSinHijos = padres.filter(p => (p.hijos_count || 0) === 0).length;
+  const padresInscritosComedor = padres.filter(p => p.tiene_inscripcion_activa).length;
+
+  const resumenData = [
+    ['LISTADO DE PADRES/MADRES'],
+    ['Fecha de exportación:', new Date().toLocaleDateString('es-ES', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    })],
+    [],
+    ['RESUMEN GENERAL'],
+    ['Total padres/madres:', totalPadres],
+    ['Padres activos:', padresActivos],
+    ['Padres inactivos:', padresInactivos],
+    [],
+    ['DETALLES'],
+    ['Padres con hijos:', padresConHijos],
+    ['Padres sin hijos:', padresSinHijos],
+    ['Padres inscritos al comedor (personal):', padresInscritosComedor],
+  ];
+
+  const wsResumen = XLSX.utils.aoa_to_sheet(resumenData);
+  wsResumen['!cols'] = [
+    { wch: 40 },
+    { wch: 20 }
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen');
+
+  const padresData: any[][] = [
+    ['LISTADO COMPLETO DE PADRES/MADRES'],
+    [],
+    ['Nombre', 'Email', 'Teléfono', 'Estado', 'Total Hijos', 'Hijos Activos', 'Inscrito Comedor']
+  ];
+
+  const padresOrdenados = [...padres].sort((a, b) => a.nombre.localeCompare(b.nombre));
+
+  padresOrdenados.forEach(p => {
+    padresData.push([
+      p.nombre,
+      p.email,
+      p.telefono || 'Sin teléfono',
+      p.activo ? 'ACTIVO' : 'INACTIVO',
+      (p.hijos_count || 0).toString(),
+      (p.hijos_activos || 0).toString(),
+      p.tiene_inscripcion_activa ? 'SÍ' : 'NO'
+    ]);
+  });
+
+  const wsPadres = XLSX.utils.aoa_to_sheet(padresData);
+  wsPadres['!cols'] = [
+    { wch: 30 },
+    { wch: 35 },
+    { wch: 15 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 15 },
+    { wch: 18 }
+  ];
+  XLSX.utils.book_append_sheet(workbook, wsPadres, 'Padres');
+
+  // Hoja de contactos (Padres con hijos activos)
+  if (padresConHijos > 0) {
+    const contactosData: any[][] = [
+      ['CONTACTOS DE PADRES/MADRES'],
+      [],
+      ['Nombre', 'Email', 'Teléfono', 'Total Hijos', 'Hijos Activos', 'Estado']
+    ];
+
+    padres
+      .filter(p => (p.hijos_count || 0) > 0)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre))
+      .forEach(p => {
+        contactosData.push([
+          p.nombre,
+          p.email,
+          p.telefono || 'Sin teléfono',
+          (p.hijos_count || 0).toString(),
+          (p.hijos_activos || 0).toString(),
+          p.activo ? 'ACTIVO' : 'INACTIVO'
+        ]);
+      });
+
+    const wsContactos = XLSX.utils.aoa_to_sheet(contactosData);
+    wsContactos['!cols'] = [
+      { wch: 30 },
+      { wch: 35 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 15 },
+      { wch: 12 }
+    ];
+    XLSX.utils.book_append_sheet(workbook, wsContactos, 'Contactos');
+  }
+
+  // Hoja de padres sin hijos (para revisión)
+  if (padresSinHijos > 0) {
+    const sinHijosData: any[][] = [
+      ['PADRES/MADRES SIN HIJOS REGISTRADOS'],
+      [],
+      ['Nombre', 'Email', 'Teléfono', 'Estado', 'Nota']
+    ];
+
+    padres
+      .filter(p => (p.hijos_count || 0) === 0)
+      .sort((a, b) => a.nombre.localeCompare(b.nombre))
+      .forEach(p => {
+        sinHijosData.push([
+          p.nombre,
+          p.email,
+          p.telefono || 'Sin teléfono',
+          p.activo ? 'ACTIVO' : 'INACTIVO',
+          p.tiene_inscripcion_activa ? 'Personal del colegio' : 'Revisar'
+        ]);
+      });
+
+    const wsSinHijos = XLSX.utils.aoa_to_sheet(sinHijosData);
+    wsSinHijos['!cols'] = [
+      { wch: 30 },
+      { wch: 35 },
+      { wch: 15 },
+      { wch: 12 },
+      { wch: 25 }
+    ];
+    XLSX.utils.book_append_sheet(workbook, wsSinHijos, 'Sin Hijos');
+  }
+
+  const fechaActual = new Date().toISOString().split('T')[0];
+  const nombreArchivo = `Padres_${fechaActual}.xlsx`;
+
+  XLSX.writeFile(workbook, nombreArchivo);
+
+  return {
+    nombreArchivo,
+    totalPadres
+  };
+}

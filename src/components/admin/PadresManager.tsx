@@ -18,10 +18,12 @@ import {
   Send,
   Shield,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  FileDown
 } from 'lucide-react';
 import { InscribirProfesorModal } from './InscribirProfesorModal';
 import { useInscripcionesPadresAdmin, InscripcionPadreAdmin } from '../../hooks/useInscripcionesPadresAdmin';
+import { exportarPadresAExcel } from '../../utils/excelExport';
 
 interface PadreWithCounts extends Padre {
   hijos_count: number;
@@ -298,6 +300,43 @@ export function PadresManager() {
     });
   }, [loadHijosForPadre]);
 
+  const handleExportExcel = async () => {
+    try {
+      const { data: allPadres, error } = await supabase.rpc('get_padres_with_counts', {
+        search_term: '',
+        page_limit: 10000,
+        page_offset: 0
+      });
+
+      if (error) throw error;
+
+      const { data: hijosData } = await supabase
+        .from('hijos')
+        .select('padre_id, activo')
+        .eq('activo', true);
+
+      const hijosActivosCount: Record<string, number> = {};
+      hijosData?.forEach(hijo => {
+        hijosActivosCount[hijo.padre_id] = (hijosActivosCount[hijo.padre_id] || 0) + 1;
+      });
+
+      const padresData = allPadres.map((p: PadreWithCounts) => ({
+        id: p.id,
+        nombre: p.nombre,
+        email: p.email,
+        telefono: p.telefono || null,
+        activo: p.activo,
+        hijos_count: p.hijos_count || 0,
+        hijos_activos: hijosActivosCount[p.id] || 0,
+        tiene_inscripcion_activa: p.tiene_inscripcion_activa
+      }));
+
+      exportarPadresAExcel({ padres: padresData });
+    } catch (error) {
+      console.error('Error al exportar Excel:', error);
+    }
+  };
+
   const handleSendPasswordReset = useCallback(async (padre: Padre) => {
     try {
       const { data, error } = await supabase.auth.getSession();
@@ -417,17 +456,27 @@ Equipo del Comedor`
           <h2 className="text-2xl font-bold text-gray-900">Gestión de Padres</h2>
           <span className="text-sm text-gray-500">({totalCount} total)</span>
         </div>
-        <button
-          onClick={() => {
-            setShowForm(true);
-            setEditingPadre(null);
-            setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: false, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
-          }}
-          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Nuevo Padre</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={handleExportExcel}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
+            title="Exportar listado de padres a Excel"
+          >
+            <FileDown className="h-4 w-4" />
+            <span>Exportar Excel</span>
+          </button>
+          <button
+            onClick={() => {
+              setShowForm(true);
+              setEditingPadre(null);
+              setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: false, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
+            }}
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Nuevo Padre</span>
+          </button>
+        </div>
       </div>
 
       <div className="relative">
