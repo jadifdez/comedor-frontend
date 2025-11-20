@@ -299,7 +299,7 @@ export function FacturacionAdminManager() {
                   <div className="mt-4 pt-4 border-t border-gray-200">
                     <h5 className="font-medium text-gray-900 mb-3">Detalle por persona</h5>
                     <div className="space-y-3">
-                      {facturacionPadre.padreComedor && facturacionPadre.padreComedor.diasFacturables.length > 0 && (
+                      {facturacionPadre.padreComedor && (facturacionPadre.padreComedor.diasFacturables.length > 0 || facturacionPadre.padreComedor.diasInvitacion > 0) && (
                         <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                           <div className="flex items-center justify-between mb-2">
                             <div className="flex items-center space-x-2">
@@ -336,7 +336,7 @@ export function FacturacionAdminManager() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-4 gap-4 text-sm">
+                          <div className="grid grid-cols-5 gap-4 text-sm">
                             <div>
                               <p className="text-gray-600">Días inscripción:</p>
                               <p className="font-medium">{facturacionPadre.padreComedor.diasInscripcion}</p>
@@ -349,6 +349,12 @@ export function FacturacionAdminManager() {
                               <p className="text-gray-600">Días baja:</p>
                               <p className="font-medium text-red-600">-{facturacionPadre.padreComedor.diasBaja}</p>
                             </div>
+                            {facturacionPadre.padreComedor.diasInvitacion > 0 && (
+                              <div>
+                                <p className="text-gray-600">Días invitación:</p>
+                                <p className="font-medium text-purple-600">{facturacionPadre.padreComedor.diasInvitacion}</p>
+                              </div>
+                            )}
                             {facturacionPadre.padreComedor.tieneDescuentoAsistencia80 && (
                               <div>
                                 <p className="text-gray-600">Descuento:</p>
