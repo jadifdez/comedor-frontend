@@ -1027,42 +1027,7 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
             continue;
           }
 
-          const tieneInvitacion = invitaciones?.some(inv =>
-            inv.hijo_id === hijo.id && inv.fecha === fechaStr
-          );
-
-          if (tieneInvitacion) {
-            row.push('I');
-            continue;
-          }
-
-          const tieneBaja = bajas[hijo.id]?.has(fechaStr);
-
-          if (tieneBaja) {
-            row.push('C');
-            continue;
-          }
-
-          const tieneSolicitudPuntual = solicitudes?.some(s =>
-            s.hijo_id === hijo.id && s.fecha === fechaStr
-          );
-
-          if (tieneSolicitudPuntual) {
-            row.push('P');
-            continue;
-          }
-
-          const diaSemanaSistema = diaSemana === 0 ? 7 : diaSemana;
-          const estaInscrito = inscripcion &&
-            diasInscripcion.includes(diaSemanaSistema) &&
-            new Date(inscripcion.fecha_inicio) <= fecha &&
-            (!inscripcion.fecha_fin || new Date(inscripcion.fecha_fin) >= fecha);
-
-          if (estaInscrito) {
-            row.push('X');
-          } else {
-            row.push('');
-          }
+          row.push('');
         }
 
         sheetData.push(row);
