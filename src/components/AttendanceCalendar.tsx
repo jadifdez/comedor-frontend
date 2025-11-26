@@ -50,7 +50,7 @@ export function AttendanceCalendar({ persona, mesActual }: AttendanceCalendarPro
     if (persona.diasPorCategoria.cancelados.has(key)) {
       console.log(`[CALENDARIO] ${key} ES CANCELADO - debería ser ROJO`);
       return {
-        color: 'bg-red-100 border-red-300 text-red-700',
+        color: 'bg-red-600 border-red-800 text-white font-bold',
         label: 'Cancelado',
         tooltip: 'Día cancelado'
       };
