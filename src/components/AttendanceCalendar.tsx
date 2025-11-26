@@ -32,13 +32,6 @@ export function AttendanceCalendar({ persona, mesActual }: AttendanceCalendarPro
   const getEstadoDia = (fecha: Date): { color: string; label: string; tooltip: string } => {
     const key = formatDateToKey(fecha);
 
-    console.log(`[CALENDARIO] Evaluando día ${key}:`, {
-      festivo: persona.diasPorCategoria.festivos.has(key),
-      cancelado: persona.diasPorCategoria.cancelados.has(key),
-      puntual: persona.diasPorCategoria.puntuales.has(key),
-      contratado: persona.diasPorCategoria.contratados.has(key)
-    });
-
     if (persona.diasPorCategoria.festivos.has(key)) {
       return {
         color: 'bg-pink-100 border-pink-300 text-pink-700',
@@ -48,9 +41,8 @@ export function AttendanceCalendar({ persona, mesActual }: AttendanceCalendarPro
     }
 
     if (persona.diasPorCategoria.cancelados.has(key)) {
-      console.log(`[CALENDARIO] ${key} ES CANCELADO - debería ser ROJO`);
       return {
-        color: 'bg-red-600 border-red-800 text-white font-bold',
+        color: 'bg-red-100 border-red-300 text-red-700',
         label: 'Cancelado',
         tooltip: 'Día cancelado'
       };

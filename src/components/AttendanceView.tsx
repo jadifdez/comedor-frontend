@@ -55,7 +55,7 @@ export function AttendanceView({ user, padre }: AttendanceViewProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Control de Asistencia <span className="text-red-600">v2</span></h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Control de Asistencia</h1>
         <p className="text-gray-600">
           Visualiza los días contratados, cancelados, festivos y comidas puntuales para cada mes
         </p>

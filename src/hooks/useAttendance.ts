@@ -102,14 +102,11 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
 
   const loadBajas = async (startDate: string, endDate: string) => {
     try {
-      console.log('[BAJAS] Cargando bajas para rango:', startDate, '-', endDate);
       const { data, error } = await supabase
         .from('comedor_bajas')
         .select('*');
 
       if (error) throw error;
-      console.log('[BAJAS] Total bajas en BD:', data?.length || 0);
-      console.log('[BAJAS] Primeras 3 bajas:', data?.slice(0, 3));
 
       const bajasFiltered = (data || []).filter(baja => {
         return baja.dias.some((diaStr: string) => {
@@ -119,8 +116,6 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
         });
       });
 
-      console.log('[BAJAS] Bajas filtradas para el mes:', bajasFiltered.length);
-      console.log('[BAJAS] Detalles bajas filtradas:', bajasFiltered);
       setBajas(bajasFiltered);
     } catch (err: any) {
       console.error('Error loading bajas:', err);
@@ -245,25 +240,12 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
 
       const contratados = inscripcion ? getDiasContratados(inscripcion, mesActual) : new Set<string>();
 
-      const bajasHijo = bajas.filter(b => b.hijo_id && b.hijo_id === hijo.id);
-      console.log(`[DEBUG] Bajas para ${hijo.nombre}:`, bajasHijo);
-      console.log(`[DEBUG] Total bajas cargadas:`, bajas.length);
-
       const cancelados = new Set(
-        bajasHijo
-          .flatMap(b => {
-            console.log(`[DEBUG] Procesando días de baja:`, b.dias);
-            return b.dias;
-          })
-          .map(d => {
-            const fechaBaja = parseBajaFecha(d);
-            const key = formatDateToKey(fechaBaja);
-            console.log(`[DEBUG] Día ${d} -> Key: ${key}`);
-            return key;
-          })
+        bajas
+          .filter(b => b.hijo_id && b.hijo_id === hijo.id)
+          .flatMap(b => b.dias)
+          .map(d => formatDateToKey(parseBajaFecha(d)))
       );
-
-      console.log(`[DEBUG] Días cancelados (Set):`, Array.from(cancelados));
 
       const puntuales = new Set(
         solicitudes
