@@ -118,7 +118,7 @@ export function ParentHeader({ activeTab, onTabChange }: ParentHeaderProps) {
                   className={getMenuItemClass('menu')}
                 >
                   <ChefHat className="h-5 w-5" />
-                  <span className="text-sm">Elegir menú</span>
+                  <span className="text-sm">Elegir plato combinado</span>
                 </button>
                 <button
                   type="button"
