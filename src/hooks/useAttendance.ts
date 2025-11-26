@@ -104,12 +104,19 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
     try {
       const { data, error } = await supabase
         .from('comedor_bajas')
-        .select('*')
-        .gte('fecha_creacion', startDate)
-        .lte('fecha_creacion', endDate);
+        .select('*');
 
       if (error) throw error;
-      setBajas(data || []);
+
+      const bajasFiltered = (data || []).filter(baja => {
+        return baja.dias.some((diaStr: string) => {
+          const fechaBaja = parseBajaFecha(diaStr);
+          const fechaBajaKey = formatDateToKey(fechaBaja);
+          return fechaBajaKey >= startDate && fechaBajaKey <= endDate;
+        });
+      });
+
+      setBajas(bajasFiltered);
     } catch (err: any) {
       console.error('Error loading bajas:', err);
       setError(err.message);
