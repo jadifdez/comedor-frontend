@@ -172,7 +172,7 @@ export function MenuEleccionForm({
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
         <div className="flex items-center space-x-2 mb-4">
           <ChefHat className="h-6 w-6 text-orange-600" />
-          <h2 className="text-xl font-semibold text-gray-900">Elegir menú semanal</h2>
+          <h2 className="text-xl font-semibold text-gray-900">Elegir plato combinado</h2>
         </div>
         <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
           <div className="flex items-start space-x-3">
