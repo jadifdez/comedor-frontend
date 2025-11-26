@@ -703,6 +703,18 @@ Equipo del Comedor`
                         <div className="text-sm text-gray-500 flex items-center">
                           <Mail className="h-3 w-3 mr-1 flex-shrink-0" />
                           <span className="truncate" title={padre.email}>{padre.email}</span>
+                          {padre.email !== padre.email.toLowerCase() && (
+                            <div className="relative group ml-1 flex-shrink-0">
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                              <div className="absolute left-0 bottom-full mb-2 hidden group-hover:block z-10 w-64">
+                                <div className="bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+                                  <p className="font-medium mb-1">⚠️ Email con mayúsculas</p>
+                                  <p>El email contiene caracteres en mayúsculas. Se recomienda usar solo minúsculas para evitar problemas de inicio de sesión.</p>
+                                  <div className="absolute left-4 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-900"></div>
+                                </div>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </td>
