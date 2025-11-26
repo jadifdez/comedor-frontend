@@ -38,16 +38,14 @@ export function FacturacionCalendario({ mesSeleccionado, diasFacturables, desglo
       const ultimoDia = new Date(year, month, 0).getDate();
       const fechaFin = `${year}-${String(month).padStart(2, '0')}-${String(ultimoDia).padStart(2, '0')}`;
 
-      const bajasQuery = supabase
+      let bajasQuery = supabase
         .from('comedor_bajas')
-        .select('dias')
-        .gte('fecha_creacion', fechaInicio)
-        .lte('fecha_creacion', fechaFin);
+        .select('dias');
 
       if (hijoId) {
-        bajasQuery.eq('hijo_id', hijoId);
+        bajasQuery = bajasQuery.eq('hijo_id', hijoId);
       } else if (padreId) {
-        bajasQuery.eq('padre_id', padreId);
+        bajasQuery = bajasQuery.eq('padre_id', padreId);
       }
 
       const invitacionesQuery = supabase
@@ -87,7 +85,11 @@ export function FacturacionCalendario({ mesSeleccionado, diasFacturables, desglo
       const bajasSet = new Set<string>();
       bajasData.data?.forEach(baja => {
         baja.dias.forEach((dia: string) => {
-          bajasSet.add(parseBajaFecha(dia));
+          const fechaNormalizada = parseBajaFecha(dia);
+          // Solo agregar si la fecha está en el rango del mes seleccionado
+          if (fechaNormalizada >= fechaInicio && fechaNormalizada <= fechaFin) {
+            bajasSet.add(fechaNormalizada);
+          }
         });
       });
 
