@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { AdminWrapper } from './components/AdminWrapper';
 import { AdminHeader } from './components/AdminHeader';
 import { OfflineBanner } from './components/OfflineBanner';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { AdministradoresManager } from './components/admin/AdministradoresManager';
 import { PadresManager } from './components/admin/PadresManager';
@@ -67,9 +68,12 @@ function AdminApp() {
   const [activeTab, setActiveTab] = useState<TabType>('gestion-diaria');
 
   return (
-    <AdminWrapper onChangePasswordClick={() => setActiveTab('cambiar-password')}>
-      {(user) => <AdminContent user={user} activeTab={activeTab} setActiveTab={setActiveTab} />}
-    </AdminWrapper>
+    <>
+      <PWAUpdatePrompt />
+      <AdminWrapper onChangePasswordClick={() => setActiveTab('cambiar-password')}>
+        {(user) => <AdminContent user={user} activeTab={activeTab} setActiveTab={setActiveTab} />}
+      </AdminWrapper>
+    </>
   );
 }
 

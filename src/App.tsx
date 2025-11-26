@@ -4,6 +4,7 @@ import { AuthWrapper } from './components/AuthWrapper';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { OfflineBanner } from './components/OfflineBanner';
 import { PWAInstallPrompt } from './components/PWAInstallPrompt';
+import { PWAUpdatePrompt } from './components/PWAUpdatePrompt';
 import { useOnlineStatus } from './hooks/useOnlineStatus';
 import { ParentHeader } from './components/ParentHeader';
 import { InscripcionComedorForm } from './components/InscripcionComedorForm';
@@ -590,6 +591,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <PWAInstallPrompt />
+      <PWAUpdatePrompt />
       <Routes>
         <Route path="/tutoriales" element={<VideoTutoriales />} />
         <Route path="/reset-password" element={<ResetPassword />} />
