@@ -63,7 +63,7 @@ export function Navigation({ activeTab, onTabChange }: NavigationProps) {
           `}
         >
           <ChefHat className="h-5 w-5" />
-          <span className="text-xs text-center">Elegir menú</span>
+          <span className="text-xs text-center">Elegir plato combinado</span>
         </button>
         
         <button
