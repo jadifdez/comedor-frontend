@@ -102,11 +102,14 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
 
   const loadBajas = async (startDate: string, endDate: string) => {
     try {
+      console.log('[BAJAS] Cargando bajas para rango:', startDate, '-', endDate);
       const { data, error } = await supabase
         .from('comedor_bajas')
         .select('*');
 
       if (error) throw error;
+      console.log('[BAJAS] Total bajas en BD:', data?.length || 0);
+      console.log('[BAJAS] Primeras 3 bajas:', data?.slice(0, 3));
 
       const bajasFiltered = (data || []).filter(baja => {
         return baja.dias.some((diaStr: string) => {
@@ -116,6 +119,8 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
         });
       });
 
+      console.log('[BAJAS] Bajas filtradas para el mes:', bajasFiltered.length);
+      console.log('[BAJAS] Detalles bajas filtradas:', bajasFiltered);
       setBajas(bajasFiltered);
     } catch (err: any) {
       console.error('Error loading bajas:', err);
