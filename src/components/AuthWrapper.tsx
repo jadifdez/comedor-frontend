@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { User } from '@supabase/supabase-js';
 import { LogIn, LogOut, AlertCircle, Mail, ArrowLeft, Shield, Lock, CheckCircle2, PlayCircle } from 'lucide-react';
+import packageJson from '../../package.json';
 
 interface AuthWrapperProps {
   children: (user: User) => React.ReactNode;
@@ -610,7 +611,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
             <img src="/horizontal_positivo.png" alt="Colegio Los Pinos" className="h-16 mx-auto mb-4" />
             <h1 className="text-2xl font-bold text-gray-900 mb-2">Comedor Colegio Los Pinos</h1>
             <p className="text-gray-600">Acceso para padres autorizados</p>
-            <p className="text-xs text-gray-400 mt-2">v1.0.6</p>
+            <p className="text-xs text-gray-400 mt-2">v{packageJson.version}</p>
           </div>
 
           {/* Banner azul para cambio de email - CON MÁXIMA PRIORIDAD VISUAL */}
