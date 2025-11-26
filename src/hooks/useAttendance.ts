@@ -240,12 +240,25 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
 
       const contratados = inscripcion ? getDiasContratados(inscripcion, mesActual) : new Set<string>();
 
+      const bajasHijo = bajas.filter(b => b.hijo_id && b.hijo_id === hijo.id);
+      console.log(`[DEBUG] Bajas para ${hijo.nombre}:`, bajasHijo);
+      console.log(`[DEBUG] Total bajas cargadas:`, bajas.length);
+
       const cancelados = new Set(
-        bajas
-          .filter(b => b.hijo_id && b.hijo_id === hijo.id)
-          .flatMap(b => b.dias)
-          .map(d => formatDateToKey(parseBajaFecha(d)))
+        bajasHijo
+          .flatMap(b => {
+            console.log(`[DEBUG] Procesando días de baja:`, b.dias);
+            return b.dias;
+          })
+          .map(d => {
+            const fechaBaja = parseBajaFecha(d);
+            const key = formatDateToKey(fechaBaja);
+            console.log(`[DEBUG] Día ${d} -> Key: ${key}`);
+            return key;
+          })
       );
+
+      console.log(`[DEBUG] Días cancelados (Set):`, Array.from(cancelados));
 
       const puntuales = new Set(
         solicitudes
