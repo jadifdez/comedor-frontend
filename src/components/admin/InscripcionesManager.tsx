@@ -470,9 +470,6 @@ export default function InscripcionesManager() {
             </button>
           </div>
         </div>
-        <p className="text-xs text-gray-600 mt-2 ml-7">
-          Genera un Excel con una hoja por grado/clase. Incluye alumnos con sus alergias, inscripciones, y columnas para cada día del mes (X=Inscrito, C=Cancelado, P=Puntual, I=Invitado)
-        </p>
       </div>
 
       {successMessage && (
