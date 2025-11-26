@@ -682,9 +682,6 @@ export default function InscripcionesManager() {
                     Días
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Precio Diario
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Fechas
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -699,7 +696,7 @@ export default function InscripcionesManager() {
                 {activeTab === 'alumnos' ? (
                   inscripcionesAlumnos.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                         No hay inscripciones de alumnos
                       </td>
                     </tr>
@@ -718,16 +715,6 @@ export default function InscripcionesManager() {
                         </td>
                         <td className="px-6 py-4">
                           <DiasSemanaIndicator diasSeleccionados={insc.dias_semana} />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <div className="text-sm text-gray-900">
-                            {insc.precio_diario.toFixed(2)} €
-                            {insc.descuento_aplicado > 0 && (
-                              <span className="text-xs text-green-600 ml-1">
-                                (-{insc.descuento_aplicado.toFixed(2)}€)
-                              </span>
-                            )}
-                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
@@ -765,7 +752,7 @@ export default function InscripcionesManager() {
                 ) : (
                   inscripcionesPadres.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
                         No hay inscripciones de personal
                       </td>
                     </tr>
@@ -779,17 +766,6 @@ export default function InscripcionesManager() {
                         </td>
                         <td className="px-6 py-4">
                           <DiasSemanaIndicator diasSeleccionados={insc.dias_semana} />
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {insc.padre?.exento_facturacion ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Exento
-                            </span>
-                          ) : (
-                            <div className="text-sm text-gray-900">
-                              {insc.precio_diario.toFixed(2)} €
-                            </div>
-                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">
