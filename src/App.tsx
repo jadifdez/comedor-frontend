@@ -18,7 +18,6 @@ import { MenuEleccionesList } from './components/MenuEleccionesList';
 import { EnfermedadForm } from './components/EnfermedadForm';
 import { EnfermedadesList } from './components/EnfermedadesList';
 import { FacturacionView } from './components/FacturacionView';
-import { AttendanceView } from './components/AttendanceView';
 import { InvitacionesView } from './components/InvitacionesView';
 import { RestriccionesDieteticasHijo } from './components/RestriccionesDieteticasHijo';
 import { PerfilPadre } from './components/PerfilPadre';
@@ -39,7 +38,7 @@ import VideoTutoriales from './pages/VideoTutoriales';
 
 function AppContent({ user }: { user: User }) {
   const isOnline = useOnlineStatus();
-  const [activeTab, setActiveTab] = useState<'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'asistencia' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil' | 'password'>('home');
+  const [activeTab, setActiveTab] = useState<'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil' | 'password'>('home');
   const [showSuccess, setShowSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error'>('success');
@@ -553,8 +552,6 @@ function AppContent({ user }: { user: User }) {
               canCancelEnfermedad={canCancelEnfermedad}
             />
           </>
-        ) : activeTab === 'asistencia' ? (
-          <AttendanceView user={user} padre={padre} />
         ) : activeTab === 'facturacion' ? (
           <FacturacionView user={user} />
         ) : activeTab === 'invitaciones' ? (

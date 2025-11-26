@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle, Gift, User, Home, Key, Calendar } from 'lucide-react';
+import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle, Gift, User, Home, Key } from 'lucide-react';
 
-type TabType = 'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'asistencia' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil' | 'password';
+type TabType = 'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil' | 'password';
 
 interface ParentHeaderProps {
   activeTab: TabType;
@@ -127,14 +127,6 @@ export function ParentHeader({ activeTab, onTabChange }: ParentHeaderProps) {
                 >
                   <Heart className="h-5 w-5" />
                   <span className="text-sm">Solicitar dieta blanda</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleMenuItemClick('asistencia')}
-                  className={getMenuItemClass('asistencia')}
-                >
-                  <Calendar className="h-5 w-5" />
-                  <span className="text-sm">Control de asistencia</span>
                 </button>
 
                 <div className="px-4 py-2 border-b border-t border-gray-200 mt-2">
