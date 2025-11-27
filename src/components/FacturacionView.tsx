@@ -18,11 +18,11 @@ export function FacturacionView({ user }: FacturacionViewProps) {
   // Extraer mes y año del mesSeleccionado
   const [year, month] = mesSeleccionado.split('-').map(Number);
 
-  // Generar años disponibles (desde 2023 hasta el año siguiente)
+  // Generar años disponibles (desde 2023 hasta los próximos 20 años)
   const generarYears = () => {
     const currentYear = new Date().getFullYear();
     const years = [];
-    for (let y = 2023; y <= currentYear + 1; y++) {
+    for (let y = 2023; y <= currentYear + 20; y++) {
       years.push(y);
     }
     return years;
