@@ -88,18 +88,18 @@ export function useFacturacion(user: User) {
 
     try {
       // Primero obtener el padre_id del usuario autenticado
-      const { data: padreData, error: padreError } = await supabase
+      const { data: padreDataList, error: padreError } = await supabase
         .from('padres')
         .select('id')
         .eq('user_id', user.id)
-        .maybeSingle();
+        .limit(1);
 
       if (padreError) throw padreError;
-      if (!padreData) {
+      if (!padreDataList || padreDataList.length === 0) {
         throw new Error('No se encontró información del padre');
       }
 
-      const padreId = padreData.id;
+      const padreId = padreDataList[0].id;
 
       // Primero obtener los IDs de los hijos del padre
       const { data: hijosIds, error: hijosIdsError } = await supabase
