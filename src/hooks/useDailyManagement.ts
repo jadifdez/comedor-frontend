@@ -307,10 +307,18 @@ export function useDailyManagement(fecha: string) {
 
       const comensales: DailyDiner[] = [];
 
+      // Crear mapa de invitaciones para búsquedas rápidas
+      const invitacionesMap = new Map<string, any>();
+      invitaciones.forEach(inv => {
+        const key = inv.hijo_id ? `hijo_${inv.hijo_id}` : inv.padre_id ? `padre_${inv.padre_id}` : `externo_${inv.id}`;
+        invitacionesMap.set(key, inv);
+      });
+
       inscripciones.forEach(insc => {
         if (!bajasHijoIds.has(insc.hijo_id)) {
           const eleccion = elecciones.find(e => e.hijo_id === insc.hijo_id);
           const dietaBlanda = dietasBlandas.find(d => d.hijo_id === insc.hijo_id && d.estado === 'aprobada');
+          const invitacion = invitacionesMap.get(`hijo_${insc.hijo_id}`);
 
           comensales.push({
             id: insc.hijo_id,
@@ -318,9 +326,10 @@ export function useDailyManagement(fecha: string) {
             tipo: 'hijo',
             curso: insc.hijo_details?.grado?.nombre,
             es_inscripcion: true,
-            es_invitacion: false,
+            es_invitacion: !!invitacion,
             es_alta_puntual: false,
             es_baja: false,
+            motivo_invitacion: invitacion?.motivo,
             tiene_eleccion: !!eleccion,
             opcion_principal: eleccion?.opcion_principal?.nombre,
             opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
@@ -339,15 +348,17 @@ export function useDailyManagement(fecha: string) {
         if (!bajasPadreIds.has(insc.padre_id)) {
           const eleccion = elecciones.find(e => e.padre_id === insc.padre_id);
           const dietaBlanda = dietasBlandas.find(d => d.padre_id === insc.padre_id && d.estado === 'aprobada');
+          const invitacion = invitacionesMap.get(`padre_${insc.padre_id}`);
 
           comensales.push({
             id: insc.padre_id,
             nombre: insc.padre?.nombre || 'Desconocido',
             tipo: 'padre',
             es_inscripcion: true,
-            es_invitacion: false,
+            es_invitacion: !!invitacion,
             es_alta_puntual: false,
             es_baja: false,
+            motivo_invitacion: invitacion?.motivo,
             tiene_eleccion: !!eleccion,
             opcion_principal: eleccion?.opcion_principal?.nombre,
             opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
