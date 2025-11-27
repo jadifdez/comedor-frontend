@@ -35,9 +35,18 @@ export function ParentHeader({ activeTab, onTabChange }: ParentHeaderProps) {
     setIsMenuOpen(false);
   };
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    window.location.href = '/';
+  const handleLogout = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsMenuOpen(false);
+
+    try {
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    } finally {
+      window.location.href = '/';
+    }
   };
 
   const toggleMenu = (e: React.MouseEvent) => {
