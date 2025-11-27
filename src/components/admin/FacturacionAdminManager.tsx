@@ -23,24 +23,37 @@ export function FacturacionAdminManager() {
 
   const { facturacion, loading, error } = useFacturacionAdmin(mesSeleccionado);
 
-  const generarOpcionesMeses = () => {
-    const opciones = [];
-    const hoy = new Date();
+  // Extraer mes y año del mesSeleccionado
+  const [year, month] = mesSeleccionado.split('-').map(Number);
 
-    for (let i = -6; i <= 3; i++) {
-      const fecha = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
-      const valor = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-      const etiqueta = fecha.toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long'
-      });
-      opciones.push({ valor, etiqueta });
+  // Generar años disponibles (desde 2023 hasta el año siguiente)
+  const generarYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = 2023; y <= currentYear + 1; y++) {
+      years.push(y);
     }
-
-    return opciones;
+    return years;
   };
 
-  const opcionesMeses = generarOpcionesMeses();
+  const availableYears = generarYears();
+
+  const handleMonthChange = (newMonth: number) => {
+    setMesSeleccionado(`${year}-${String(newMonth).padStart(2, '0')}`);
+  };
+
+  const handleYearChange = (newYear: number) => {
+    setMesSeleccionado(`${newYear}-${String(month).padStart(2, '0')}`);
+  };
+
+  const getMesEtiqueta = (mesSeleccionado: string) => {
+    const [y, m] = mesSeleccionado.split('-').map(Number);
+    const fecha = new Date(y, m - 1, 1);
+    return fecha.toLocaleDateString('es-ES', {
+      year: 'numeric',
+      month: 'long'
+    });
+  };
 
   const togglePadreExpansion = (padreId: string) => {
     setExpandedPadre(expandedPadre === padreId ? null : padreId);
@@ -136,19 +149,40 @@ export function FacturacionAdminManager() {
           <div>
             <label className="flex items-center space-x-2 text-sm font-medium text-gray-700 mb-2">
               <Calendar className="h-4 w-4" />
-              <span>Mes a facturar:</span>
+              <span>Periodo a facturar:</span>
             </label>
-            <select
-              value={mesSeleccionado}
-              onChange={(e) => setMesSeleccionado(e.target.value)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-            >
-              {opcionesMeses.map((opcion) => (
-                <option key={opcion.valor} value={opcion.valor}>
-                  {opcion.etiqueta}
-                </option>
-              ))}
-            </select>
+            <div className="flex items-center space-x-2">
+              <select
+                value={month}
+                onChange={(e) => handleMonthChange(Number(e.target.value))}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+              >
+                <option value={1}>Enero</option>
+                <option value={2}>Febrero</option>
+                <option value={3}>Marzo</option>
+                <option value={4}>Abril</option>
+                <option value={5}>Mayo</option>
+                <option value={6}>Junio</option>
+                <option value={7}>Julio</option>
+                <option value={8}>Agosto</option>
+                <option value={9}>Septiembre</option>
+                <option value={10}>Octubre</option>
+                <option value={11}>Noviembre</option>
+                <option value={12}>Diciembre</option>
+              </select>
+              <span className="text-gray-500 font-medium">de</span>
+              <select
+                value={year}
+                onChange={(e) => handleYearChange(Number(e.target.value))}
+                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+              >
+                {availableYears.map((y) => (
+                  <option key={y} value={y}>
+                    {y}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div>
@@ -504,7 +538,7 @@ export function FacturacionAdminManager() {
                   Detalle de facturación - {personaSeleccionada.tipo === 'hijo' ? personaSeleccionada.data.hijo.nombre : `${personaSeleccionada.nombre} (Personal)`}
                 </h3>
                 <p className="text-sm text-gray-600">
-                  {opcionesMeses.find(o => o.valor === mesSeleccionado)?.etiqueta}
+                  {getMesEtiqueta(mesSeleccionado)}
                 </p>
                 <div className="flex items-center space-x-2 mt-2">
                   {personaSeleccionada.tipo === 'hijo' && personaSeleccionada.data.esHijoDePersonal && (
@@ -673,7 +707,7 @@ export function FacturacionAdminManager() {
                     <div className="flex justify-between text-sm">
                       <span className="text-gray-600">Mes:</span>
                       <span className="font-medium text-gray-900">
-                        {opcionesMeses.find(o => o.valor === mesSeleccionado)?.etiqueta}
+                        {getMesEtiqueta(mesSeleccionado)}
                       </span>
                     </div>
                     <div className="flex justify-between text-sm">
