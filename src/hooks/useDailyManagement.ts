@@ -572,11 +572,11 @@ export function useDailyManagement(fecha: string) {
       };
 
       const comensalesRecurrentes = comensales
-        .filter(c => c.es_inscripcion)
+        .filter(c => c.es_inscripcion && !c.es_invitacion && !c.es_alta_puntual)
         .sort(sortComensales);
 
       const comensalesPuntuales = comensales
-        .filter(c => (c.es_invitacion || c.es_alta_puntual) && !c.es_inscripcion)
+        .filter(c => c.es_invitacion || c.es_alta_puntual)
         .sort(sortComensales);
 
       const dailyData: DailyData = {
