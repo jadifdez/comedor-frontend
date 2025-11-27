@@ -168,7 +168,7 @@ export function useFacturacion(user: User) {
           .from('padres')
           .select('*')
           .eq('id', padreId)
-          .single(),
+          .maybeSingle(),
 
         // IMPORTANTE: Incluir inscripciones de padres activas Y desactivadas que estuvieron activas durante el mes
         supabase
@@ -207,6 +207,17 @@ export function useFacturacion(user: User) {
       const padre = padreResult.data;
       const inscripcionesPadre = inscripcionesPadreResult.data || [];
       const invitaciones = invitacionesResult.data || [];
+
+      // Si no existe el padre, no hay facturación
+      if (!padre) {
+        return {
+          hijosFacturacion: [],
+          totalGeneral: 0,
+          totalDias: 0,
+          totalSinDescuentos: 0,
+          ahorroTotalDescuentos: 0
+        };
+      }
 
       // Obtener días laborables del mes
       const diasLaborables = await getDiasLaborablesMes(year, month);
