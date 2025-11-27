@@ -576,7 +576,7 @@ export function useDailyManagement(fecha: string) {
         .sort(sortComensales);
 
       const comensalesPuntuales = comensales
-        .filter(c => c.es_invitacion || c.es_alta_puntual)
+        .filter(c => (c.es_invitacion || c.es_alta_puntual) && !c.es_inscripcion)
         .sort(sortComensales);
 
       const dailyData: DailyData = {
