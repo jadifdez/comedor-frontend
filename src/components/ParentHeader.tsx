@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle, Gift, User, Home, Key } from 'lucide-react';
+import { Utensils, CalendarX, Plus, ChefHat, Heart, Euro, Menu, X, AlertCircle, Gift, User, Home, Key, LogOut } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 type TabType = 'home' | 'inscripcion' | 'bajas' | 'solicitudes' | 'menu' | 'enfermedades' | 'facturacion' | 'invitaciones' | 'restricciones' | 'perfil' | 'password';
 
@@ -32,6 +33,11 @@ export function ParentHeader({ activeTab, onTabChange }: ParentHeaderProps) {
   const handleMenuItemClick = (tab: TabType) => {
     onTabChange(tab);
     setIsMenuOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/';
   };
 
   const toggleMenu = (e: React.MouseEvent) => {
@@ -175,6 +181,14 @@ export function ParentHeader({ activeTab, onTabChange }: ParentHeaderProps) {
                 >
                   <Key className="h-5 w-5" />
                   <span className="text-sm">Cambiar Contraseña</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="flex items-center space-x-3 px-4 py-3 text-red-600 hover:bg-red-50 transition-colors"
+                >
+                  <LogOut className="h-5 w-5" />
+                  <span className="text-sm">Cerrar Sesión</span>
                 </button>
               </div>
             )}
