@@ -35,18 +35,22 @@ export function ParentHeader({ activeTab, onTabChange }: ParentHeaderProps) {
     setIsMenuOpen(false);
   };
 
-  const handleLogout = async (e: React.MouseEvent) => {
+  const handleLogout = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    console.log('Botón de cerrar sesión clickeado');
     setIsMenuOpen(false);
 
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
+    // Ejecutar signOut y redirigir sin esperar
+    supabase.auth.signOut().then(() => {
+      console.log('Sesión cerrada exitosamente');
+      window.location.replace('/');
+    }).catch((error) => {
       console.error('Error al cerrar sesión:', error);
-    } finally {
-      window.location.href = '/';
-    }
+      // Redirigir de todas formas
+      window.location.replace('/');
+    });
   };
 
   const toggleMenu = (e: React.MouseEvent) => {
