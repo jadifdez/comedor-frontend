@@ -15,25 +15,28 @@ export function FacturacionView({ user }: FacturacionViewProps) {
   const [configuracionPrecios, setConfiguracionPrecios] = useState<any>(null);
   const [calendarioExpandido, setCalendarioExpandido] = useState<string | null>(null);
 
-  // Generar opciones de meses (6 meses hacia atrás y 3 hacia adelante)
-  const generarOpcionesMeses = () => {
-    const opciones = [];
-    const hoy = new Date();
-    
-    for (let i = -6; i <= 3; i++) {
-      const fecha = new Date(hoy.getFullYear(), hoy.getMonth() + i, 1);
-      const valor = `${fecha.getFullYear()}-${String(fecha.getMonth() + 1).padStart(2, '0')}`;
-      const etiqueta = fecha.toLocaleDateString('es-ES', { 
-        year: 'numeric', 
-        month: 'long' 
-      });
-      opciones.push({ valor, etiqueta });
+  // Extraer mes y año del mesSeleccionado
+  const [year, month] = mesSeleccionado.split('-').map(Number);
+
+  // Generar años disponibles (desde 2023 hasta el año siguiente)
+  const generarYears = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let y = 2023; y <= currentYear + 1; y++) {
+      years.push(y);
     }
-    
-    return opciones;
+    return years;
   };
 
-  const opcionesMeses = generarOpcionesMeses();
+  const availableYears = generarYears();
+
+  const handleMonthChange = (newMonth: number) => {
+    setMesSeleccionado(`${year}-${String(newMonth).padStart(2, '0')}`);
+  };
+
+  const handleYearChange = (newYear: number) => {
+    setMesSeleccionado(`${newYear}-${String(month).padStart(2, '0')}`);
+  };
 
   useEffect(() => {
     const loadConfiguracion = async () => {
@@ -97,23 +100,44 @@ export function FacturacionView({ user }: FacturacionViewProps) {
           </div>
         </div>
 
-        {/* Selector de mes */}
+        {/* Selector de mes y año */}
         <div className="flex items-center space-x-4 mb-6">
           <label className="flex items-center space-x-2 text-sm font-medium text-gray-700">
             <Calendar className="h-4 w-4" />
-            <span>Mes a consultar:</span>
+            <span>Periodo a consultar:</span>
           </label>
-          <select
-            value={mesSeleccionado}
-            onChange={(e) => setMesSeleccionado(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-          >
-            {opcionesMeses.map((opcion) => (
-              <option key={opcion.valor} value={opcion.valor}>
-                {opcion.etiqueta}
-              </option>
-            ))}
-          </select>
+          <div className="flex items-center space-x-2">
+            <select
+              value={month}
+              onChange={(e) => handleMonthChange(Number(e.target.value))}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+            >
+              <option value={1}>Enero</option>
+              <option value={2}>Febrero</option>
+              <option value={3}>Marzo</option>
+              <option value={4}>Abril</option>
+              <option value={5}>Mayo</option>
+              <option value={6}>Junio</option>
+              <option value={7}>Julio</option>
+              <option value={8}>Agosto</option>
+              <option value={9}>Septiembre</option>
+              <option value={10}>Octubre</option>
+              <option value={11}>Noviembre</option>
+              <option value={12}>Diciembre</option>
+            </select>
+            <span className="text-gray-500 font-medium">de</span>
+            <select
+              value={year}
+              onChange={(e) => handleYearChange(Number(e.target.value))}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 bg-white"
+            >
+              {availableYears.map((y) => (
+                <option key={y} value={y}>
+                  {y}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Resumen general */}
