@@ -48,16 +48,16 @@ export function FacturacionCalendario({ mesSeleccionado, diasFacturables, desglo
         bajasQuery = bajasQuery.eq('padre_id', padreId);
       }
 
-      const invitacionesQuery = supabase
+      let invitacionesQuery = supabase
         .from('invitaciones_comedor')
         .select('fecha')
         .gte('fecha', fechaInicio)
         .lte('fecha', fechaFin);
 
       if (hijoId) {
-        invitacionesQuery.eq('hijo_id', hijoId);
+        invitacionesQuery = invitacionesQuery.eq('hijo_id', hijoId);
       } else if (padreId) {
-        invitacionesQuery.eq('padre_id', padreId);
+        invitacionesQuery = invitacionesQuery.eq('padre_id', padreId);
       }
 
       const [bajasData, festivosData, invitacionesData] = await Promise.all([
