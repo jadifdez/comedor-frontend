@@ -117,7 +117,6 @@ export function useDailyManagement(fecha: string) {
         dietasBlandasResult,
         festivosResult,
         restriccionesResult,
-        cancelacionesResult,
         restriccionesActivasResult
       ] = await Promise.all([
         supabase
@@ -214,11 +213,6 @@ export function useDailyManagement(fecha: string) {
           `),
 
         supabase
-          .from('comedor_cancelaciones_ultimo_momento')
-          .select('*')
-          .eq('fecha', selectedDate),
-
-        supabase
           .from('restricciones_dieteticas')
           .select('id, nombre, tipo')
           .eq('activo', true)
@@ -235,7 +229,6 @@ export function useDailyManagement(fecha: string) {
       if (dietasBlandasResult.error) throw dietasBlandasResult.error;
       if (festivosResult.error) throw festivosResult.error;
       if (restriccionesResult.error) throw restriccionesResult.error;
-      if (cancelacionesResult.error) throw cancelacionesResult.error;
       if (restriccionesActivasResult.error) throw restriccionesActivasResult.error;
 
       const inscripcionesRaw = inscripcionesResult.data || [];
@@ -248,7 +241,6 @@ export function useDailyManagement(fecha: string) {
       const dietasBlandas = dietasBlandasResult.data || [];
       const festivo = festivosResult.data;
       const restriccionesData = restriccionesResult.data || [];
-      const cancelaciones = cancelacionesResult.data || [];
       const restriccionesActivas = restriccionesActivasResult.data || [];
 
       // Filtrar inscripciones por fecha
@@ -290,20 +282,18 @@ export function useDailyManagement(fecha: string) {
         return false;
       };
 
-      const bajasHijoIds = new Set(bajas.map(b => b.hijo_id));
-      const bajasPadreIds = new Set(bajas.map(b => b.padre_id).filter(Boolean));
+      // Crear mapas de bajas para marcar comensales como cancelados
+      const bajasHijosMap = new Map<string, string>();
+      const bajasPadresMap = new Map<string, string>();
 
-      // Crear mapas de cancelaciones
-      const cancelacionesHijos = new Map(
-        cancelaciones
-          .filter(c => c.hijo_id)
-          .map(c => [c.hijo_id, c.id])
-      );
-      const cancelacionesPadres = new Map(
-        cancelaciones
-          .filter(c => c.padre_id)
-          .map(c => [c.padre_id, c.id])
-      );
+      bajas.forEach(b => {
+        if (b.hijo_id) {
+          bajasHijosMap.set(b.hijo_id, b.id);
+        }
+        if (b.padre_id) {
+          bajasPadresMap.set(b.padre_id, b.id);
+        }
+      });
 
       const comensales: DailyDiner[] = [];
 
@@ -315,62 +305,60 @@ export function useDailyManagement(fecha: string) {
       });
 
       inscripciones.forEach(insc => {
-        if (!bajasHijoIds.has(insc.hijo_id)) {
-          const eleccion = elecciones.find(e => e.hijo_id === insc.hijo_id);
-          const dietaBlanda = dietasBlandas.find(d => d.hijo_id === insc.hijo_id && d.estado === 'aprobada');
-          const invitacion = invitacionesMap.get(`hijo_${insc.hijo_id}`);
+        const eleccion = elecciones.find(e => e.hijo_id === insc.hijo_id);
+        const dietaBlanda = dietasBlandas.find(d => d.hijo_id === insc.hijo_id && d.estado === 'aprobada');
+        const invitacion = invitacionesMap.get(`hijo_${insc.hijo_id}`);
+        const tieneBaja = bajasHijosMap.has(insc.hijo_id);
 
-          comensales.push({
-            id: insc.hijo_id,
-            nombre: insc.hijo_details?.nombre || 'Desconocido',
-            tipo: 'hijo',
-            curso: insc.hijo_details?.grado?.nombre,
-            es_inscripcion: true,
-            es_invitacion: !!invitacion,
-            es_alta_puntual: false,
-            es_baja: false,
-            motivo_invitacion: invitacion?.motivo,
-            tiene_eleccion: !!eleccion,
-            opcion_principal: eleccion?.opcion_principal?.nombre,
-            opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
-            tiene_dieta_blanda: !!dietaBlanda,
-            tiene_menu_personalizado: tieneMenuPersonalizado(insc.hijo_id, undefined),
-            hijo_id: insc.hijo_id,
-            restricciones: restriccionesPorHijo.get(insc.hijo_id) || [],
-            es_personal: false,
-            cancelado_ultimo_momento: cancelacionesHijos.has(insc.hijo_id),
-            cancelacion_id: cancelacionesHijos.get(insc.hijo_id)
-          });
-        }
+        comensales.push({
+          id: insc.hijo_id,
+          nombre: insc.hijo_details?.nombre || 'Desconocido',
+          tipo: 'hijo',
+          curso: insc.hijo_details?.grado?.nombre,
+          es_inscripcion: true,
+          es_invitacion: !!invitacion,
+          es_alta_puntual: false,
+          es_baja: false,
+          motivo_invitacion: invitacion?.motivo,
+          tiene_eleccion: !!eleccion,
+          opcion_principal: eleccion?.opcion_principal?.nombre,
+          opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
+          tiene_dieta_blanda: !!dietaBlanda,
+          tiene_menu_personalizado: tieneMenuPersonalizado(insc.hijo_id, undefined),
+          hijo_id: insc.hijo_id,
+          restricciones: restriccionesPorHijo.get(insc.hijo_id) || [],
+          es_personal: false,
+          cancelado_ultimo_momento: tieneBaja,
+          cancelacion_id: bajasHijosMap.get(insc.hijo_id)
+        });
       });
 
       inscripcionesPadre.forEach(insc => {
-        if (!bajasPadreIds.has(insc.padre_id)) {
-          const eleccion = elecciones.find(e => e.padre_id === insc.padre_id);
-          const dietaBlanda = dietasBlandas.find(d => d.padre_id === insc.padre_id && d.estado === 'aprobada');
-          const invitacion = invitacionesMap.get(`padre_${insc.padre_id}`);
+        const eleccion = elecciones.find(e => e.padre_id === insc.padre_id);
+        const dietaBlanda = dietasBlandas.find(d => d.padre_id === insc.padre_id && d.estado === 'aprobada');
+        const invitacion = invitacionesMap.get(`padre_${insc.padre_id}`);
+        const tieneBaja = bajasPadresMap.has(insc.padre_id);
 
-          comensales.push({
-            id: insc.padre_id,
-            nombre: insc.padre?.nombre || 'Desconocido',
-            tipo: 'padre',
-            es_inscripcion: true,
-            es_invitacion: !!invitacion,
-            es_alta_puntual: false,
-            es_baja: false,
-            motivo_invitacion: invitacion?.motivo,
-            tiene_eleccion: !!eleccion,
-            opcion_principal: eleccion?.opcion_principal?.nombre,
-            opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
-            tiene_dieta_blanda: !!dietaBlanda,
-            tiene_menu_personalizado: tieneMenuPersonalizado(undefined, insc.padre_id),
-            padre_id: insc.padre_id,
-            restricciones: [],
-            es_personal: insc.padre?.es_personal || false,
-            cancelado_ultimo_momento: cancelacionesPadres.has(insc.padre_id),
-            cancelacion_id: cancelacionesPadres.get(insc.padre_id)
-          });
-        }
+        comensales.push({
+          id: insc.padre_id,
+          nombre: insc.padre?.nombre || 'Desconocido',
+          tipo: 'padre',
+          es_inscripcion: true,
+          es_invitacion: !!invitacion,
+          es_alta_puntual: false,
+          es_baja: false,
+          motivo_invitacion: invitacion?.motivo,
+          tiene_eleccion: !!eleccion,
+          opcion_principal: eleccion?.opcion_principal?.nombre,
+          opcion_guarnicion: eleccion?.opcion_guarnicion?.nombre,
+          tiene_dieta_blanda: !!dietaBlanda,
+          tiene_menu_personalizado: tieneMenuPersonalizado(undefined, insc.padre_id),
+          padre_id: insc.padre_id,
+          restricciones: [],
+          es_personal: insc.padre?.es_personal || false,
+          cancelado_ultimo_momento: tieneBaja,
+          cancelacion_id: bajasPadresMap.get(insc.padre_id)
+        });
       });
 
       invitaciones.forEach(inv => {
@@ -391,15 +379,15 @@ export function useDailyManagement(fecha: string) {
           );
 
           const canceladoUltimoMomento = inv.hijo_id
-            ? cancelacionesHijos.has(inv.hijo_id)
+            ? bajasHijosMap.has(inv.hijo_id)
             : inv.padre_id
-            ? cancelacionesPadres.has(inv.padre_id)
+            ? bajasPadresMap.has(inv.padre_id)
             : false;
 
           const cancelacionId = inv.hijo_id
-            ? cancelacionesHijos.get(inv.hijo_id)
+            ? bajasHijosMap.get(inv.hijo_id)
             : inv.padre_id
-            ? cancelacionesPadres.get(inv.padre_id)
+            ? bajasPadresMap.get(inv.padre_id)
             : undefined;
 
           comensales.push({
@@ -445,15 +433,15 @@ export function useDailyManagement(fecha: string) {
           );
 
           const canceladoUltimoMomento = alta.hijo_id
-            ? cancelacionesHijos.has(alta.hijo_id)
+            ? bajasHijosMap.has(alta.hijo_id)
             : alta.padre_id
-            ? cancelacionesPadres.has(alta.padre_id)
+            ? bajasPadresMap.has(alta.padre_id)
             : false;
 
           const cancelacionId = alta.hijo_id
-            ? cancelacionesHijos.get(alta.hijo_id)
+            ? bajasHijosMap.get(alta.hijo_id)
             : alta.padre_id
-            ? cancelacionesPadres.get(alta.padre_id)
+            ? bajasPadresMap.get(alta.padre_id)
             : undefined;
 
           comensales.push({

@@ -175,21 +175,31 @@ export function DailyManagementView() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Usuario no autenticado');
 
-      const cancelacionData: any = {
-        fecha: formatDateISO(selectedDate),
-        motivo: cancelMotivo || null,
-        cancelado_por: userData.user.id
+      const date = new Date(selectedDate);
+      const fechaFormateada = date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+
+      const bajaData: any = {
+        hijo: selectedComensal.nombre,
+        dias: [fechaFormateada],
+        user_id: userData.user.id,
+        motivo_baja: cancelMotivo || 'Cancelación administrativa'
       };
 
       if (selectedComensal.hijo_id) {
-        cancelacionData.hijo_id = selectedComensal.hijo_id;
+        bajaData.hijo_id = selectedComensal.hijo_id;
+        bajaData.curso = selectedComensal.curso || 'Sin curso';
       } else if (selectedComensal.padre_id) {
-        cancelacionData.padre_id = selectedComensal.padre_id;
+        bajaData.padre_id = selectedComensal.padre_id;
+        bajaData.curso = 'Personal del colegio';
       }
 
       const { error } = await supabase
-        .from('comedor_cancelaciones_ultimo_momento')
-        .insert([cancelacionData]);
+        .from('comedor_bajas')
+        .insert([bajaData]);
 
       if (error) throw error;
 
@@ -211,15 +221,30 @@ export function DailyManagementView() {
   };
 
   const handleRestoreClick = async (comensal: DailyDiner) => {
-    if (!comensal.cancelacion_id) return;
-
     if (!confirm(`¿Restaurar la comida de ${comensal.nombre}?`)) return;
 
     try {
-      const { error } = await supabase
-        .from('comedor_cancelaciones_ultimo_momento')
+      const date = new Date(selectedDate);
+      const fechaFormateada = date.toLocaleDateString('es-ES', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric'
+      });
+
+      let query = supabase
+        .from('comedor_bajas')
         .delete()
-        .eq('id', comensal.cancelacion_id);
+        .contains('dias', [fechaFormateada]);
+
+      if (comensal.hijo_id) {
+        query = query.eq('hijo_id', comensal.hijo_id);
+      } else if (comensal.padre_id) {
+        query = query.eq('padre_id', comensal.padre_id);
+      } else {
+        return;
+      }
+
+      const { error } = await query;
 
       if (error) throw error;
 
@@ -1037,15 +1062,15 @@ export function DailyManagementView() {
 
             <div className="mb-4">
               <p className="text-sm text-gray-700 mb-3">
-                Esta acción cancelará la comida para <strong>{formatDate(selectedDate)}</strong> y no será facturada.
+                Esta acción registrará una baja para <strong>{formatDate(selectedDate)}</strong> y no será facturada.
               </p>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Motivo de cancelación (opcional)
+                Motivo de la baja (opcional)
               </label>
               <textarea
                 value={cancelMotivo}
                 onChange={(e) => setCancelMotivo(e.target.value)}
-                placeholder="Ej: Aviso de última hora, enfermedad..."
+                placeholder="Ej: Cancelación administrativa, enfermedad..."
                 rows={3}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
               />
