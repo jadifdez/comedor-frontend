@@ -97,7 +97,7 @@ export function estaEnRangoInscripcion(
 }
 
 export function tieneBaja(fecha: string, bajas: BajaComedor[]): boolean {
-  const fechaFormateada = new Date(fecha).toLocaleDateString('es-ES', {
+  const fechaFormateada = new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
@@ -107,7 +107,7 @@ export function tieneBaja(fecha: string, bajas: BajaComedor[]): boolean {
 }
 
 export function tieneSolicitudPuntual(fecha: string, solicitudes: SolicitudComida[]): SolicitudComida | null {
-  const fechaFormateada = new Date(fecha).toLocaleDateString('es-ES', {
+  const fechaFormateada = new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric'
