@@ -175,18 +175,12 @@ export function DailyManagementView() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error('Usuario no autenticado');
 
-      const date = new Date(selectedDate);
-      const fechaFormateada = date.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
-
       const bajaData: any = {
         hijo: selectedComensal.nombre,
-        dias: [fechaFormateada],
+        fecha_inicio: formatDateISO(selectedDate),
+        fecha_fin: formatDateISO(selectedDate),
         user_id: userData.user.id,
-        motivo_baja: cancelMotivo || 'Cancelación administrativa'
+        motivo: cancelMotivo || 'Cancelación administrativa'
       };
 
       if (selectedComensal.hijo_id) {
@@ -224,17 +218,13 @@ export function DailyManagementView() {
     if (!confirm(`¿Restaurar la comida de ${comensal.nombre}?`)) return;
 
     try {
-      const date = new Date(selectedDate);
-      const fechaFormateada = date.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-      });
+      const fechaISO = formatDateISO(selectedDate);
 
       let query = supabase
         .from('comedor_bajas')
         .delete()
-        .contains('dias', [fechaFormateada]);
+        .lte('fecha_inicio', fechaISO)
+        .gte('fecha_fin', fechaISO);
 
       if (comensal.hijo_id) {
         query = query.eq('hijo_id', comensal.hijo_id);

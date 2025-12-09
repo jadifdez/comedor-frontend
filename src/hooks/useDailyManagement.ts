@@ -102,15 +102,36 @@ export function useDailyManagement(fecha: string) {
       const date = new Date(selectedDate + 'T00:00:00');
       const diaSemana = date.getDay();
 
-      // Convertir fecha ISO (2025-10-22) a formato español (22/10/2025) para búsqueda de bajas
+      // Convertir fecha ISO (2025-10-22) a formato español (22/10/2025) para búsqueda de bajas (formato antiguo)
       const [year, month, day] = selectedDate.split('-');
       const fechaEspanol = `${day}/${month}/${year}`;
+
+      // Consultar bajas en ambos formatos (antiguo con array dias y nuevo con fecha_inicio/fecha_fin)
+      const bajasAntiguasPromise = supabase
+        .from('comedor_bajas')
+        .select(`
+          *,
+          hijo_details:hijos(nombre, grado:grados(nombre)),
+          padre:padres(nombre)
+        `)
+        .contains('dias', [fechaEspanol]);
+
+      const bajasNuevasPromise = supabase
+        .from('comedor_bajas')
+        .select(`
+          *,
+          hijo_details:hijos(nombre, grado:grados(nombre)),
+          padre:padres(nombre)
+        `)
+        .lte('fecha_inicio', selectedDate)
+        .gte('fecha_fin', selectedDate);
 
       const [
         inscripcionesResult,
         inscripcionesPadreResult,
         menusPersonalizadosResult,
-        bajasResult,
+        bajasAntiguasResult,
+        bajasNuevasResult,
         invitacionesResult,
         altasPuntualesResult,
         eleccionesResult,
@@ -150,14 +171,8 @@ export function useDailyManagement(fecha: string) {
           .select('hijo_id, padre_id')
           .eq('fecha', selectedDate),
 
-        supabase
-          .from('comedor_bajas')
-          .select(`
-            *,
-            hijo_details:hijos(nombre, grado:grados(nombre)),
-            padre:padres(nombre)
-          `)
-          .contains('dias', [fechaEspanol]),
+        bajasAntiguasPromise,
+        bajasNuevasPromise,
 
         supabase
           .from('invitaciones_comedor')
@@ -222,7 +237,8 @@ export function useDailyManagement(fecha: string) {
       if (inscripcionesResult.error) throw inscripcionesResult.error;
       if (inscripcionesPadreResult.error) throw inscripcionesPadreResult.error;
       if (menusPersonalizadosResult.error) throw menusPersonalizadosResult.error;
-      if (bajasResult.error) throw bajasResult.error;
+      if (bajasAntiguasResult.error) throw bajasAntiguasResult.error;
+      if (bajasNuevasResult.error) throw bajasNuevasResult.error;
       if (invitacionesResult.error) throw invitacionesResult.error;
       if (altasPuntualesResult.error) throw altasPuntualesResult.error;
       if (eleccionesResult.error) throw eleccionesResult.error;
@@ -234,7 +250,13 @@ export function useDailyManagement(fecha: string) {
       const inscripcionesRaw = inscripcionesResult.data || [];
       const inscripcionesPadreRaw = inscripcionesPadreResult.data || [];
       const menusPersonalizadosRaw = menusPersonalizadosResult.data || [];
-      const bajas = bajasResult.data || [];
+
+      // Combinar bajas de ambos formatos y eliminar duplicados por ID
+      const bajasAntiguas = bajasAntiguasResult.data || [];
+      const bajasNuevas = bajasNuevasResult.data || [];
+      const bajasMap = new Map();
+      [...bajasAntiguas, ...bajasNuevas].forEach(b => bajasMap.set(b.id, b));
+      const bajas = Array.from(bajasMap.values());
       const invitaciones = invitacionesResult.data || [];
       const altasPuntuales = altasPuntualesResult.data || [];
       const elecciones = eleccionesResult.data || [];
