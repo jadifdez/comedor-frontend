@@ -247,11 +247,10 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
               diasPuntuales++;
 
               // Los días puntuales usan el mismo precio que la inscripción aplicable para ese día
-              // Buscar qué inscripción aplica para esta fecha específica
+              // Si no hay inscripción, usar el precio configurado según si es hijo de personal o no
               const inscripcionParaDia = inscripcionesHijo.find(i => estaEnRangoInscripcion(fecha, i));
-              const precioPuntual = calcularPrecioPuntual(
-                inscripcionParaDia?.precio_diario || null
-              );
+              const precioPuntual = inscripcionParaDia?.precio_diario ||
+                (esHijoDePersonal ? configuracionPrecios.precio_hijo_personal : configuracionPrecios.precio);
 
               diasFacturables.push({
                 fecha,
