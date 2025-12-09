@@ -495,7 +495,6 @@ export function DailyManagementView() {
     });
 
     if (result.success) {
-      refetch();
       setShowAltaPuntualModal(false);
       setAltaPersonaId('');
       setAltaTipoPersona('hijo');
@@ -505,6 +504,8 @@ export function DailyManagementView() {
         title: 'Alta puntual creada',
         message: 'Se ha registrado correctamente'
       });
+      // Pequeño delay para asegurar que la DB haya procesado el cambio
+      setTimeout(() => refetch(), 300);
     } else {
       setNotification({
         isOpen: true,

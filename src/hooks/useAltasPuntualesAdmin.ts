@@ -46,7 +46,8 @@ export const useAltasPuntualesAdmin = () => {
       const nombreCompleto = personaData.nombre;
 
       const solicitudesToInsert = formData.fechas.map(fecha => {
-        const date = new Date(fecha);
+        // Evitar problemas de zona horaria añadiendo T00:00:00
+        const date = new Date(fecha + 'T00:00:00');
         const fechaFormateada = date.toLocaleDateString('es-ES', {
           day: '2-digit',
           month: '2-digit',
