@@ -179,7 +179,7 @@ export function DailyManagementView() {
 
       const bajaData: any = {
         hijo: selectedComensal.nombre,
-        dias: [],
+        dias: [selectedDate.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })],
         fecha_inicio: formatDateISO(selectedDate),
         fecha_fin: formatDateISO(selectedDate),
         user_id: userData.user.id,
