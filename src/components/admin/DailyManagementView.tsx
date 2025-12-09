@@ -192,23 +192,29 @@ export function DailyManagementView() {
         bajaData.curso = 'Personal del colegio';
       }
 
-      const { error } = await supabase
+      const { data: insertedData, error } = await supabase
         .from('comedor_bajas')
-        .insert([bajaData]);
+        .insert([bajaData])
+        .select();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Error detallado al insertar baja:', error);
+        throw error;
+      }
 
+      console.log('Baja creada exitosamente:', insertedData);
       setShowCancelModal(false);
       setSelectedComensal(null);
       setCancelMotivo('');
       refetch();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error al cancelar comida:', error);
+      const errorMessage = error?.message || 'Error desconocido';
       setNotification({
         isOpen: true,
         type: 'error',
         title: 'Error al cancelar la comida',
-        message: 'Por favor, intenta de nuevo.'
+        message: `${errorMessage}. Por favor, verifica que tienes permisos de administrador.`
       });
     } finally {
       setProcessingCancel(false);
