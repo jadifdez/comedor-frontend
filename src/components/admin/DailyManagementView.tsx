@@ -5,6 +5,7 @@ import { generateDailyPDF } from '../../utils/dailyPdfExport';
 import { supabase } from '../../lib/supabase';
 import { useAltasPuntualesAdmin } from '../../hooks/useAltasPuntualesAdmin';
 import { NotificationModal } from '../NotificationModal';
+import { ConfirmModal } from '../ConfirmModal';
 import { AttendanceRestrictionsTable } from './AttendanceRestrictionsTable';
 
 export function DailyManagementView() {
@@ -12,6 +13,7 @@ export function DailyManagementView() {
   const [expandedSections, setExpandedSections] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [showCancelModal, setShowCancelModal] = useState(false);
+  const [showRestoreModal, setShowRestoreModal] = useState(false);
   const [selectedComensal, setSelectedComensal] = useState<DailyDiner | null>(null);
   const [cancelMotivo, setCancelMotivo] = useState('');
   const [processingCancel, setProcessingCancel] = useState(false);
@@ -221,8 +223,13 @@ export function DailyManagementView() {
     }
   };
 
-  const handleRestoreClick = async (comensal: DailyDiner) => {
-    if (!confirm(`¿Restaurar la comida de ${comensal.nombre}?`)) return;
+  const handleRestoreClick = (comensal: DailyDiner) => {
+    setSelectedComensal(comensal);
+    setShowRestoreModal(true);
+  };
+
+  const handleRestoreConfirm = async () => {
+    if (!selectedComensal) return;
 
     try {
       const fechaISO = formatDateISO(selectedDate);
@@ -233,10 +240,10 @@ export function DailyManagementView() {
         .lte('fecha_inicio', fechaISO)
         .gte('fecha_fin', fechaISO);
 
-      if (comensal.hijo_id) {
-        query = query.eq('hijo_id', comensal.hijo_id);
-      } else if (comensal.padre_id) {
-        query = query.eq('padre_id', comensal.padre_id);
+      if (selectedComensal.hijo_id) {
+        query = query.eq('hijo_id', selectedComensal.hijo_id);
+      } else if (selectedComensal.padre_id) {
+        query = query.eq('padre_id', selectedComensal.padre_id);
       } else {
         return;
       }
@@ -244,6 +251,13 @@ export function DailyManagementView() {
       const { error } = await query;
 
       if (error) throw error;
+
+      setNotification({
+        isOpen: true,
+        type: 'success',
+        title: 'Comida restaurada',
+        message: `La comida de ${selectedComensal.nombre} ha sido restaurada correctamente.`
+      });
 
       refetch();
     } catch (error) {
@@ -1365,6 +1379,20 @@ export function DailyManagementView() {
           </div>
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={showRestoreModal}
+        onClose={() => {
+          setShowRestoreModal(false);
+          setSelectedComensal(null);
+        }}
+        onConfirm={handleRestoreConfirm}
+        title="Restaurar comida"
+        message={selectedComensal ? `¿Deseas restaurar la comida de ${selectedComensal.nombre}? Esta acción eliminará la cancelación y el comensal volverá a aparecer en la lista activa.` : ''}
+        confirmText="Restaurar"
+        cancelText="Cancelar"
+        type="info"
+      />
 
       <NotificationModal
         isOpen={notification.isOpen}
