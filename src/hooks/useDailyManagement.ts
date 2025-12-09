@@ -254,6 +254,16 @@ export function useDailyManagement(fecha: string) {
       // Combinar bajas de ambos formatos y eliminar duplicados por ID
       const bajasAntiguas = bajasAntiguasResult.data || [];
       const bajasNuevas = bajasNuevasResult.data || [];
+
+      console.log('🔍 DEBUG BAJAS:', {
+        fecha: selectedDate,
+        fechaEspanol,
+        bajasAntiguas: bajasAntiguas.length,
+        bajasNuevas: bajasNuevas.length,
+        errorAntiguas: bajasAntiguasResult.error,
+        errorNuevas: bajasNuevasResult.error
+      });
+
       const bajasMap = new Map();
       [...bajasAntiguas, ...bajasNuevas].forEach(b => bajasMap.set(b.id, b));
       const bajas = Array.from(bajasMap.values());
@@ -315,6 +325,17 @@ export function useDailyManagement(fecha: string) {
         if (b.padre_id) {
           bajasPadresMap.set(b.padre_id, b.id);
         }
+      });
+
+      console.log('🔍 DEBUG MAPAS:', {
+        totalBajas: bajas.length,
+        bajasHijos: bajasHijosMap.size,
+        bajasPadres: bajasPadresMap.size,
+        ejemploBaja: bajas[0] ? {
+          id: bajas[0].id,
+          hijo: bajas[0].hijo,
+          hijo_id: bajas[0].hijo_id
+        } : null
       });
 
       const comensales: DailyDiner[] = [];
@@ -599,6 +620,17 @@ export function useDailyManagement(fecha: string) {
       const comensalesPuntuales = comensales
         .filter(c => c.es_invitacion || c.es_alta_puntual)
         .sort(sortComensales);
+
+      const comensalesCancelados = comensales.filter(c => c.cancelado_ultimo_momento);
+      console.log('🔍 DEBUG COMENSALES CANCELADOS:', {
+        total: comensales.length,
+        cancelados: comensalesCancelados.length,
+        ejemplos: comensalesCancelados.slice(0, 3).map(c => ({
+          nombre: c.nombre,
+          hijo_id: c.hijo_id,
+          cancelacion_id: c.cancelacion_id
+        }))
+      });
 
       const dailyData: DailyData = {
         fecha: selectedDate,
