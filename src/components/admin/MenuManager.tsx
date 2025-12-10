@@ -166,10 +166,12 @@ export function MenuManager() {
       // Si es nueva opción, calcular el máximo orden + 1
       if (!editingOpcion) {
         if (activeTab === 'principales') {
-          const maxOrden = Math.max(0, ...opcionesPrincipalesAgrupadas.map(o => o.orden));
+          const agrupadas = agruparOpcionesPrincipales();
+          const maxOrden = agrupadas.length > 0 ? Math.max(...agrupadas.map(o => o.orden)) : 0;
           orden = maxOrden + 1;
         } else {
-          const maxOrden = Math.max(0, ...opcionesGuarnicionAgrupadas.map(o => o.orden));
+          const agrupadas = agruparOpcionesGuarnicion();
+          const maxOrden = agrupadas.length > 0 ? Math.max(...agrupadas.map(o => o.orden)) : 0;
           orden = maxOrden + 1;
         }
       }
