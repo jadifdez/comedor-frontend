@@ -655,30 +655,24 @@ export function MenuManager() {
                       </span>
                     </div>
 
-                    <div className="flex items-center space-x-4 text-sm text-gray-600">
-                      {activeTab === 'principales' && opcion.dias.length > 0 && (
-                        <div className="flex items-center space-x-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <div className="flex flex-wrap gap-1">
-                            {opcion.dias.map(dia => {
-                              const diaLabel = diasSemana.find(d => d.value === dia)?.label || '';
-                              return (
-                                <span
-                                  key={dia}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-                                >
-                                  {diaLabel}
-                                </span>
-                              );
-                            })}
-                          </div>
+                    {activeTab === 'principales' && opcion.dias.length > 0 && (
+                      <div className="flex items-center space-x-2 text-sm text-gray-600">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <div className="flex flex-wrap gap-1">
+                          {opcion.dias.map(dia => {
+                            const diaLabel = diasSemana.find(d => d.value === dia)?.label || '';
+                            return (
+                              <span
+                                key={dia}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {diaLabel}
+                              </span>
+                            );
+                          })}
                         </div>
-                      )}
-                      <div className="flex items-center space-x-1">
-                        <span className="text-gray-500">Orden:</span>
-                        <span className="font-medium text-gray-700">{opcion.orden}</span>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </div>
 
