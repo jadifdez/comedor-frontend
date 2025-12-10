@@ -176,13 +176,13 @@ export function MenuManager() {
 
             if (opcionExistente) {
               const { error } = await supabase
-                .from('opciones_menu_principal')
-                .update({
-                  nombre: formData.nombre,
-                  orden: formData.orden,
-                  activo: formData.activo
-                })
-                .eq('id', opcionExistente.id);
+                .rpc('admin_update_opcion_principal', {
+                  opcion_id: opcionExistente.id,
+                  new_nombre: formData.nombre,
+                  new_dia_semana: dia,
+                  new_orden: formData.orden,
+                  new_activo: formData.activo
+                });
               if (error) throw error;
             } else {
               const { error } = await supabase
