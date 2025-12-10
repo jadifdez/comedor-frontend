@@ -183,7 +183,8 @@ export function MenuManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (activeTab === 'principales' && formData.dias_semana_multi.length === 0) {
+    // Solo validar días cuando se está editando
+    if (editingOpcion && activeTab === 'principales' && formData.dias_semana_multi.length === 0) {
       alert('Debes seleccionar al menos un día de la semana');
       return;
     }
@@ -279,12 +280,13 @@ export function MenuManager() {
         }
       } else {
         if (activeTab === 'principales') {
+          // Al crear nueva opción, siempre crear para todos los días (lunes a viernes) y activo = true
           const { error } = await supabase
             .rpc('admin_insert_opcion_principal_multi_dias', {
               new_nombre: formData.nombre,
-              new_dias_semana: formData.dias_semana_multi,
+              new_dias_semana: [1, 2, 3, 4, 5],
               new_orden: orden,
-              new_activo: formData.activo
+              new_activo: true
             });
           if (error) throw error;
         } else {
@@ -607,7 +609,7 @@ export function MenuManager() {
                 required
               />
             </div>
-            {activeTab === 'principales' && (
+            {activeTab === 'principales' && editingOpcion && (
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Días de la semana
@@ -643,21 +645,30 @@ export function MenuManager() {
                 )}
               </div>
             )}
-            <div className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <input
-                type="checkbox"
-                id="activo"
-                checked={formData.activo}
-                onChange={(e) => setFormData(prev => ({ ...prev, activo: e.target.checked }))}
-                className="h-5 w-5 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500 focus:ring-2"
-              />
-              <label htmlFor="activo" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
-                Habilitar esta opción en el menú
-                <span className="block text-xs text-gray-500 mt-1">
-                  {formData.activo ? 'Los padres podrán seleccionar esta opción' : 'Esta opción no estará disponible para selección'}
-                </span>
-              </label>
-            </div>
+            {activeTab === 'principales' && !editingOpcion && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <p className="text-sm text-blue-800">
+                  Se creará automáticamente esta opción para todos los días de la semana (lunes a viernes) y estará habilitada por defecto
+                </p>
+              </div>
+            )}
+            {editingOpcion && (
+              <div className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
+                <input
+                  type="checkbox"
+                  id="activo"
+                  checked={formData.activo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, activo: e.target.checked }))}
+                  className="h-5 w-5 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500 focus:ring-2"
+                />
+                <label htmlFor="activo" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+                  Habilitar esta opción en el menú
+                  <span className="block text-xs text-gray-500 mt-1">
+                    {formData.activo ? 'Los padres podrán seleccionar esta opción' : 'Esta opción no estará disponible para selección'}
+                  </span>
+                </label>
+              </div>
+            )}
             <div className="flex space-x-3">
               <button
                 type="submit"
