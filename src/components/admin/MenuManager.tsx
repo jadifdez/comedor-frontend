@@ -1,6 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, OpcionMenuPrincipal, OpcionMenuGuarnicion } from '../../lib/supabase';
-import { ChefHat, Plus, Edit, Trash2, Check, X, Utensils, Calendar, AlertTriangle } from 'lucide-react';
+import { ChefHat, Plus, Edit, Trash2, Check, X, Utensils, Calendar, AlertTriangle, Search, Settings, Power, PowerOff } from 'lucide-react';
+
+interface OpcionAgrupada {
+  nombre: string;
+  dias: number[];
+  orden: number;
+  activo: boolean;
+  ids: number[];
+}
 
 export function MenuManager() {
   const [opcionesPrincipales, setOpcionesPrincipales] = useState<OpcionMenuPrincipal[]>([]);
@@ -8,9 +16,10 @@ export function MenuManager() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'principales' | 'guarniciones'>('principales');
   const [showForm, setShowForm] = useState(false);
-  const [editingOpcion, setEditingOpcion] = useState<OpcionMenuPrincipal | OpcionMenuGuarnicion | null>(null);
+  const [editingOpcion, setEditingOpcion] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [opcionToDelete, setOpcionToDelete] = useState<OpcionMenuPrincipal | OpcionMenuGuarnicion | null>(null);
+  const [opcionToDelete, setOpcionToDelete] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     nombre: '',
     dia_semana: 1,
@@ -34,34 +43,17 @@ export function MenuManager() {
   const loadData = async () => {
     try {
       setLoading(true);
-      
-      console.log('🍽️ Cargando todas las opciones de menú...');
-      
-      // Cargar opciones principales usando RPC para bypasear RLS
+
       const { data: principalesData, error: principalesError } = await supabase
         .rpc('admin_load_all_opciones_principales');
 
       if (principalesError) throw principalesError;
-      console.log('🥘 Opciones principales cargadas:', principalesData?.length, 'opciones encontradas');
-      console.log('📋 Detalle principales:', principalesData?.map(o => ({ 
-        id: o.id, 
-        nombre: o.nombre, 
-        activo: o.activo, 
-        dia_semana: o.dia_semana 
-      })));
       setOpcionesPrincipales(principalesData || []);
 
-      // Cargar opciones de guarnición usando RPC para bypasear RLS
       const { data: guarnicionData, error: guarnicionError } = await supabase
         .rpc('admin_load_all_opciones_guarnicion');
 
       if (guarnicionError) throw guarnicionError;
-      console.log('🥗 Opciones guarnición cargadas:', guarnicionData?.length, 'opciones encontradas');
-      console.log('📋 Detalle guarnición:', guarnicionData?.map(o => ({ 
-        id: o.id, 
-        nombre: o.nombre, 
-        activo: o.activo 
-      })));
       setOpcionesGuarnicion(guarnicionData || []);
 
     } catch (error) {
@@ -69,15 +61,45 @@ export function MenuManager() {
     } finally {
       setLoading(false);
     }
-    
-    console.log('🎯 Estado final de opciones principales en componente:', opcionesPrincipales.map(o => ({ 
-      nombre: o.nombre, 
-      activo: o.activo 
-    })));
-    console.log('🎯 Estado final de opciones guarnición en componente:', opcionesGuarnicion.map(o => ({ 
-      nombre: o.nombre, 
-      activo: o.activo 
-    })));
+  };
+
+  const agruparOpcionesPrincipales = (): OpcionAgrupada[] => {
+    const grupos = new Map<string, OpcionAgrupada>();
+
+    opcionesPrincipales.forEach(opcion => {
+      if (grupos.has(opcion.nombre)) {
+        const grupo = grupos.get(opcion.nombre)!;
+        grupo.dias.push(opcion.dia_semana);
+        grupo.ids.push(opcion.id);
+      } else {
+        grupos.set(opcion.nombre, {
+          nombre: opcion.nombre,
+          dias: [opcion.dia_semana],
+          orden: opcion.orden,
+          activo: opcion.activo,
+          ids: [opcion.id]
+        });
+      }
+    });
+
+    return Array.from(grupos.values())
+      .map(grupo => ({
+        ...grupo,
+        dias: grupo.dias.sort()
+      }))
+      .sort((a, b) => a.orden - b.orden);
+  };
+
+  const agruparOpcionesGuarnicion = (): OpcionAgrupada[] => {
+    return opcionesGuarnicion
+      .map(opcion => ({
+        nombre: opcion.nombre,
+        dias: [],
+        orden: opcion.orden,
+        activo: opcion.activo,
+        ids: [opcion.id]
+      }))
+      .sort((a, b) => a.orden - b.orden);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,31 +107,15 @@ export function MenuManager() {
 
     try {
       if (editingOpcion) {
-        // Use RPC functions for updates to bypass RLS
         if (activeTab === 'principales') {
-          const { error } = await supabase
-            .rpc('admin_update_opcion_principal', {
-              opcion_id: editingOpcion.id,
-              new_nombre: formData.nombre,
-              new_dia_semana: formData.dia_semana,
-              new_orden: formData.orden,
-              new_activo: formData.activo
+          const opcionesExistentes = opcionesPrincipales.filter(o => o.nombre === editingOpcion);
+
+          for (const opcion of opcionesExistentes) {
+            await supabase.rpc('admin_delete_opcion_principal', {
+              opcion_id: opcion.id
             });
-          if (error) throw error;
-        } else {
-          const { error } = await supabase
-            .rpc('admin_update_opcion_guarnicion', {
-              opcion_id: editingOpcion.id,
-              new_nombre: formData.nombre,
-              new_orden: formData.orden,
-              new_activo: formData.activo
-            });
-          if (error) throw error;
-        }
-      } else {
-        // Use RPC functions for new items to bypass RLS
-        if (activeTab === 'principales') {
-          // Check if using multi-day selection
+          }
+
           if (formData.dias_semana_multi.length > 0) {
             const { error } = await supabase
               .rpc('admin_insert_opcion_principal_multi_dias', {
@@ -119,11 +125,27 @@ export function MenuManager() {
                 new_activo: formData.activo
               });
             if (error) throw error;
-          } else {
+          }
+        } else {
+          const opcion = opcionesGuarnicion.find(o => o.nombre === editingOpcion);
+          if (opcion) {
             const { error } = await supabase
-              .rpc('admin_insert_opcion_principal', {
+              .rpc('admin_update_opcion_guarnicion', {
+                opcion_id: opcion.id,
                 new_nombre: formData.nombre,
-                new_dia_semana: formData.dia_semana,
+                new_orden: formData.orden,
+                new_activo: formData.activo
+              });
+            if (error) throw error;
+          }
+        }
+      } else {
+        if (activeTab === 'principales') {
+          if (formData.dias_semana_multi.length > 0) {
+            const { error } = await supabase
+              .rpc('admin_insert_opcion_principal_multi_dias', {
+                new_nombre: formData.nombre,
+                new_dias_semana: formData.dias_semana_multi,
                 new_orden: formData.orden,
                 new_activo: formData.activo
               });
@@ -149,20 +171,20 @@ export function MenuManager() {
     }
   };
 
-  const handleEdit = (opcion: OpcionMenuPrincipal | OpcionMenuGuarnicion) => {
-    setEditingOpcion(opcion);
+  const handleEdit = (opcionAgrupada: OpcionAgrupada) => {
+    setEditingOpcion(opcionAgrupada.nombre);
     setFormData({
-      nombre: opcion.nombre,
-      dia_semana: 'dia_semana' in opcion ? opcion.dia_semana : 1,
-      dias_semana_multi: [],
-      orden: opcion.orden,
-      activo: opcion.activo
+      nombre: opcionAgrupada.nombre,
+      dia_semana: 1,
+      dias_semana_multi: opcionAgrupada.dias,
+      orden: opcionAgrupada.orden,
+      activo: opcionAgrupada.activo
     });
     setShowForm(true);
   };
 
-  const handleDeleteClick = (opcion: OpcionMenuPrincipal | OpcionMenuGuarnicion) => {
-    setOpcionToDelete(opcion);
+  const handleDeleteClick = (opcionAgrupada: OpcionAgrupada) => {
+    setOpcionToDelete(opcionAgrupada.nombre);
     setShowDeleteModal(true);
   };
 
@@ -170,17 +192,23 @@ export function MenuManager() {
     if (!opcionToDelete) return;
     try {
       if (activeTab === 'principales') {
-        const { error } = await supabase
-          .rpc('admin_delete_opcion_principal', {
-            opcion_id: opcionToDelete.id
-          });
-        if (error) throw error;
+        const opcionesAEliminar = opcionesPrincipales.filter(o => o.nombre === opcionToDelete);
+        for (const opcion of opcionesAEliminar) {
+          const { error } = await supabase
+            .rpc('admin_delete_opcion_principal', {
+              opcion_id: opcion.id
+            });
+          if (error) throw error;
+        }
       } else {
-        const { error } = await supabase
-          .rpc('admin_delete_opcion_guarnicion', {
-            opcion_id: opcionToDelete.id
-          });
-        if (error) throw error;
+        const opcion = opcionesGuarnicion.find(o => o.nombre === opcionToDelete);
+        if (opcion) {
+          const { error } = await supabase
+            .rpc('admin_delete_opcion_guarnicion', {
+              opcion_id: opcion.id
+            });
+          if (error) throw error;
+        }
       }
 
       loadData();
@@ -197,24 +225,28 @@ export function MenuManager() {
     setOpcionToDelete(null);
   };
 
-  const toggleActivo = async (opcion: OpcionMenuPrincipal | OpcionMenuGuarnicion) => {
+  const toggleActivo = async (opcionAgrupada: OpcionAgrupada) => {
     try {
+      const nuevoEstado = !opcionAgrupada.activo;
+
       if (activeTab === 'principales') {
-        // Use RPC function with elevated privileges for main dishes
-        const { error } = await supabase
-          .rpc('admin_update_opcion_principal_activo', {
-            opcion_id: opcion.id,
-            new_activo: !opcion.activo
-          });
-        if (error) throw error;
+        for (const id of opcionAgrupada.ids) {
+          const { error } = await supabase
+            .rpc('admin_update_opcion_principal_activo', {
+              opcion_id: id,
+              new_activo: nuevoEstado
+            });
+          if (error) throw error;
+        }
       } else {
-        // Use RPC function with elevated privileges for side dishes
-        const { error } = await supabase
-          .rpc('admin_update_opcion_guarnicion_activo', {
-            opcion_id: opcion.id,
-            new_activo: !opcion.activo
-          });
-        if (error) throw error;
+        for (const id of opcionAgrupada.ids) {
+          const { error } = await supabase
+            .rpc('admin_update_opcion_guarnicion_activo', {
+              opcion_id: id,
+              new_activo: nuevoEstado
+            });
+          if (error) throw error;
+        }
       }
 
       loadData();
@@ -231,7 +263,13 @@ export function MenuManager() {
     );
   }
 
-  const currentOptions = activeTab === 'principales' ? opcionesPrincipales : opcionesGuarnicion;
+  const opcionesAgrupadas = activeTab === 'principales'
+    ? agruparOpcionesPrincipales()
+    : agruparOpcionesGuarnicion();
+
+  const opcionesFiltradas = opcionesAgrupadas.filter(opcion =>
+    opcion.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
@@ -253,11 +291,13 @@ export function MenuManager() {
         </button>
       </div>
 
-      {/* Tabs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
         <div className="grid grid-cols-2 gap-1">
           <button
-            onClick={() => setActiveTab('principales')}
+            onClick={() => {
+              setActiveTab('principales');
+              setSearchTerm('');
+            }}
             className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
               activeTab === 'principales'
                 ? 'bg-yellow-600 text-white shadow-sm'
@@ -268,7 +308,10 @@ export function MenuManager() {
             <span>Platos Principales</span>
           </button>
           <button
-            onClick={() => setActiveTab('guarniciones')}
+            onClick={() => {
+              setActiveTab('guarniciones');
+              setSearchTerm('');
+            }}
             className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
               activeTab === 'guarniciones'
                 ? 'bg-yellow-600 text-white shadow-sm'
@@ -281,13 +324,25 @@ export function MenuManager() {
         </div>
       </div>
 
-      {/* Formulario */}
+      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder={`Buscar ${activeTab === 'principales' ? 'platos principales' : 'guarniciones'}...`}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+          />
+        </div>
+      </div>
+
       {showForm && (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">
             {editingOpcion ? 'Editar Opción' : 'Nueva Opción'} - {activeTab === 'principales' ? 'Plato Principal' : 'Guarnición'}
           </h3>
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Nombre</label>
               <input
@@ -300,89 +355,64 @@ export function MenuManager() {
               />
             </div>
             {activeTab === 'principales' && (
-              <div className="md:col-span-2">
-                {editingOpcion ? (
-                  // When editing, show single day selector
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Día de la semana</label>
-                    <select
-                      value={formData.dia_semana}
-                      onChange={(e) => setFormData(prev => ({ ...prev, dia_semana: parseInt(e.target.value) }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                      required
-                    >
-                      {diasSemana.map((dia) => (
-                        <option key={dia.value} value={dia.value}>
-                          {dia.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ) : (
-                  // When creating new, allow multi-day selection
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Días de la semana (selecciona uno o varios)
-                    </label>
-                    <div className="grid grid-cols-5 gap-2">
-                      {diasSemana.map((dia) => {
-                        const isSelected = formData.dias_semana_multi.includes(dia.value);
-                        return (
-                          <button
-                            key={dia.value}
-                            type="button"
-                            onClick={() => {
-                              setFormData(prev => ({
-                                ...prev,
-                                dias_semana_multi: isSelected
-                                  ? prev.dias_semana_multi.filter(d => d !== dia.value)
-                                  : [...prev.dias_semana_multi, dia.value].sort()
-                              }));
-                            }}
-                            className={`px-3 py-2 rounded-lg border-2 transition-all duration-200 text-sm font-medium ${
-                              isSelected
-                                ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
-                                : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
-                            }`}
-                          >
-                            {dia.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-                    {formData.dias_semana_multi.length === 0 && (
-                      <p className="mt-2 text-sm text-red-600">Debes seleccionar al menos un día</p>
-                    )}
-                    {formData.dias_semana_multi.length > 0 && (
-                      <p className="mt-2 text-sm text-green-600">
-                        Se creará esta opción para {formData.dias_semana_multi.length} día{formData.dias_semana_multi.length > 1 ? 's' : ''}
-                      </p>
-                    )}
-                  </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Días de la semana
+                </label>
+                <div className="grid grid-cols-5 gap-2">
+                  {diasSemana.map((dia) => {
+                    const isSelected = formData.dias_semana_multi.includes(dia.value);
+                    return (
+                      <button
+                        key={dia.value}
+                        type="button"
+                        onClick={() => {
+                          setFormData(prev => ({
+                            ...prev,
+                            dias_semana_multi: isSelected
+                              ? prev.dias_semana_multi.filter(d => d !== dia.value)
+                              : [...prev.dias_semana_multi, dia.value].sort()
+                          }));
+                        }}
+                        className={`px-3 py-2 rounded-lg border-2 transition-all duration-200 text-sm font-medium ${
+                          isSelected
+                            ? 'border-yellow-500 bg-yellow-50 text-yellow-700'
+                            : 'border-gray-300 bg-white text-gray-600 hover:border-gray-400'
+                        }`}
+                      >
+                        {dia.label}
+                      </button>
+                    );
+                  })}
+                </div>
+                {formData.dias_semana_multi.length === 0 && (
+                  <p className="mt-2 text-sm text-red-600">Debes seleccionar al menos un día</p>
                 )}
               </div>
             )}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
-              <input
-                type="number"
-                value={formData.orden}
-                onChange={(e) => setFormData(prev => ({ ...prev, orden: parseInt(e.target.value) }))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                required
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
+                <input
+                  type="number"
+                  value={formData.orden}
+                  onChange={(e) => setFormData(prev => ({ ...prev, orden: parseInt(e.target.value) }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
+                  required
+                />
+              </div>
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="activo"
+                  checked={formData.activo}
+                  onChange={(e) => setFormData(prev => ({ ...prev, activo: e.target.checked }))}
+                  className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                />
+                <label htmlFor="activo" className="ml-2 text-sm font-medium text-gray-700">Activo</label>
+              </div>
             </div>
-            <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="activo"
-                checked={formData.activo}
-                onChange={(e) => setFormData(prev => ({ ...prev, activo: e.target.checked }))}
-                className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
-              />
-              <label htmlFor="activo" className="text-sm font-medium text-gray-700">Activo</label>
-            </div>
-            <div className="md:col-span-2 flex space-x-3">
+            <div className="flex space-x-3">
               <button
                 type="submit"
                 className="bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-colors"
@@ -404,82 +434,38 @@ export function MenuManager() {
         </div>
       )}
 
-      {/* Lista de opciones */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nombre
-                </th>
-                {activeTab === 'principales' && (
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Día
-                  </th>
-                )}
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Orden
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Estado
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Acciones
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {currentOptions.map((opcion) => (
-                <tr key={opcion.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">{opcion.nombre}</div>
-                    {activeTab === 'principales' && (() => {
-                      const nombreOpcion = opcion.nombre;
-                      const diasConMismoNombre = opcionesPrincipales.filter(
-                        o => o.nombre === nombreOpcion && o.id !== opcion.id
-                      );
-                      if (diasConMismoNombre.length > 0) {
-                        const todosDias = [
-                          (opcion as OpcionMenuPrincipal).dia_semana,
-                          ...diasConMismoNombre.map(o => o.dia_semana)
-                        ].sort();
-                        return (
-                          <div className="flex flex-wrap gap-1 mt-1">
-                            {todosDias.map(dia => {
-                              const diaLabel = diasSemana.find(d => d.value === dia)?.label || '';
-                              return (
-                                <span
-                                  key={dia}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-                                >
-                                  {diaLabel}
-                                </span>
-                              );
-                            })}
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
-                  </td>
-                  {activeTab === 'principales' && (
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {diasSemana.find(d => d.value === (opcion as OpcionMenuPrincipal).dia_semana)?.label}
-                      </div>
-                    </td>
-                  )}
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-500">{opcion.orden}</div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+      {opcionesFiltradas.length === 0 ? (
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
+          <div className="text-center">
+            <ChefHat className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              {searchTerm ? 'No se encontraron resultados' : `No hay ${activeTab === 'principales' ? 'platos principales' : 'guarniciones'} registrados`}
+            </h3>
+            <p className="text-gray-600">
+              {searchTerm
+                ? 'Intenta con otro término de búsqueda'
+                : `Comienza agregando ${activeTab === 'principales' ? 'el primer plato principal' : 'la primera guarnición'} al menú`
+              }
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="grid gap-4">
+          {opcionesFiltradas.map((opcion) => (
+            <div
+              key={opcion.nombre}
+              className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow"
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center space-x-3 mb-2">
+                    <h3 className="text-lg font-semibold text-gray-900">{opcion.nombre}</h3>
                     <button
                       onClick={() => toggleActivo(opcion)}
-                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
                         opcion.activo
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-red-100 text-red-800'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-red-100 text-red-800 hover:bg-red-200'
                       }`}
                     >
                       {opcion.activo ? (
@@ -494,44 +480,57 @@ export function MenuManager() {
                         </>
                       )}
                     </button>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => handleEdit(opcion)}
-                        className="text-yellow-600 hover:text-yellow-900"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteClick(opcion)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  </div>
 
-      {currentOptions.length === 0 && (
-        <div className="text-center py-12">
-          <ChefHat className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">
-            No hay {activeTab === 'principales' ? 'platos principales' : 'guarniciones'} registrados
-          </h3>
-          <p className="text-gray-600">
-            Comienza agregando {activeTab === 'principales' ? 'el primer plato principal' : 'la primera guarnición'} al menú
-          </p>
+                  <div className="flex items-center space-x-4 text-sm text-gray-600">
+                    {activeTab === 'principales' && opcion.dias.length > 0 && (
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <div className="flex flex-wrap gap-1">
+                          {opcion.dias.map(dia => {
+                            const diaLabel = diasSemana.find(d => d.value === dia)?.label || '';
+                            return (
+                              <span
+                                key={dia}
+                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                              >
+                                {diaLabel}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex items-center space-x-1">
+                      <span className="text-gray-500">Orden:</span>
+                      <span className="font-medium text-gray-700">{opcion.orden}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center space-x-2 ml-4">
+                  <button
+                    onClick={() => handleEdit(opcion)}
+                    className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-lg transition-colors"
+                    title="Editar"
+                  >
+                    <Edit className="h-5 w-5" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteClick(opcion)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* Modal de confirmación de eliminación */}
-      {showDeleteModal && (
+      {showDeleteModal && opcionToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4 p-6">
             <div className="flex items-center space-x-3 mb-4">
@@ -544,45 +543,50 @@ export function MenuManager() {
                 </h3>
               </div>
             </div>
-            
+
             <div className="mb-6">
               <p className="text-gray-600 mb-2">
                 ¿Estás seguro de que quieres eliminar esta opción de menú?
               </p>
-              {opcionToDelete && (
-                <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
-                  <div className="font-medium text-gray-900">{opcionToDelete.nombre}</div>
-                  <div className="text-sm text-gray-600">
-                    Tipo: {activeTab === 'principales' ? 'Plato Principal' : 'Guarnición'}
-                  </div>
-                  {'dia_semana' in opcionToDelete && (
-                    <div className="text-sm text-gray-600">
-                      Día: {['', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes'][opcionToDelete.dia_semana]}
-                    </div>
-                  )}
-                  <div className="text-sm text-gray-600">
-                    Orden: {opcionToDelete.orden}
-                  </div>
+              <div className="bg-gray-50 rounded-lg p-3 border border-gray-200">
+                <div className="font-medium text-gray-900">{opcionToDelete}</div>
+                <div className="text-sm text-gray-600">
+                  Tipo: {activeTab === 'principales' ? 'Plato Principal' : 'Guarnición'}
                 </div>
-              )}
-              
+                {activeTab === 'principales' && (() => {
+                  const opcion = opcionesAgrupadas.find(o => o.nombre === opcionToDelete);
+                  if (opcion && opcion.dias.length > 0) {
+                    return (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <span>Días: </span>
+                        {opcion.dias.map(dia => diasSemana.find(d => d.value === dia)?.label).join(', ')}
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+
               <div className="bg-red-50 border border-red-200 rounded-lg p-4 mt-4">
                 <div className="flex items-start space-x-3">
                   <AlertTriangle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
                   <div>
                     <h4 className="text-sm font-semibold text-red-800 mb-2">
-                      ⚠️ ADVERTENCIA: Eliminación en cascada
+                      ADVERTENCIA: Eliminación en cascada
                     </h4>
                     <div className="text-sm text-red-700 space-y-1">
                       <p>Al eliminar esta opción de menú también se eliminarán:</p>
                       <ul className="list-disc list-inside ml-2 space-y-1">
                         <li>Todas las <strong>elecciones de menú</strong> que usen esta opción</li>
+                        {activeTab === 'principales' && (
+                          <li>Los registros en <strong>todos los días</strong> de la semana donde aparece</li>
+                        )}
                       </ul>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mt-4">
                 <div className="flex items-center space-x-2">
                   <AlertTriangle className="h-4 w-4 text-yellow-600" />
@@ -592,7 +596,7 @@ export function MenuManager() {
                 </div>
               </div>
             </div>
-            
+
             <div className="flex space-x-3">
               <button
                 onClick={handleDeleteCancel}
