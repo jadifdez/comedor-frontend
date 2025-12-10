@@ -27,7 +27,7 @@ export function MenuManager() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'principales' | 'guarniciones'>('principales');
   const [showForm, setShowForm] = useState(false);
-  const [editingOpcion, setEditingOpcion] = useState<string | null>(null);
+  const [editingOpcion, setEditingOpcion] = useState<OpcionAgrupada | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [opcionToDelete, setOpcionToDelete] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
@@ -197,34 +197,28 @@ export function MenuManager() {
 
       if (editingOpcion) {
         if (activeTab === 'principales') {
-          console.log('🔍 EDIT DEBUG - Buscando opciones con nombre:', editingOpcion);
+          console.log('🔍 EDIT DEBUG - Editando opción:', editingOpcion.nombre);
+          console.log('🔍 EDIT DEBUG - IDs existentes:', editingOpcion.ids);
+          console.log('🔍 EDIT DEBUG - Días existentes:', editingOpcion.dias);
+          console.log('🔍 EDIT DEBUG - Días detalle:', editingOpcion.diasDetalle);
           console.log('🔍 EDIT DEBUG - Nuevo nombre:', formData.nombre);
-          console.log('🔍 EDIT DEBUG - Días en formulario:', formData.dias_semana_multi);
+          console.log('🔍 EDIT DEBUG - Nuevos días:', formData.dias_semana_multi);
 
-          const { data: opcionesExistentes, error: queryError } = await supabase
-            .from('opciones_menu_principal')
-            .select('id, dia_semana, activo')
-            .eq('nombre', editingOpcion);
-
-          if (queryError) throw queryError;
-
-          console.log('🔍 EDIT DEBUG - Opciones encontradas:', opcionesExistentes);
-
-          const diasExistentes = opcionesExistentes?.map(o => o.dia_semana) || [];
+          const diasExistentesMap = editingOpcion.diasDetalle || new Map();
           const nuevasDias = formData.dias_semana_multi;
 
           for (const dia of nuevasDias) {
-            const opcionExistente = opcionesExistentes?.find(o => o.dia_semana === dia);
+            const diaDetalle = diasExistentesMap.get(dia);
 
-            if (opcionExistente) {
-              console.log(`✏️ EDIT DEBUG - Actualizando día ${dia}, ID: ${opcionExistente.id}`);
+            if (diaDetalle) {
+              console.log(`✏️ EDIT DEBUG - Actualizando día ${dia}, ID: ${diaDetalle.id}`);
               const { error } = await supabase
                 .rpc('admin_update_opcion_principal', {
-                  opcion_id: opcionExistente.id,
+                  opcion_id: diaDetalle.id,
                   new_nombre: formData.nombre,
                   new_dia_semana: dia,
                   new_orden: orden,
-                  new_activo: opcionExistente.activo
+                  new_activo: diaDetalle.activo
                 });
               if (error) {
                 console.error(`❌ EDIT DEBUG - Error actualizando día ${dia}:`, error);
@@ -248,19 +242,21 @@ export function MenuManager() {
             }
           }
 
-          for (const opcion of opcionesExistentes || []) {
-            if (!nuevasDias.includes(opcion.dia_semana)) {
+          for (const [dia, detalle] of diasExistentesMap.entries()) {
+            if (!nuevasDias.includes(dia)) {
+              console.log(`🗑️ EDIT DEBUG - Eliminando día ${dia}, ID: ${detalle.id}`);
               try {
                 await supabase.rpc('admin_delete_opcion_principal', {
-                  opcion_id: opcion.id
+                  opcion_id: detalle.id
                 });
+                console.log(`✅ EDIT DEBUG - Día ${dia} eliminado correctamente`);
               } catch (err) {
-                console.warn(`No se pudo eliminar opción para ${opcion.dia_semana}, probablemente tiene elecciones asociadas`);
+                console.warn(`⚠️ EDIT DEBUG - No se pudo eliminar día ${dia}, probablemente tiene elecciones asociadas`);
               }
             }
           }
         } else {
-          const opcion = opcionesGuarnicion.find(o => o.nombre === editingOpcion);
+          const opcion = opcionesGuarnicion.find(o => o.nombre === editingOpcion.nombre);
           if (opcion) {
             const { error } = await supabase
               .rpc('admin_update_opcion_guarnicion', {
@@ -304,7 +300,11 @@ export function MenuManager() {
   };
 
   const handleEdit = (opcionAgrupada: OpcionAgrupada) => {
-    setEditingOpcion(opcionAgrupada.nombre);
+    console.log('📝 EDIT CLICK - Opción agrupada:', opcionAgrupada);
+    console.log('📝 EDIT CLICK - IDs:', opcionAgrupada.ids);
+    console.log('📝 EDIT CLICK - Días detalle:', opcionAgrupada.diasDetalle);
+
+    setEditingOpcion(opcionAgrupada);
     setFormData({
       nombre: opcionAgrupada.nombre,
       dia_semana: 1,
