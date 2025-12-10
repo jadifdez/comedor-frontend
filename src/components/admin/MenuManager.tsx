@@ -9,6 +9,7 @@ interface OpcionAgrupada {
   activo: boolean;
   ids: number[];
   eleccionesFuturas?: number;
+  diasDetalle?: Map<number, { id: number; activo: boolean }>;
 }
 
 interface EleccionDetalle {
@@ -124,13 +125,20 @@ export function MenuManager() {
         const grupo = grupos.get(opcion.nombre)!;
         grupo.dias.push(opcion.dia_semana);
         grupo.ids.push(opcion.id);
+        if (grupo.diasDetalle) {
+          grupo.diasDetalle.set(opcion.dia_semana, { id: opcion.id, activo: opcion.activo });
+        }
       } else {
+        const diasDetalle = new Map<number, { id: number; activo: boolean }>();
+        diasDetalle.set(opcion.dia_semana, { id: opcion.id, activo: opcion.activo });
+
         grupos.set(opcion.nombre, {
           nombre: opcion.nombre,
           dias: [opcion.dia_semana],
           orden: opcion.orden,
           activo: opcion.activo,
-          ids: [opcion.id]
+          ids: [opcion.id],
+          diasDetalle
         });
       }
     });
@@ -405,6 +413,25 @@ export function MenuManager() {
     }
   };
 
+  const toggleActivoDia = async (idOpcion: number, estadoActual: boolean) => {
+    try {
+      const nuevoEstado = !estadoActual;
+
+      const { error } = await supabase
+        .rpc('admin_update_opcion_principal_activo', {
+          opcion_id: idOpcion,
+          new_activo: nuevoEstado
+        });
+
+      if (error) throw error;
+
+      await loadData();
+    } catch (error) {
+      console.error('Error updating day status:', error);
+      alert('Error al actualizar el estado del día: ' + (error as Error).message);
+    }
+  };
+
   const handleDragStart = (index: number) => {
     setDraggedIndex(index);
   };
@@ -655,26 +682,28 @@ export function MenuManager() {
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
                       <h3 className="text-lg font-semibold text-gray-900">{opcion.nombre}</h3>
-                      <button
-                        onClick={() => toggleActivo(opcion)}
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                          opcion.activo
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
-                        }`}
-                      >
-                        {opcion.activo ? (
-                          <>
-                            <Check className="h-3 w-3 mr-1" />
-                            Activo
-                          </>
-                        ) : (
-                          <>
-                            <X className="h-3 w-3 mr-1" />
-                            Inactivo
-                          </>
-                        )}
-                      </button>
+                      {activeTab === 'guarniciones' && (
+                        <button
+                          onClick={() => toggleActivo(opcion)}
+                          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                            opcion.activo
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                              : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                          }`}
+                        >
+                          {opcion.activo ? (
+                            <>
+                              <Check className="h-3 w-3 mr-1" />
+                              Activo
+                            </>
+                          ) : (
+                            <>
+                              <X className="h-3 w-3 mr-1" />
+                              Inactivo
+                            </>
+                          )}
+                        </button>
+                      )}
                       <button
                         onClick={() => handleMostrarElecciones(opcion)}
                         disabled={!opcion.eleccionesFuturas || opcion.eleccionesFuturas === 0}
@@ -696,13 +725,35 @@ export function MenuManager() {
                         <div className="flex flex-wrap gap-1">
                           {opcion.dias.map(dia => {
                             const diaLabel = diasSemana.find(d => d.value === dia)?.label || '';
+                            const diaDetalle = opcion.diasDetalle?.get(dia);
+                            const diaActivo = diaDetalle?.activo ?? true;
                             return (
-                              <span
+                              <button
                                 key={dia}
-                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                                onClick={() => {
+                                  if (diaDetalle) {
+                                    toggleActivoDia(diaDetalle.id, diaActivo);
+                                  }
+                                }}
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium transition-colors cursor-pointer ${
+                                  diaActivo
+                                    ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                }`}
+                                title={diaActivo ? 'Click para desactivar' : 'Click para activar'}
                               >
-                                {diaLabel}
-                              </span>
+                                {diaActivo ? (
+                                  <>
+                                    <Check className="h-3 w-3 mr-1" />
+                                    {diaLabel}
+                                  </>
+                                ) : (
+                                  <>
+                                    <X className="h-3 w-3 mr-1" />
+                                    {diaLabel}
+                                  </>
+                                )}
+                              </button>
                             );
                           })}
                         </div>
