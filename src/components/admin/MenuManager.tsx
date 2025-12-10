@@ -161,6 +161,19 @@ export function MenuManager() {
     }
 
     try {
+      let orden = formData.orden;
+
+      // Si es nueva opción, calcular el máximo orden + 1
+      if (!editingOpcion) {
+        if (activeTab === 'principales') {
+          const maxOrden = Math.max(0, ...opcionesPrincipalesAgrupadas.map(o => o.orden));
+          orden = maxOrden + 1;
+        } else {
+          const maxOrden = Math.max(0, ...opcionesGuarnicionAgrupadas.map(o => o.orden));
+          orden = maxOrden + 1;
+        }
+      }
+
       if (editingOpcion) {
         if (activeTab === 'principales') {
           const { data: opcionesExistentes, error: queryError } = await supabase
@@ -182,7 +195,7 @@ export function MenuManager() {
                   opcion_id: opcionExistente.id,
                   new_nombre: formData.nombre,
                   new_dia_semana: dia,
-                  new_orden: formData.orden,
+                  new_orden: orden,
                   new_activo: formData.activo
                 });
               if (error) throw error;
@@ -191,7 +204,7 @@ export function MenuManager() {
                 .rpc('admin_insert_opcion_principal_multi_dias', {
                   new_nombre: formData.nombre,
                   new_dias_semana: [dia],
-                  new_orden: formData.orden,
+                  new_orden: orden,
                   new_activo: formData.activo
                 });
               if (error) throw error;
@@ -216,7 +229,7 @@ export function MenuManager() {
               .rpc('admin_update_opcion_guarnicion', {
                 opcion_id: opcion.id,
                 new_nombre: formData.nombre,
-                new_orden: formData.orden,
+                new_orden: orden,
                 new_activo: formData.activo
               });
             if (error) throw error;
@@ -228,7 +241,7 @@ export function MenuManager() {
             .rpc('admin_insert_opcion_principal_multi_dias', {
               new_nombre: formData.nombre,
               new_dias_semana: formData.dias_semana_multi,
-              new_orden: formData.orden,
+              new_orden: orden,
               new_activo: formData.activo
             });
           if (error) throw error;
@@ -236,7 +249,7 @@ export function MenuManager() {
           const { error } = await supabase
             .rpc('admin_insert_opcion_guarnicion', {
               new_nombre: formData.nombre,
-              new_orden: formData.orden,
+              new_orden: orden,
               new_activo: formData.activo
             });
           if (error) throw error;
@@ -546,27 +559,15 @@ export function MenuManager() {
                 )}
               </div>
             )}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Orden</label>
-                <input
-                  type="number"
-                  value={formData.orden}
-                  onChange={(e) => setFormData(prev => ({ ...prev, orden: parseInt(e.target.value) }))}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-                  required
-                />
-              </div>
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="activo"
-                  checked={formData.activo}
-                  onChange={(e) => setFormData(prev => ({ ...prev, activo: e.target.checked }))}
-                  className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
-                />
-                <label htmlFor="activo" className="ml-2 text-sm font-medium text-gray-700">Activo</label>
-              </div>
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="activo"
+                checked={formData.activo}
+                onChange={(e) => setFormData(prev => ({ ...prev, activo: e.target.checked }))}
+                className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+              />
+              <label htmlFor="activo" className="ml-2 text-sm font-medium text-gray-700">Activo</label>
             </div>
             <div className="flex space-x-3">
               <button
