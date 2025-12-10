@@ -114,7 +114,7 @@ export function MenuManager() {
       if (editingOpcion) {
         if (activeTab === 'principales') {
           const { data: opcionesExistentes, error: queryError } = await supabase
-            .from('comedor_menu_principales')
+            .from('opciones_menu_principal')
             .select('id')
             .eq('nombre', editingOpcion);
 
