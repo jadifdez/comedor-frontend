@@ -199,7 +199,7 @@ export function MenuManager() {
         if (activeTab === 'principales') {
           const { data: opcionesExistentes, error: queryError } = await supabase
             .from('opciones_menu_principal')
-            .select('id, dia_semana')
+            .select('id, dia_semana, activo')
             .eq('nombre', editingOpcion);
 
           if (queryError) throw queryError;
@@ -217,7 +217,7 @@ export function MenuManager() {
                   new_nombre: formData.nombre,
                   new_dia_semana: dia,
                   new_orden: orden,
-                  new_activo: formData.activo
+                  new_activo: opcionExistente.activo
                 });
               if (error) throw error;
             } else {
@@ -226,7 +226,7 @@ export function MenuManager() {
                   new_nombre: formData.nombre,
                   new_dias_semana: [dia],
                   new_orden: orden,
-                  new_activo: formData.activo
+                  new_activo: true
                 });
               if (error) throw error;
             }
