@@ -152,12 +152,92 @@ export const useInvitaciones = () => {
     }
   };
 
+  const getFutureInvitacionesCount = async (
+    tipoInvitado: 'hijo' | 'padre' | 'externo',
+    id: string | null
+  ): Promise<{ count: number; fechaInicio: string; fechaFin: string } | null> => {
+    try {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      let query = supabase
+        .from('invitaciones_comedor')
+        .select('fecha', { count: 'exact', head: false })
+        .gte('fecha', tomorrowStr);
+
+      if (tipoInvitado === 'hijo' && id) {
+        query = query.eq('hijo_id', id);
+      } else if (tipoInvitado === 'padre' && id) {
+        query = query.eq('padre_id', id);
+      } else if (tipoInvitado === 'externo') {
+        return null;
+      }
+
+      const { data, count, error: countError } = await query;
+
+      if (countError) throw countError;
+
+      if (!data || data.length === 0) {
+        return { count: 0, fechaInicio: tomorrowStr, fechaFin: tomorrowStr };
+      }
+
+      const fechas = data.map(inv => inv.fecha).sort();
+      return {
+        count: count || 0,
+        fechaInicio: fechas[0],
+        fechaFin: fechas[fechas.length - 1]
+      };
+    } catch (err) {
+      console.error('Error getting future invitaciones count:', err);
+      return null;
+    }
+  };
+
+  const deleteFutureInvitacionesByMember = async (
+    tipoInvitado: 'hijo' | 'padre',
+    id: string
+  ) => {
+    try {
+      setError(null);
+
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowStr = tomorrow.toISOString().split('T')[0];
+
+      let query = supabase
+        .from('invitaciones_comedor')
+        .delete()
+        .gte('fecha', tomorrowStr);
+
+      if (tipoInvitado === 'hijo') {
+        query = query.eq('hijo_id', id);
+      } else if (tipoInvitado === 'padre') {
+        query = query.eq('padre_id', id);
+      }
+
+      const { error: deleteError, count } = await query;
+
+      if (deleteError) throw deleteError;
+
+      await fetchInvitaciones();
+      return { success: true, deletedCount: count || 0 };
+    } catch (err) {
+      console.error('Error deleting future invitaciones:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Error al eliminar invitaciones futuras';
+      setError(errorMessage);
+      return { success: false, error: errorMessage, deletedCount: 0 };
+    }
+  };
+
   return {
     invitaciones,
     loading,
     error,
     createInvitacion,
     deleteInvitacion,
+    getFutureInvitacionesCount,
+    deleteFutureInvitacionesByMember,
     refreshInvitaciones: fetchInvitaciones
   };
 };

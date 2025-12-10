@@ -9,13 +9,15 @@ import {
   ChevronDown,
   ChevronUp,
   CalendarDays,
-  X
+  X,
+  CalendarX
 } from 'lucide-react';
 import { useInvitaciones, type InvitacionFormData } from '../../hooks/useInvitaciones';
 import { supabase } from '../../lib/supabase';
 import { SuccessMessage } from '../SuccessMessage';
 import { SearchableSelect } from '../SearchableSelect';
 import { ConfirmModal } from '../ConfirmModal';
+import { DeleteFutureInvitacionesModal } from './DeleteFutureInvitacionesModal';
 
 interface Hijo {
   id: string;
@@ -50,13 +52,14 @@ const DIAS_SEMANA = [
 ];
 
 export const InvitacionesManager: React.FC = () => {
-  const { invitaciones, loading, error, createInvitacion, deleteInvitacion } = useInvitaciones();
+  const { invitaciones, loading, error, createInvitacion, deleteInvitacion, getFutureInvitacionesCount, deleteFutureInvitacionesByMember } = useInvitaciones();
   const [showForm, setShowForm] = useState(false);
   const [hijos, setHijos] = useState<Hijo[]>([]);
   const [padres, setPadres] = useState<Padre[]>([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [invitacionToDelete, setInvitacionToDelete] = useState<string | null>(null);
+  const [deleteFutureModalOpen, setDeleteFutureModalOpen] = useState(false);
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterTipo, setFilterTipo] = useState<'all' | 'hijo' | 'padre' | 'externo'>('all');
@@ -169,6 +172,20 @@ export const InvitacionesManager: React.FC = () => {
       setTimeout(() => setSuccessMessage(''), 3000);
     }
     setInvitacionToDelete(null);
+  };
+
+  const handleDeleteFutureInvitaciones = async (
+    tipoInvitado: 'hijo' | 'padre',
+    id: string,
+    nombre: string
+  ) => {
+    const result = await deleteFutureInvitacionesByMember(tipoInvitado, id);
+    if (result.success) {
+      setSuccessMessage(`${result.deletedCount} invitaciones futuras de ${nombre} han sido eliminadas correctamente`);
+      setTimeout(() => setSuccessMessage(''), 5000);
+    } else {
+      alert(`Error al eliminar invitaciones: ${result.error}`);
+    }
   };
 
   const getInvitadoDisplay = (inv: typeof invitaciones[0]) => {
@@ -290,13 +307,22 @@ export const InvitacionesManager: React.FC = () => {
             Total: {invitaciones.length} invitaciones | Mostrando: {filteredInvitaciones.length}
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <UserPlus className="w-5 h-5" />
-          {showForm ? 'Cancelar' : 'Nueva Invitación'}
-        </button>
+        <div className="flex gap-3">
+          <button
+            onClick={() => setDeleteFutureModalOpen(true)}
+            className="flex items-center gap-2 bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors"
+          >
+            <CalendarX className="w-5 h-5" />
+            Eliminar Invitaciones Futuras
+          </button>
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <UserPlus className="w-5 h-5" />
+            {showForm ? 'Cancelar' : 'Nueva Invitación'}
+          </button>
+        </div>
       </div>
 
       {successMessage && <SuccessMessage message={successMessage} />}
@@ -682,6 +708,13 @@ export const InvitacionesManager: React.FC = () => {
         confirmText="Eliminar"
         cancelText="Cancelar"
         type="danger"
+      />
+
+      <DeleteFutureInvitacionesModal
+        isOpen={deleteFutureModalOpen}
+        onClose={() => setDeleteFutureModalOpen(false)}
+        onConfirm={handleDeleteFutureInvitaciones}
+        onGetCount={getFutureInvitacionesCount}
       />
     </div>
   );
