@@ -197,12 +197,18 @@ export function MenuManager() {
 
       if (editingOpcion) {
         if (activeTab === 'principales') {
+          console.log('🔍 EDIT DEBUG - Buscando opciones con nombre:', editingOpcion);
+          console.log('🔍 EDIT DEBUG - Nuevo nombre:', formData.nombre);
+          console.log('🔍 EDIT DEBUG - Días en formulario:', formData.dias_semana_multi);
+
           const { data: opcionesExistentes, error: queryError } = await supabase
             .from('opciones_menu_principal')
             .select('id, dia_semana, activo')
             .eq('nombre', editingOpcion);
 
           if (queryError) throw queryError;
+
+          console.log('🔍 EDIT DEBUG - Opciones encontradas:', opcionesExistentes);
 
           const diasExistentes = opcionesExistentes?.map(o => o.dia_semana) || [];
           const nuevasDias = formData.dias_semana_multi;
@@ -211,6 +217,7 @@ export function MenuManager() {
             const opcionExistente = opcionesExistentes?.find(o => o.dia_semana === dia);
 
             if (opcionExistente) {
+              console.log(`✏️ EDIT DEBUG - Actualizando día ${dia}, ID: ${opcionExistente.id}`);
               const { error } = await supabase
                 .rpc('admin_update_opcion_principal', {
                   opcion_id: opcionExistente.id,
@@ -219,8 +226,13 @@ export function MenuManager() {
                   new_orden: orden,
                   new_activo: opcionExistente.activo
                 });
-              if (error) throw error;
+              if (error) {
+                console.error(`❌ EDIT DEBUG - Error actualizando día ${dia}:`, error);
+                throw error;
+              }
+              console.log(`✅ EDIT DEBUG - Día ${dia} actualizado correctamente`);
             } else {
+              console.log(`➕ EDIT DEBUG - Insertando nuevo día ${dia}`);
               const { error } = await supabase
                 .rpc('admin_insert_opcion_principal_multi_dias', {
                   new_nombre: formData.nombre,
@@ -228,7 +240,11 @@ export function MenuManager() {
                   new_orden: orden,
                   new_activo: true
                 });
-              if (error) throw error;
+              if (error) {
+                console.error(`❌ EDIT DEBUG - Error insertando día ${dia}:`, error);
+                throw error;
+              }
+              console.log(`✅ EDIT DEBUG - Día ${dia} insertado correctamente`);
             }
           }
 
