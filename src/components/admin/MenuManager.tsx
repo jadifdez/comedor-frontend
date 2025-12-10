@@ -487,12 +487,16 @@ export function MenuManager() {
           for (const id of opcion.ids) {
             const opcionOriginal = opcionesPrincipales.find(o => o.id === id);
             if (opcionOriginal) {
+              // Obtener el estado activo específico de este día desde diasDetalle
+              const diaDetalle = opcion.diasDetalle?.get(opcionOriginal.dia_semana);
+              const activoEspecifico = diaDetalle?.activo ?? opcionOriginal.activo;
+
               await supabase.rpc('admin_update_opcion_principal', {
                 opcion_id: id,
                 new_nombre: opcion.nombre,
                 new_dia_semana: opcionOriginal.dia_semana,
                 new_orden: newOrder,
-                new_activo: opcion.activo
+                new_activo: activoEspecifico
               });
             }
           }
