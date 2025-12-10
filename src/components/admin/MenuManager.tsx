@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, OpcionMenuPrincipal, OpcionMenuGuarnicion } from '../../lib/supabase';
-import { ChefHat, Plus, Edit, Trash2, Check, X, Utensils, Calendar, AlertTriangle, Search, Settings, Power, PowerOff } from 'lucide-react';
+import { ChefHat, Plus, Edit, Trash2, Check, X, Utensils, Calendar, AlertTriangle, Search, Settings, Power, PowerOff, GripVertical } from 'lucide-react';
 
 interface OpcionAgrupada {
   nombre: string;
@@ -22,6 +22,8 @@ export function MenuManager() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [opcionToDelete, setOpcionToDelete] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     nombre: '',
     dia_semana: 1,
@@ -335,6 +337,80 @@ export function MenuManager() {
     }
   };
 
+  const handleDragStart = (index: number) => {
+    setDraggedIndex(index);
+  };
+
+  const handleDragOver = (e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  };
+
+  const handleDragLeave = () => {
+    setDragOverIndex(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetIndex: number) => {
+    e.preventDefault();
+
+    if (draggedIndex === null || draggedIndex === targetIndex) {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    try {
+      const opcionesAgrupadas = activeTab === 'principales'
+        ? agruparOpcionesPrincipales()
+        : agruparOpcionesGuarnicion();
+
+      const opcionesFiltradas = opcionesAgrupadas.filter(opcion =>
+        opcion.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      const reordered = [...opcionesFiltradas];
+      const [movedItem] = reordered.splice(draggedIndex, 1);
+      reordered.splice(targetIndex, 0, movedItem);
+
+      for (let i = 0; i < reordered.length; i++) {
+        const opcion = reordered[i];
+        const newOrder = i;
+
+        if (activeTab === 'principales') {
+          for (const id of opcion.ids) {
+            const opcionOriginal = opcionesPrincipales.find(o => o.id === id);
+            if (opcionOriginal) {
+              await supabase.rpc('admin_update_opcion_principal', {
+                opcion_id: id,
+                new_nombre: opcion.nombre,
+                new_dia_semana: opcionOriginal.dia_semana,
+                new_orden: newOrder,
+                new_activo: opcion.activo
+              });
+            }
+          }
+        } else {
+          for (const id of opcion.ids) {
+            await supabase.rpc('admin_update_opcion_guarnicion', {
+              opcion_id: id,
+              new_nombre: opcion.nombre,
+              new_orden: newOrder,
+              new_activo: opcion.activo
+            });
+          }
+        }
+      }
+
+      await loadData();
+    } catch (error) {
+      console.error('Error reordering options:', error);
+      alert('Error al reordenar: ' + (error as Error).message);
+    } finally {
+      setDraggedIndex(null);
+      setDragOverIndex(null);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -531,63 +607,77 @@ export function MenuManager() {
         </div>
       ) : (
         <div className="grid gap-4">
-          {opcionesFiltradas.map((opcion) => (
+          {opcionesFiltradas.map((opcion, index) => (
             <div
               key={opcion.nombre}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-shadow"
+              draggable
+              onDragStart={() => handleDragStart(index)}
+              onDragOver={(e) => handleDragOver(e, index)}
+              onDragLeave={handleDragLeave}
+              onDrop={(e) => handleDrop(e, index)}
+              className={`bg-white rounded-xl shadow-sm border border-gray-200 p-5 hover:shadow-md transition-all cursor-move ${
+                draggedIndex === index ? 'opacity-50' : ''
+              } ${
+                dragOverIndex === index ? 'border-yellow-500 border-2' : ''
+              }`}
             >
               <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    <h3 className="text-lg font-semibold text-gray-900">{opcion.nombre}</h3>
-                    <button
-                      onClick={() => toggleActivo(opcion)}
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
-                        opcion.activo
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      }`}
-                    >
-                      {opcion.activo ? (
-                        <>
-                          <Check className="h-3 w-3 mr-1" />
-                          Activo
-                        </>
-                      ) : (
-                        <>
-                          <X className="h-3 w-3 mr-1" />
-                          Inactivo
-                        </>
-                      )}
-                    </button>
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      <Calendar className="h-3 w-3 mr-1" />
-                      {opcion.eleccionesFuturas || 0} elegidos
-                    </span>
+                <div className="flex items-center space-x-3 flex-1">
+                  <div className="text-gray-400 hover:text-gray-600 cursor-grab active:cursor-grabbing">
+                    <GripVertical className="h-5 w-5" />
                   </div>
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-3 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">{opcion.nombre}</h3>
+                      <button
+                        onClick={() => toggleActivo(opcion)}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          opcion.activo
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                        }`}
+                      >
+                        {opcion.activo ? (
+                          <>
+                            <Check className="h-3 w-3 mr-1" />
+                            Activo
+                          </>
+                        ) : (
+                          <>
+                            <X className="h-3 w-3 mr-1" />
+                            Inactivo
+                          </>
+                        )}
+                      </button>
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <Calendar className="h-3 w-3 mr-1" />
+                        {opcion.eleccionesFuturas || 0} elegidos
+                      </span>
+                    </div>
 
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    {activeTab === 'principales' && opcion.dias.length > 0 && (
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <div className="flex flex-wrap gap-1">
-                          {opcion.dias.map(dia => {
-                            const diaLabel = diasSemana.find(d => d.value === dia)?.label || '';
-                            return (
-                              <span
-                                key={dia}
-                                className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
-                              >
-                                {diaLabel}
-                              </span>
-                            );
-                          })}
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      {activeTab === 'principales' && opcion.dias.length > 0 && (
+                        <div className="flex items-center space-x-2">
+                          <Calendar className="h-4 w-4 text-gray-400" />
+                          <div className="flex flex-wrap gap-1">
+                            {opcion.dias.map(dia => {
+                              const diaLabel = diasSemana.find(d => d.value === dia)?.label || '';
+                              return (
+                                <span
+                                  key={dia}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {diaLabel}
+                                </span>
+                              );
+                            })}
+                          </div>
                         </div>
+                      )}
+                      <div className="flex items-center space-x-1">
+                        <span className="text-gray-500">Orden:</span>
+                        <span className="font-medium text-gray-700">{opcion.orden}</span>
                       </div>
-                    )}
-                    <div className="flex items-center space-x-1">
-                      <span className="text-gray-500">Orden:</span>
-                      <span className="font-medium text-gray-700">{opcion.orden}</span>
                     </div>
                   </div>
                 </div>
