@@ -168,6 +168,14 @@ export function MenuManager() {
 
           if (queryError) throw queryError;
 
+          if (opcionesExistentes) {
+            for (const opcion of opcionesExistentes) {
+              await supabase.rpc('admin_delete_opcion_principal', {
+                opcion_id: opcion.id
+              });
+            }
+          }
+
           const { error } = await supabase
             .rpc('admin_insert_opcion_principal_multi_dias', {
               new_nombre: formData.nombre,
@@ -176,14 +184,6 @@ export function MenuManager() {
               new_activo: formData.activo
             });
           if (error) throw error;
-
-          if (opcionesExistentes) {
-            for (const opcion of opcionesExistentes) {
-              await supabase.rpc('admin_delete_opcion_principal', {
-                opcion_id: opcion.id
-              });
-            }
-          }
         } else {
           const opcion = opcionesGuarnicion.find(o => o.nombre === editingOpcion);
           if (opcion) {
