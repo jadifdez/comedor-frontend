@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, OpcionMenuPrincipal, OpcionMenuGuarnicion } from '../../lib/supabase';
-import { ChefHat, Plus, Edit, Trash2, Check, X, Utensils, Calendar, AlertTriangle, Search, Settings, Power, PowerOff, GripVertical } from 'lucide-react';
+import { ChefHat, Plus, Edit, Trash2, Check, X, Utensils, Calendar, AlertTriangle, Settings, Power, PowerOff, GripVertical } from 'lucide-react';
 
 interface OpcionAgrupada {
   nombre: string;
@@ -21,7 +21,6 @@ export function MenuManager() {
   const [editingOpcion, setEditingOpcion] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [opcionToDelete, setOpcionToDelete] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
   const [formData, setFormData] = useState({
@@ -379,11 +378,7 @@ export function MenuManager() {
         ? agruparOpcionesPrincipales()
         : agruparOpcionesGuarnicion();
 
-      const opcionesFiltradas = opcionesAgrupadas.filter(opcion =>
-        opcion.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-
-      const reordered = [...opcionesFiltradas];
+      const reordered = [...opcionesAgrupadas];
       const [movedItem] = reordered.splice(draggedIndex, 1);
       reordered.splice(targetIndex, 0, movedItem);
 
@@ -438,10 +433,6 @@ export function MenuManager() {
     ? agruparOpcionesPrincipales()
     : agruparOpcionesGuarnicion();
 
-  const opcionesFiltradas = opcionesAgrupadas.filter(opcion =>
-    opcion.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -465,10 +456,7 @@ export function MenuManager() {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-1">
         <div className="grid grid-cols-2 gap-1">
           <button
-            onClick={() => {
-              setActiveTab('principales');
-              setSearchTerm('');
-            }}
+            onClick={() => setActiveTab('principales')}
             className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
               activeTab === 'principales'
                 ? 'bg-yellow-600 text-white shadow-sm'
@@ -479,10 +467,7 @@ export function MenuManager() {
             <span>Platos Principales</span>
           </button>
           <button
-            onClick={() => {
-              setActiveTab('guarniciones');
-              setSearchTerm('');
-            }}
+            onClick={() => setActiveTab('guarniciones')}
             className={`flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium transition-all duration-200 ${
               activeTab === 'guarniciones'
                 ? 'bg-yellow-600 text-white shadow-sm'
@@ -492,19 +477,6 @@ export function MenuManager() {
             <Calendar className="h-5 w-5" />
             <span>Guarniciones</span>
           </button>
-        </div>
-      </div>
-
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-          <input
-            type="text"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder={`Buscar ${activeTab === 'principales' ? 'platos principales' : 'guarniciones'}...`}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-yellow-500 focus:border-yellow-500"
-          />
         </div>
       </div>
 
@@ -593,24 +565,21 @@ export function MenuManager() {
         </div>
       )}
 
-      {opcionesFiltradas.length === 0 ? (
+      {opcionesAgrupadas.length === 0 ? (
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12">
           <div className="text-center">
             <ChefHat className="h-12 w-12 text-gray-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">
-              {searchTerm ? 'No se encontraron resultados' : `No hay ${activeTab === 'principales' ? 'platos principales' : 'guarniciones'} registrados`}
+              No hay {activeTab === 'principales' ? 'platos principales' : 'guarniciones'} registrados
             </h3>
             <p className="text-gray-600">
-              {searchTerm
-                ? 'Intenta con otro término de búsqueda'
-                : `Comienza agregando ${activeTab === 'principales' ? 'el primer plato principal' : 'la primera guarnición'} al menú`
-              }
+              Comienza agregando {activeTab === 'principales' ? 'el primer plato principal' : 'la primera guarnición'} al menú
             </p>
           </div>
         </div>
       ) : (
         <div className="grid gap-4">
-          {opcionesFiltradas.map((opcion, index) => (
+          {opcionesAgrupadas.map((opcion, index) => (
             <div
               key={opcion.nombre}
               draggable
