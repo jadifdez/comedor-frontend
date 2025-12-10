@@ -8,11 +8,13 @@ interface OpcionAgrupada {
   orden: number;
   activo: boolean;
   ids: number[];
+  eleccionesFuturas?: number;
 }
 
 export function MenuManager() {
   const [opcionesPrincipales, setOpcionesPrincipales] = useState<OpcionMenuPrincipal[]>([]);
   const [opcionesGuarnicion, setOpcionesGuarnicion] = useState<OpcionMenuGuarnicion[]>([]);
+  const [eleccionesFuturas, setEleccionesFuturas] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<'principales' | 'guarniciones'>('principales');
   const [showForm, setShowForm] = useState(false);
@@ -56,10 +58,48 @@ export function MenuManager() {
       if (guarnicionError) throw guarnicionError;
       setOpcionesGuarnicion(guarnicionData || []);
 
+      await loadEleccionesFuturas();
+
     } catch (error) {
       console.error('Error loading menu data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadEleccionesFuturas = async () => {
+    try {
+      const hoy = new Date().toISOString().split('T')[0];
+
+      const { data: principalesData, error: principalesError } = await supabase
+        .from('comedor_menupersonalizado')
+        .select('opcion_principal_id')
+        .gte('fecha', hoy);
+
+      if (principalesError) throw principalesError;
+
+      const { data: guarnicionData, error: guarnicionError } = await supabase
+        .from('comedor_menupersonalizado')
+        .select('opcion_guarnicion_id')
+        .gte('fecha', hoy);
+
+      if (guarnicionError) throw guarnicionError;
+
+      const conteos = new Map<string, number>();
+
+      principalesData?.forEach((item: any) => {
+        const id = item.opcion_principal_id;
+        conteos.set(`p_${id}`, (conteos.get(`p_${id}`) || 0) + 1);
+      });
+
+      guarnicionData?.forEach((item: any) => {
+        const id = item.opcion_guarnicion_id;
+        conteos.set(`g_${id}`, (conteos.get(`g_${id}`) || 0) + 1);
+      });
+
+      setEleccionesFuturas(conteos);
+    } catch (error) {
+      console.error('Error loading future selections:', error);
     }
   };
 
@@ -83,10 +123,17 @@ export function MenuManager() {
     });
 
     return Array.from(grupos.values())
-      .map(grupo => ({
-        ...grupo,
-        dias: grupo.dias.sort()
-      }))
+      .map(grupo => {
+        const totalElecciones = grupo.ids.reduce((sum, id) => {
+          return sum + (eleccionesFuturas.get(`p_${id}`) || 0);
+        }, 0);
+
+        return {
+          ...grupo,
+          dias: grupo.dias.sort(),
+          eleccionesFuturas: totalElecciones
+        };
+      })
       .sort((a, b) => a.orden - b.orden);
   };
 
@@ -97,7 +144,8 @@ export function MenuManager() {
         dias: [],
         orden: opcion.orden,
         activo: opcion.activo,
-        ids: [opcion.id]
+        ids: [opcion.id],
+        eleccionesFuturas: eleccionesFuturas.get(`g_${opcion.id}`) || 0
       }))
       .sort((a, b) => a.orden - b.orden);
   };
@@ -489,6 +537,10 @@ export function MenuManager() {
                         </>
                       )}
                     </button>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                      <Calendar className="h-3 w-3 mr-1" />
+                      {opcion.eleccionesFuturas || 0} elegidos
+                    </span>
                   </div>
 
                   <div className="flex items-center space-x-4 text-sm text-gray-600">
