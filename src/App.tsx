@@ -497,6 +497,7 @@ function AppContent({ user }: { user: User }) {
               inscripcionesPadre={inscripcionesPadre}
               nombrePadre={padre?.nombre}
               padreId={padre?.id}
+              esPersonal={padre?.es_personal}
               isSubmitting={submitting}
               diasAntelacion={diasAntelacionSolicitudes}
             />

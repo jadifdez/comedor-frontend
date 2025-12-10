@@ -24,11 +24,12 @@ interface SolicitudFormProps {
   inscripcionesPadre?: InscripcionPadre[];
   nombrePadre?: string;
   padreId?: string;
+  esPersonal?: boolean;
   isSubmitting?: boolean;
   diasAntelacion?: number;
 }
 
-export function SolicitudForm({ onSubmit, hijos, solicitudes, inscripciones, inscripcionesPadre = [], nombrePadre = '', padreId = '', isSubmitting = false, diasAntelacion = 2 }: SolicitudFormProps) {
+export function SolicitudForm({ onSubmit, hijos, solicitudes, inscripciones, inscripcionesPadre = [], nombrePadre = '', padreId = '', esPersonal = false, isSubmitting = false, diasAntelacion = 2 }: SolicitudFormProps) {
   const [diasDisponibles, setDiasDisponibles] = useState<any[]>([]);
   const [loadingDays, setLoadingDays] = useState(true);
   
@@ -46,8 +47,8 @@ export function SolicitudForm({ onSubmit, hijos, solicitudes, inscripciones, ins
       tipo: 'hijo' as const
     }));
 
-    // El padre solo aparece si tiene inscripciones activas de comedor
-    const opcionesPadre: OpcionUnificada[] = inscripcionesPadre && inscripcionesPadre.length > 0 && padreId && nombrePadre
+    // El padre aparece si es personal del colegio (sin necesidad de inscripción activa)
+    const opcionesPadre: OpcionUnificada[] = esPersonal && padreId && nombrePadre
       ? [{
           id: padreId,
           nombre: nombrePadre,
@@ -57,7 +58,7 @@ export function SolicitudForm({ onSubmit, hijos, solicitudes, inscripciones, ins
       : [];
 
     return [...opcionesPadre, ...opcionesHijos];
-  }, [hijos, inscripcionesPadre, padreId, nombrePadre]);
+  }, [hijos, esPersonal, padreId, nombrePadre]);
 
   React.useEffect(() => {
     const loadDays = async () => {
