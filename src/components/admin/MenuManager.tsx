@@ -163,27 +163,50 @@ export function MenuManager() {
         if (activeTab === 'principales') {
           const { data: opcionesExistentes, error: queryError } = await supabase
             .from('opciones_menu_principal')
-            .select('id')
+            .select('id, dia_semana')
             .eq('nombre', editingOpcion);
 
           if (queryError) throw queryError;
 
-          if (opcionesExistentes) {
-            for (const opcion of opcionesExistentes) {
-              await supabase.rpc('admin_delete_opcion_principal', {
-                opcion_id: opcion.id
-              });
+          const diasExistentes = opcionesExistentes?.map(o => o.dia_semana) || [];
+          const nuevasDias = formData.dias_semana_multi;
+
+          for (const dia of nuevasDias) {
+            const opcionExistente = opcionesExistentes?.find(o => o.dia_semana === dia);
+
+            if (opcionExistente) {
+              const { error } = await supabase
+                .from('opciones_menu_principal')
+                .update({
+                  nombre: formData.nombre,
+                  orden: formData.orden,
+                  activo: formData.activo
+                })
+                .eq('id', opcionExistente.id);
+              if (error) throw error;
+            } else {
+              const { error } = await supabase
+                .rpc('admin_insert_opcion_principal_multi_dias', {
+                  new_nombre: formData.nombre,
+                  new_dias_semana: [dia],
+                  new_orden: formData.orden,
+                  new_activo: formData.activo
+                });
+              if (error) throw error;
             }
           }
 
-          const { error } = await supabase
-            .rpc('admin_insert_opcion_principal_multi_dias', {
-              new_nombre: formData.nombre,
-              new_dias_semana: formData.dias_semana_multi,
-              new_orden: formData.orden,
-              new_activo: formData.activo
-            });
-          if (error) throw error;
+          for (const opcion of opcionesExistentes || []) {
+            if (!nuevasDias.includes(opcion.dia_semana)) {
+              try {
+                await supabase.rpc('admin_delete_opcion_principal', {
+                  opcion_id: opcion.id
+                });
+              } catch (err) {
+                console.warn(`No se pudo eliminar opción para ${opcion.dia_semana}, probablemente tiene elecciones asociadas`);
+              }
+            }
+          }
         } else {
           const opcion = opcionesGuarnicion.find(o => o.nombre === editingOpcion);
           if (opcion) {
