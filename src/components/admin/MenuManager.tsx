@@ -113,7 +113,12 @@ export function MenuManager() {
     try {
       if (editingOpcion) {
         if (activeTab === 'principales') {
-          const opcionesExistentes = opcionesPrincipales.filter(o => o.nombre === editingOpcion);
+          const { data: opcionesExistentes, error: queryError } = await supabase
+            .from('comedor_menu_principales')
+            .select('id')
+            .eq('nombre', editingOpcion);
+
+          if (queryError) throw queryError;
 
           const { error } = await supabase
             .rpc('admin_insert_opcion_principal_multi_dias', {
@@ -124,10 +129,12 @@ export function MenuManager() {
             });
           if (error) throw error;
 
-          for (const opcion of opcionesExistentes) {
-            await supabase.rpc('admin_delete_opcion_principal', {
-              opcion_id: opcion.id
-            });
+          if (opcionesExistentes) {
+            for (const opcion of opcionesExistentes) {
+              await supabase.rpc('admin_delete_opcion_principal', {
+                opcion_id: opcion.id
+              });
+            }
           }
         } else {
           const opcion = opcionesGuarnicion.find(o => o.nombre === editingOpcion);
