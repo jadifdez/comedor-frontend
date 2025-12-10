@@ -883,11 +883,16 @@ export function MenuManager() {
                           <td className="py-3 px-4">
                             <div className="flex items-center text-sm text-gray-600">
                               <Calendar className="h-4 w-4 mr-1 text-gray-400" />
-                              {new Date(eleccion.fecha).toLocaleDateString('es-ES', {
-                                day: '2-digit',
-                                month: '2-digit',
-                                year: 'numeric'
-                              })}
+                              <div>
+                                <div className="font-medium">
+                                  {new Date(eleccion.fecha).toLocaleDateString('es-ES', {
+                                    weekday: 'long',
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric'
+                                  })}
+                                </div>
+                              </div>
                             </div>
                           </td>
                           <td className="py-3 px-4">
