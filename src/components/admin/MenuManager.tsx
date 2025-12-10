@@ -105,26 +105,29 @@ export function MenuManager() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    if (activeTab === 'principales' && formData.dias_semana_multi.length === 0) {
+      alert('Debes seleccionar al menos un día de la semana');
+      return;
+    }
+
     try {
       if (editingOpcion) {
         if (activeTab === 'principales') {
           const opcionesExistentes = opcionesPrincipales.filter(o => o.nombre === editingOpcion);
 
+          const { error } = await supabase
+            .rpc('admin_insert_opcion_principal_multi_dias', {
+              new_nombre: formData.nombre,
+              new_dias_semana: formData.dias_semana_multi,
+              new_orden: formData.orden,
+              new_activo: formData.activo
+            });
+          if (error) throw error;
+
           for (const opcion of opcionesExistentes) {
             await supabase.rpc('admin_delete_opcion_principal', {
               opcion_id: opcion.id
             });
-          }
-
-          if (formData.dias_semana_multi.length > 0) {
-            const { error } = await supabase
-              .rpc('admin_insert_opcion_principal_multi_dias', {
-                new_nombre: formData.nombre,
-                new_dias_semana: formData.dias_semana_multi,
-                new_orden: formData.orden,
-                new_activo: formData.activo
-              });
-            if (error) throw error;
           }
         } else {
           const opcion = opcionesGuarnicion.find(o => o.nombre === editingOpcion);
@@ -141,16 +144,14 @@ export function MenuManager() {
         }
       } else {
         if (activeTab === 'principales') {
-          if (formData.dias_semana_multi.length > 0) {
-            const { error } = await supabase
-              .rpc('admin_insert_opcion_principal_multi_dias', {
-                new_nombre: formData.nombre,
-                new_dias_semana: formData.dias_semana_multi,
-                new_orden: formData.orden,
-                new_activo: formData.activo
-              });
-            if (error) throw error;
-          }
+          const { error } = await supabase
+            .rpc('admin_insert_opcion_principal_multi_dias', {
+              new_nombre: formData.nombre,
+              new_dias_semana: formData.dias_semana_multi,
+              new_orden: formData.orden,
+              new_activo: formData.activo
+            });
+          if (error) throw error;
         } else {
           const { error } = await supabase
             .rpc('admin_insert_opcion_guarnicion', {
@@ -168,6 +169,7 @@ export function MenuManager() {
       loadData();
     } catch (error) {
       console.error('Error saving menu option:', error);
+      alert('Error al guardar: ' + (error as Error).message);
     }
   };
 
