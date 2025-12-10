@@ -56,6 +56,15 @@ export function MenuManager() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    // Resetear formulario cuando se cambie de tab
+    if (showForm) {
+      setShowForm(false);
+      setEditingOpcion(null);
+      setFormData({ nombre: '', dia_semana: 1, dias_semana_multi: [], orden: 0, activo: true });
+    }
+  }, [activeTab]);
+
   const loadData = async () => {
     try {
       setLoading(true);
@@ -634,15 +643,20 @@ export function MenuManager() {
                 )}
               </div>
             )}
-            <div className="flex items-center">
+            <div className="flex items-center p-3 bg-gray-50 rounded-lg border border-gray-200">
               <input
                 type="checkbox"
                 id="activo"
                 checked={formData.activo}
                 onChange={(e) => setFormData(prev => ({ ...prev, activo: e.target.checked }))}
-                className="rounded border-gray-300 text-yellow-600 focus:ring-yellow-500"
+                className="h-5 w-5 rounded border-gray-300 text-yellow-600 focus:ring-yellow-500 focus:ring-2"
               />
-              <label htmlFor="activo" className="ml-2 text-sm font-medium text-gray-700">Activo</label>
+              <label htmlFor="activo" className="ml-3 text-sm font-medium text-gray-700 cursor-pointer">
+                Habilitar esta opción en el menú
+                <span className="block text-xs text-gray-500 mt-1">
+                  {formData.activo ? 'Los padres podrán seleccionar esta opción' : 'Esta opción no estará disponible para selección'}
+                </span>
+              </label>
             </div>
             <div className="flex space-x-3">
               <button
