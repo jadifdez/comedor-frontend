@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, OpcionMenuPrincipal, OpcionMenuGuarnicion } from '../../lib/supabase';
-import { ChefHat, Plus, Edit, Trash2, Check, X, Utensils, Calendar, AlertTriangle, Settings, Power, PowerOff, GripVertical } from 'lucide-react';
+import { ChefHat, Plus, Edit, Trash2, Check, X, Utensils, Calendar, AlertTriangle, Settings, Power, PowerOff, GripVertical, Users } from 'lucide-react';
 
 interface OpcionAgrupada {
   nombre: string;
@@ -9,6 +9,14 @@ interface OpcionAgrupada {
   activo: boolean;
   ids: number[];
   eleccionesFuturas?: number;
+}
+
+interface EleccionDetalle {
+  hijo_nombre: string;
+  padre_nombre: string | null;
+  curso: string;
+  fecha: string;
+  es_padre: boolean;
 }
 
 export function MenuManager() {
@@ -23,6 +31,10 @@ export function MenuManager() {
   const [opcionToDelete, setOpcionToDelete] = useState<string | null>(null);
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [showEleccionesModal, setShowEleccionesModal] = useState(false);
+  const [eleccionesDetalle, setEleccionesDetalle] = useState<EleccionDetalle[]>([]);
+  const [loadingElecciones, setLoadingElecciones] = useState(false);
+  const [opcionMostrandoElecciones, setOpcionMostrandoElecciones] = useState<string>('');
   const [formData, setFormData] = useState({
     nombre: '',
     dia_semana: 1,
@@ -319,6 +331,48 @@ export function MenuManager() {
   const handleDeleteCancel = () => {
     setShowDeleteModal(false);
     setOpcionToDelete(null);
+  };
+
+  const handleMostrarElecciones = async (opcionAgrupada: OpcionAgrupada) => {
+    setLoadingElecciones(true);
+    setShowEleccionesModal(true);
+    setOpcionMostrandoElecciones(opcionAgrupada.nombre);
+    setEleccionesDetalle([]);
+
+    try {
+      let allElecciones: EleccionDetalle[] = [];
+
+      if (activeTab === 'principales') {
+        for (const id of opcionAgrupada.ids) {
+          const { data, error } = await supabase
+            .rpc('get_menu_principal_elecciones', { opcion_id: id });
+
+          if (error) throw error;
+          if (data) allElecciones = [...allElecciones, ...data];
+        }
+      } else {
+        for (const id of opcionAgrupada.ids) {
+          const { data, error } = await supabase
+            .rpc('get_menu_guarnicion_elecciones', { opcion_id: id });
+
+          if (error) throw error;
+          if (data) allElecciones = [...allElecciones, ...data];
+        }
+      }
+
+      allElecciones.sort((a, b) => {
+        const dateCompare = a.fecha.localeCompare(b.fecha);
+        if (dateCompare !== 0) return dateCompare;
+        return a.hijo_nombre.localeCompare(b.hijo_nombre);
+      });
+
+      setEleccionesDetalle(allElecciones);
+    } catch (error) {
+      console.error('Error loading elecciones details:', error);
+      alert('Error al cargar los detalles de las elecciones');
+    } finally {
+      setLoadingElecciones(false);
+    }
   };
 
   const toggleActivo = async (opcionAgrupada: OpcionAgrupada) => {
@@ -621,10 +675,19 @@ export function MenuManager() {
                           </>
                         )}
                       </button>
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                        <Calendar className="h-3 w-3 mr-1" />
+                      <button
+                        onClick={() => handleMostrarElecciones(opcion)}
+                        disabled={!opcion.eleccionesFuturas || opcion.eleccionesFuturas === 0}
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+                          opcion.eleccionesFuturas && opcion.eleccionesFuturas > 0
+                            ? 'bg-blue-100 text-blue-800 hover:bg-blue-200 cursor-pointer'
+                            : 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                        }`}
+                        title={opcion.eleccionesFuturas && opcion.eleccionesFuturas > 0 ? 'Ver quién eligió este menú' : ''}
+                      >
+                        <Users className="h-3 w-3 mr-1" />
                         {opcion.eleccionesFuturas || 0} elegidos
-                      </span>
+                      </button>
                     </div>
 
                     {activeTab === 'principales' && opcion.dias.length > 0 && (
@@ -749,6 +812,110 @@ export function MenuManager() {
                 className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors"
               >
                 Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEleccionesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-4xl w-full max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  Elecciones de "{opcionMostrandoElecciones}"
+                </h3>
+                <p className="text-sm text-gray-600 mt-1">
+                  Mostrando todas las elecciones futuras para esta opción
+                </p>
+              </div>
+              <button
+                onClick={() => setShowEleccionesModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-6">
+              {loadingElecciones ? (
+                <div className="flex items-center justify-center py-12">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-yellow-600 border-t-transparent"></div>
+                </div>
+              ) : eleccionesDetalle.length === 0 ? (
+                <div className="text-center py-12">
+                  <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-600">No hay elecciones futuras para esta opción</p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="bg-gray-50 border-b border-gray-200">
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Alumno/Personal</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Curso</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Fecha</th>
+                        <th className="text-left py-3 px-4 text-sm font-semibold text-gray-700">Tipo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {eleccionesDetalle.map((eleccion, index) => (
+                        <tr
+                          key={index}
+                          className="border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                        >
+                          <td className="py-3 px-4">
+                            <div className="text-sm font-medium text-gray-900">
+                              {eleccion.hijo_nombre}
+                            </div>
+                            {eleccion.padre_nombre && (
+                              <div className="text-xs text-gray-500">
+                                Padre: {eleccion.padre_nombre}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                              {eleccion.curso}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center text-sm text-gray-600">
+                              <Calendar className="h-4 w-4 mr-1 text-gray-400" />
+                              {new Date(eleccion.fecha).toLocaleDateString('es-ES', {
+                                day: '2-digit',
+                                month: '2-digit',
+                                year: 'numeric'
+                              })}
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              eleccion.es_padre
+                                ? 'bg-purple-100 text-purple-800'
+                                : 'bg-green-100 text-green-800'
+                            }`}>
+                              {eleccion.es_padre ? 'Personal' : 'Alumno'}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div className="mt-4 text-sm text-gray-600 text-center">
+                    Total: {eleccionesDetalle.length} {eleccionesDetalle.length === 1 ? 'elección' : 'elecciones'}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className="border-t border-gray-200 p-4 flex justify-end">
+              <button
+                onClick={() => setShowEleccionesModal(false)}
+                className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-medium transition-colors"
+              >
+                Cerrar
               </button>
             </div>
           </div>
