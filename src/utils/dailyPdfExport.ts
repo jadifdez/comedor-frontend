@@ -412,17 +412,17 @@ export function generateDailyPDF(data: DailyData, selectedDate: Date) {
     });
   }
 
-  const invitaciones = data.comensales.filter(c => c.es_invitacion);
-  if (invitaciones.length > 0) {
+  const invitadosExternos = data.comensales.filter(c => c.tipo === 'externo');
+  if (invitadosExternos.length > 0) {
     doc.addPage();
     yPosition = 20;
 
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Invitaciones del Día (${invitaciones.length})`, 14, yPosition);
+    doc.text(`Invitados Externos (${invitadosExternos.length})`, 14, yPosition);
     yPosition += 10;
 
-    const invitacionesTableData = invitaciones.map(inv => {
+    const invitadosTableData = invitadosExternos.map(inv => {
       let menu = '';
       if (inv.tiene_dieta_blanda) {
         menu = 'DIETA BLANDA';
@@ -432,35 +432,31 @@ export function generateDailyPDF(data: DailyData, selectedDate: Date) {
         menu = 'Menú Rancho';
       }
 
-      const tipo = inv.tipo === 'hijo' ? 'Alumno' : inv.tipo === 'padre' ? 'Personal' : 'Externo';
-      const curso = inv.curso || '-';
       const motivo = inv.motivo_invitacion || '-';
       const restricciones = inv.restricciones.length > 0 ? inv.restricciones.join(', ') : '-';
 
-      return [inv.nombre, restricciones, curso, tipo, motivo, menu];
+      return [inv.nombre, restricciones, motivo, menu];
     });
 
     autoTable(doc, {
       startY: yPosition,
-      head: [['Nombre', 'Alergias/Restricciones', 'Curso', 'Tipo', 'Motivo', 'Menú']],
-      body: invitacionesTableData,
+      head: [['Nombre', 'Alergias/Restricciones', 'Motivo', 'Menú']],
+      body: invitadosTableData,
       theme: 'grid',
       headStyles: {
         fillColor: [236, 72, 153],
         fontStyle: 'bold',
-        fontSize: 8
+        fontSize: 9
       },
       styles: {
-        fontSize: 7,
-        cellPadding: 2
+        fontSize: 8,
+        cellPadding: 3
       },
       columnStyles: {
-        0: { cellWidth: 35 },
-        1: { cellWidth: 35 },
-        2: { cellWidth: 20 },
-        3: { cellWidth: 20, halign: 'center' },
-        4: { cellWidth: 35 },
-        5: { cellWidth: 40 }
+        0: { cellWidth: 45 },
+        1: { cellWidth: 45 },
+        2: { cellWidth: 45 },
+        3: { cellWidth: 50 }
       },
       didParseCell: (data) => {
         if (data.cell.raw === 'DIETA BLANDA') {
