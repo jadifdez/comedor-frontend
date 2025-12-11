@@ -747,6 +747,11 @@ export function DailyManagementView() {
                         <td className="px-4 py-3 text-sm">
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-medium text-gray-900">{comensal.nombre}</span>
+                            {comensal.restricciones.length > 0 && (
+                              <span className="bg-red-100 text-red-700 px-2 py-0.5 rounded text-xs font-bold">
+                                {comensal.restricciones.join(', ')}
+                              </span>
+                            )}
                             {comensal.es_alta_puntual && (
                               <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-xs font-bold flex items-center gap-1">
                                 <DollarSign className="h-3 w-3" />
