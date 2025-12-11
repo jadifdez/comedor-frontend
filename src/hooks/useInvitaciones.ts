@@ -1,6 +1,12 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
+export interface RestriccionDietetica {
+  id: string;
+  nombre: string;
+  tipo: 'alergia' | 'restriccion';
+}
+
 export interface Invitacion {
   id: string;
   fecha: string;
@@ -8,6 +14,7 @@ export interface Invitacion {
   padre_id: string | null;
   nombre_completo: string | null;
   motivo: string;
+  restricciones_ids: string[] | null;
   created_at: string;
   created_by: string;
   hijo?: {
@@ -22,6 +29,7 @@ export interface Invitacion {
     nombre: string;
     es_personal: boolean;
   };
+  restricciones?: RestriccionDietetica[];
 }
 
 export interface InvitacionFormData {
@@ -30,6 +38,7 @@ export interface InvitacionFormData {
   hijo_id?: string;
   padre_id?: string;
   nombre_completo?: string;
+  restricciones_ids?: string[];
   motivo: string;
   es_recurrente?: boolean;
   dias_semana?: number[];
@@ -74,7 +83,30 @@ export const useInvitaciones = () => {
         }
       }
 
-      setInvitaciones(allInvitaciones);
+      const invitacionesConIds = allInvitaciones.filter(inv => inv.restricciones_ids && inv.restricciones_ids.length > 0);
+      const restriccionesIds = [...new Set(invitacionesConIds.flatMap(inv => inv.restricciones_ids))];
+
+      let restriccionesMap: Map<string, RestriccionDietetica> = new Map();
+
+      if (restriccionesIds.length > 0) {
+        const { data: restricciones, error: restriccionesError } = await supabase
+          .from('restricciones_dieteticas')
+          .select('id, nombre, tipo')
+          .in('id', restriccionesIds);
+
+        if (restriccionesError) throw restriccionesError;
+
+        restricciones?.forEach(r => {
+          restriccionesMap.set(r.id, r);
+        });
+      }
+
+      const invitacionesConRestricciones = allInvitaciones.map(inv => ({
+        ...inv,
+        restricciones: inv.restricciones_ids?.map((id: string) => restriccionesMap.get(id)).filter(Boolean) || []
+      }));
+
+      setInvitaciones(invitacionesConRestricciones);
     } catch (err) {
       console.error('Error fetching invitaciones:', err);
       setError(err instanceof Error ? err.message : 'Error al cargar invitaciones');
@@ -111,6 +143,9 @@ export const useInvitaciones = () => {
         hijo_id: formData.tipo_invitado === 'hijo' ? formData.hijo_id : null,
         padre_id: formData.tipo_invitado === 'padre' ? formData.padre_id : null,
         nombre_completo: formData.tipo_invitado === 'externo' ? formData.nombre_completo : null,
+        restricciones_ids: formData.tipo_invitado === 'externo' && formData.restricciones_ids && formData.restricciones_ids.length > 0
+          ? formData.restricciones_ids
+          : null,
         motivo: formData.motivo,
         created_by: user.id
       }));

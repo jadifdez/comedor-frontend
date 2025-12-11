@@ -51,11 +51,18 @@ const DIAS_SEMANA = [
   { value: 5, label: 'Viernes' }
 ];
 
+interface RestriccionDietetica {
+  id: string;
+  nombre: string;
+  tipo: 'alergia' | 'restriccion';
+}
+
 export const InvitacionesManager: React.FC = () => {
   const { invitaciones, loading, error, createInvitacion, deleteInvitacion, getFutureInvitacionesCount, deleteFutureInvitacionesByMember } = useInvitaciones();
   const [showForm, setShowForm] = useState(false);
   const [hijos, setHijos] = useState<Hijo[]>([]);
   const [padres, setPadres] = useState<Padre[]>([]);
+  const [restricciones, setRestricciones] = useState<RestriccionDietetica[]>([]);
   const [successMessage, setSuccessMessage] = useState('');
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [invitacionToDelete, setInvitacionToDelete] = useState<string | null>(null);
@@ -86,6 +93,7 @@ export const InvitacionesManager: React.FC = () => {
   useEffect(() => {
     fetchHijos();
     fetchPadres();
+    fetchRestricciones();
   }, []);
 
   const fetchHijos = async () => {
@@ -112,6 +120,17 @@ export const InvitacionesManager: React.FC = () => {
       .order('nombre');
 
     if (data) setPadres(data);
+  };
+
+  const fetchRestricciones = async () => {
+    const { data } = await supabase
+      .from('restricciones_dieteticas')
+      .select('id, nombre, tipo')
+      .eq('activo', true)
+      .order('tipo')
+      .order('nombre');
+
+    if (data) setRestricciones(data);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -191,7 +210,13 @@ export const InvitacionesManager: React.FC = () => {
   const getInvitadoDisplay = (inv: typeof invitaciones[0]) => {
     if (inv.hijo) return `${inv.hijo.nombre} (${inv.hijo.grado.nombre})`;
     if (inv.padre) return `${inv.padre.nombre} ${inv.padre.es_personal ? '(Personal)' : ''}`;
-    return inv.nombre_completo || 'Desconocido';
+
+    let display = inv.nombre_completo || 'Desconocido';
+    if (inv.restricciones && inv.restricciones.length > 0) {
+      const restriccionesText = inv.restricciones.map(r => r.nombre).join(', ');
+      display += ` (${restriccionesText})`;
+    }
+    return display;
   };
 
   const getTipoInvitado = (inv: typeof invitaciones[0]) => {
@@ -396,6 +421,54 @@ export const InvitacionesManager: React.FC = () => {
                 </div>
               )}
             </div>
+
+            {formData.tipo_invitado === 'externo' && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-3">
+                  Restricciones Dietéticas (Opcional)
+                </label>
+                <div className="space-y-2 max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-4">
+                  {restricciones.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic">No hay restricciones dietéticas configuradas</p>
+                  ) : (
+                    restricciones.map((restriccion) => (
+                      <label
+                        key={restriccion.id}
+                        className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer transition-colors"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={formData.restricciones_ids?.includes(restriccion.id) || false}
+                          onChange={(e) => {
+                            const currentRestricciones = formData.restricciones_ids || [];
+                            const newRestricciones = e.target.checked
+                              ? [...currentRestricciones, restriccion.id]
+                              : currentRestricciones.filter(id => id !== restriccion.id);
+                            setFormData({ ...formData, restricciones_ids: newRestricciones });
+                          }}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                        />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-900">{restriccion.nombre}</span>
+                          <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+                            restriccion.tipo === 'alergia'
+                              ? 'bg-red-100 text-red-700'
+                              : 'bg-yellow-100 text-yellow-700'
+                          }`}>
+                            {restriccion.tipo === 'alergia' ? 'Alergia' : 'Restricción'}
+                          </span>
+                        </div>
+                      </label>
+                    ))
+                  )}
+                </div>
+                {formData.restricciones_ids && formData.restricciones_ids.length > 0 && (
+                  <p className="mt-2 text-sm text-gray-600">
+                    {formData.restricciones_ids.length} restricción(es) seleccionada(s)
+                  </p>
+                )}
+              </div>
+            )}
 
             <div>
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 mb-2">
@@ -667,7 +740,25 @@ export const InvitacionesManager: React.FC = () => {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900">
-                            {getInvitadoDisplay(invitacion)}
+                            <div>
+                              <div className="font-medium">{getInvitadoDisplay(invitacion)}</div>
+                              {invitacion.restricciones && invitacion.restricciones.length > 0 && (
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                  {invitacion.restricciones.map(restriccion => (
+                                    <span
+                                      key={restriccion.id}
+                                      className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                        restriccion.tipo === 'alergia'
+                                          ? 'bg-red-100 text-red-700'
+                                          : 'bg-yellow-100 text-yellow-700'
+                                      }`}
+                                    >
+                                      {restriccion.nombre}
+                                    </span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="px-6 py-4 text-sm text-gray-900">
                             {invitacion.motivo}

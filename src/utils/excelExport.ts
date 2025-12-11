@@ -932,6 +932,49 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
     const solicitudes = solicitudesFiltradas;
     const invitaciones = todasInvitaciones;
 
+    const { data: invitacionesExternas, error: externosError } = await supabase
+      .from('invitaciones_comedor')
+      .select(`
+        fecha,
+        nombre_completo,
+        motivo,
+        restricciones_ids
+      `)
+      .not('nombre_completo', 'is', null)
+      .gte('fecha', fechaInicio)
+      .lte('fecha', fechaFin)
+      .order('fecha');
+
+    if (externosError) throw externosError;
+
+    const invitadosExternosConRestricciones: any[] = [];
+    if (invitacionesExternas && invitacionesExternas.length > 0) {
+      const restriccionesIdsUnicos = [...new Set(
+        invitacionesExternas
+          .filter(inv => inv.restricciones_ids && inv.restricciones_ids.length > 0)
+          .flatMap(inv => inv.restricciones_ids)
+      )];
+
+      let restriccionesMap = new Map<string, string>();
+      if (restriccionesIdsUnicos.length > 0) {
+        const { data: restriccionesData, error: restriccionesExtError } = await supabase
+          .from('restricciones_dieteticas')
+          .select('id, nombre')
+          .in('id', restriccionesIdsUnicos);
+
+        if (restriccionesExtError) throw restriccionesExtError;
+
+        restriccionesData?.forEach(r => {
+          restriccionesMap.set(r.id, r.nombre);
+        });
+      }
+
+      invitadosExternosConRestricciones.push(...invitacionesExternas.map(inv => ({
+        ...inv,
+        restricciones: inv.restricciones_ids?.map(id => restriccionesMap.get(id)).filter(Boolean) || []
+      })));
+    }
+
     const restriccionesPorHijo: Record<string, string[]> = {};
     todasRestricciones.forEach((r: any) => {
       if (!restriccionesPorHijo[r.hijo_id]) {
@@ -1032,6 +1075,32 @@ export async function exportarParteDiarioMensual(mesSeleccionado: string) {
 
         sheetData.push(row);
       });
+
+      if (invitadosExternosConRestricciones.length > 0) {
+        sheetData.push([]);
+        sheetData.push([]);
+        sheetData.push(['INVITADOS EXTERNOS DEL MES']);
+        sheetData.push(['Fecha', 'Nombre', 'Restricciones Dietéticas', 'Motivo']);
+
+        invitadosExternosConRestricciones.forEach(externo => {
+          const fecha = new Date(externo.fecha + 'T00:00:00');
+          const fechaFormato = fecha.toLocaleDateString('es-ES', {
+            day: '2-digit',
+            month: 'short',
+            weekday: 'short'
+          });
+          const restriccionesTexto = externo.restricciones.length > 0
+            ? externo.restricciones.join(', ')
+            : 'Ninguna';
+
+          sheetData.push([
+            fechaFormato,
+            externo.nombre_completo,
+            restriccionesTexto,
+            externo.motivo
+          ]);
+        });
+      }
 
       const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
