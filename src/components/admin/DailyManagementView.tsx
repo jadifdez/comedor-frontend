@@ -233,25 +233,74 @@ export function DailyManagementView() {
 
     try {
       const fechaISO = formatDateISO(selectedDate);
+      const [year, month, day] = fechaISO.split('-');
+      const fechaEspanol = `${day}/${month}/${year}`;
 
-      let query = supabase
+      console.log('🔄 Intentando restaurar comida:', {
+        nombre: selectedComensal.nombre,
+        hijo_id: selectedComensal.hijo_id,
+        padre_id: selectedComensal.padre_id,
+        fechaISO,
+        fechaEspanol,
+        cancelacion_id: selectedComensal.cancelacion_id
+      });
+
+      // Primero, buscar bajas que coincidan con esta fecha
+      // Necesitamos buscar en ambos formatos: antiguo (dias array) y nuevo (fecha_inicio/fecha_fin)
+      let searchQuery = supabase
         .from('comedor_bajas')
-        .delete()
-        .lte('fecha_inicio', fechaISO)
-        .gte('fecha_fin', fechaISO);
+        .select('*')
+        .or(`and(fecha_inicio.lte.${fechaISO},fecha_fin.gte.${fechaISO}),dias.cs.{"${fechaEspanol}"}`);
 
       if (selectedComensal.hijo_id) {
-        query = query.eq('hijo_id', selectedComensal.hijo_id);
+        searchQuery = searchQuery.eq('hijo_id', selectedComensal.hijo_id);
       } else if (selectedComensal.padre_id) {
-        query = query.eq('padre_id', selectedComensal.padre_id);
+        searchQuery = searchQuery.eq('padre_id', selectedComensal.padre_id);
       } else {
+        console.error('❌ No se pudo identificar hijo_id ni padre_id');
         return;
       }
 
-      const { error } = await query;
+      const { data: bajasEncontradas, error: searchError } = await searchQuery;
 
-      if (error) throw error;
+      console.log('🔍 Bajas encontradas:', {
+        error: searchError,
+        cantidad: bajasEncontradas?.length || 0,
+        bajas: bajasEncontradas
+      });
 
+      if (searchError) throw searchError;
+
+      if (!bajasEncontradas || bajasEncontradas.length === 0) {
+        console.warn('⚠️ No se encontró ninguna baja para eliminar');
+        setNotification({
+          isOpen: true,
+          type: 'warning',
+          title: 'No se encontró la cancelación',
+          message: `No se encontró ninguna baja registrada para ${selectedComensal.nombre} en esta fecha. Es posible que ya haya sido restaurada.`
+        });
+        refetch();
+        return;
+      }
+
+      // Borrar cada baja encontrada
+      const deletePromises = bajasEncontradas.map(baja =>
+        supabase
+          .from('comedor_bajas')
+          .delete()
+          .eq('id', baja.id)
+      );
+
+      const deleteResults = await Promise.all(deletePromises);
+
+      // Verificar si hubo errores
+      const errores = deleteResults.filter(r => r.error);
+      if (errores.length > 0) {
+        console.error('❌ Errores al eliminar bajas:', errores);
+        throw errores[0].error;
+      }
+
+      console.log('✅ Baja(s) eliminada(s) correctamente:', bajasEncontradas.length);
       setNotification({
         isOpen: true,
         type: 'success',
@@ -260,14 +309,17 @@ export function DailyManagementView() {
       });
 
       refetch();
-    } catch (error) {
-      console.error('Error al restaurar comida:', error);
+    } catch (error: any) {
+      console.error('❌ Error al restaurar comida:', error);
       setNotification({
         isOpen: true,
         type: 'error',
         title: 'Error al restaurar la comida',
-        message: 'Por favor, intenta de nuevo.'
+        message: error?.message || 'Por favor, intenta de nuevo. Si el error persiste, verifica tus permisos de administrador.'
       });
+    } finally {
+      setShowRestoreModal(false);
+      setSelectedComensal(null);
     }
   };
 
