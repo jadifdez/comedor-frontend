@@ -179,7 +179,8 @@ export function useDailyManagement(fecha: string) {
           .select(`
             *,
             hijo:hijos(id, nombre, grado:grados(nombre)),
-            padre:padres(id, nombre, es_personal)
+            padre:padres(id, nombre, es_personal),
+            restricciones_ids
           `)
           .eq('fecha', selectedDate),
 
@@ -293,6 +294,33 @@ export function useDailyManagement(fecha: string) {
         return fechaInicio <= fechaSeleccionada &&
                (!fechaFin || fechaFin >= fechaSeleccionada);
       });
+
+      const invitacionesExternas = invitaciones.filter(inv => inv.restricciones_ids && inv.restricciones_ids.length > 0);
+      const restriccionesIdsUnicos = [...new Set(invitacionesExternas.flatMap(inv => inv.restricciones_ids))];
+
+      let restriccionesPorInvitacion = new Map<string, string[]>();
+      if (restriccionesIdsUnicos.length > 0) {
+        const { data: restriccionesExternas, error: restriccionesExternasError } = await supabase
+          .from('restricciones_dieteticas')
+          .select('id, nombre')
+          .in('id', restriccionesIdsUnicos);
+
+        if (restriccionesExternasError) throw restriccionesExternasError;
+
+        const restriccionesMap = new Map<string, string>();
+        restriccionesExternas?.forEach(r => {
+          restriccionesMap.set(r.id, r.nombre);
+        });
+
+        invitaciones.forEach(inv => {
+          if (inv.restricciones_ids && inv.restricciones_ids.length > 0) {
+            const nombresRestricciones = inv.restricciones_ids
+              .map(id => restriccionesMap.get(id))
+              .filter((nombre): nombre is string => nombre !== undefined);
+            restriccionesPorInvitacion.set(inv.id, nombresRestricciones);
+          }
+        });
+      }
 
       const restriccionesPorHijo = new Map<string, string[]>();
       restriccionesData.forEach((r: any) => {
@@ -433,6 +461,10 @@ export function useDailyManagement(fecha: string) {
             ? bajasPadresMap.get(inv.padre_id)
             : undefined;
 
+          const restricciones = hijoId
+            ? (restriccionesPorHijo.get(hijoId) || [])
+            : (restriccionesPorInvitacion.get(inv.id) || []);
+
           comensales.push({
             id: inv.id,
             nombre: inv.hijo ? inv.hijo.nombre : inv.padre ? inv.padre.nombre : inv.nombre_completo || 'Desconocido',
@@ -450,7 +482,7 @@ export function useDailyManagement(fecha: string) {
             tiene_menu_personalizado: tieneMenuPersonalizado(inv.hijo_id, inv.padre_id),
             hijo_id: inv.hijo_id || undefined,
             padre_id: inv.padre_id || undefined,
-            restricciones: hijoId ? (restriccionesPorHijo.get(hijoId) || []) : [],
+            restricciones: restricciones,
             es_personal: inv.padre?.es_personal || false,
             cancelado_ultimo_momento: canceladoUltimoMomento,
             cancelacion_id: cancelacionId
