@@ -956,6 +956,9 @@ export function DailyManagementView() {
                 <h2 className="text-xl font-bold text-gray-900">
                   Resumen de Asistencia por Curso y Restricciones
                 </h2>
+                <span className="bg-blue-600 text-white text-sm font-bold px-3 py-1 rounded-full">
+                  {data.comensales.filter(c => !c.cancelado_ultimo_momento).length}
+                </span>
               </div>
               {expandedSections.has('restricciones') ? (
                 <ChevronUp className="h-5 w-5 text-gray-600 group-hover:text-gray-900 transition-colors" />
