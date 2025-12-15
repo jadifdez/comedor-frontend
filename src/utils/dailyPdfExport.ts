@@ -198,17 +198,33 @@ export function generateDailyPDF(data: DailyData, selectedDate: Date) {
   doc.addPage();
   yPosition = 20;
 
+  const { todosLosGrupos, restriccionesDelDia } = generateAttendanceSummary();
+  const totalComensalesDelDia = todosLosGrupos.reduce((sum, g) => sum + g.total, 0);
+
   doc.setFontSize(16);
   doc.setFont('helvetica', 'bold');
   doc.text('Resumen de Asistencia por Curso y Restricciones', pageWidth / 2, yPosition, { align: 'center' });
+
+  const badgeWidth = 18;
+  const badgeHeight = 8;
+  const badgeX = pageWidth - 20;
+  const badgeY = yPosition - 5;
+
+  doc.setFillColor(59, 130, 246);
+  doc.roundedRect(badgeX, badgeY, badgeWidth, badgeHeight, 2, 2, 'F');
+
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(totalComensalesDelDia.toString(), badgeX + badgeWidth / 2, badgeY + 5.5, { align: 'center' });
+
+  doc.setTextColor(0, 0, 0);
   yPosition += 8;
 
   doc.setFontSize(10);
   doc.setFont('helvetica', 'normal');
   doc.text(`Fecha: ${selectedDate.toLocaleDateString('es-ES', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}`, pageWidth / 2, yPosition, { align: 'center' });
   yPosition += 10;
-
-  const { todosLosGrupos, restriccionesDelDia } = generateAttendanceSummary();
 
   if (todosLosGrupos.length > 0) {
     const headers = ['Curso', 'Sin Restricciones', ...restriccionesDelDia.map(r => r.nombre), 'Total'];
@@ -241,8 +257,7 @@ export function generateDailyPDF(data: DailyData, selectedDate: Date) {
       const total = totalesPorRestriccion.get(restriccion.nombre) || 0;
       totalRow.push(total > 0 ? total.toString() : '-');
     });
-    const totalGeneral = todosLosGrupos.reduce((sum, g) => sum + g.total, 0);
-    totalRow.push(totalGeneral.toString());
+    totalRow.push(totalComensalesDelDia.toString());
     summaryData.push(totalRow);
 
     autoTable(doc, {
