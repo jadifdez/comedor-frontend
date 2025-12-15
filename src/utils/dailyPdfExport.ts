@@ -286,7 +286,7 @@ export function generateDailyPDF(data: DailyData, selectedDate: Date) {
   doc.addPage();
   yPosition = 20;
 
-  const alumnos = data.comensales.filter(c => c.tipo === 'hijo');
+  const alumnos = data.comensales.filter(c => c.tipo === 'hijo' && !c.cancelado_ultimo_momento);
   const gradosAgrupados = groupByGrado(alumnos);
 
   gradosAgrupados.forEach(([grado, alumnosGrado], index) => {
@@ -351,7 +351,7 @@ export function generateDailyPDF(data: DailyData, selectedDate: Date) {
     });
   });
 
-  const personal = data.comensales.filter(c => c.tipo === 'padre');
+  const personal = data.comensales.filter(c => c.tipo === 'padre' && !c.cancelado_ultimo_momento);
   if (personal.length > 0) {
     doc.addPage();
     yPosition = 20;
@@ -412,7 +412,7 @@ export function generateDailyPDF(data: DailyData, selectedDate: Date) {
     });
   }
 
-  const invitadosExternos = data.comensales.filter(c => c.tipo === 'externo');
+  const invitadosExternos = data.comensales.filter(c => c.tipo === 'externo' && !c.cancelado_ultimo_momento);
   if (invitadosExternos.length > 0) {
     doc.addPage();
     yPosition = 20;
