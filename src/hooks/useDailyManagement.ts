@@ -581,8 +581,11 @@ export function useDailyManagement(fecha: string) {
         }
       });
 
+      // Filtrar comensales activos (sin cancelaciones) antes de calcular resúmenes
+      const comensalesActivos = comensales.filter(c => !c.cancelado_ultimo_momento);
+
       const menuSummaryMap = new Map<string, MenuSummary>();
-      comensales.forEach(comensal => {
+      comensalesActivos.forEach(comensal => {
         if (comensal.tiene_eleccion && comensal.opcion_principal && comensal.opcion_guarnicion) {
           const key = `${comensal.opcion_principal}|${comensal.opcion_guarnicion}`;
           if (!menuSummaryMap.has(key)) {
@@ -601,7 +604,7 @@ export function useDailyManagement(fecha: string) {
         }
       });
 
-      const sinEleccion = comensales.filter(c => !c.tiene_eleccion && !c.tiene_dieta_blanda && c.tipo === 'hijo');
+      const sinEleccion = comensalesActivos.filter(c => !c.tiene_eleccion && !c.tiene_dieta_blanda && c.tipo === 'hijo');
 
       const menuRancho = sinEleccion;
 
@@ -663,8 +666,6 @@ export function useDailyManagement(fecha: string) {
           cancelacion_id: c.cancelacion_id
         }))
       });
-
-      const comensalesActivos = comensales.filter(c => !c.cancelado_ultimo_momento);
 
       const dailyData: DailyData = {
         fecha: selectedDate,
