@@ -646,11 +646,11 @@ export function useDailyManagement(fecha: string) {
       };
 
       const comensalesRecurrentes = comensales
-        .filter(c => c.es_inscripcion && !c.es_invitacion && !c.es_alta_puntual)
+        .filter(c => c.es_inscripcion && !c.es_invitacion && !c.es_alta_puntual && !c.cancelado_ultimo_momento)
         .sort(sortComensales);
 
       const comensalesPuntuales = comensales
-        .filter(c => c.es_invitacion || c.es_alta_puntual)
+        .filter(c => (c.es_invitacion || c.es_alta_puntual) && !c.cancelado_ultimo_momento)
         .sort(sortComensales);
 
       const comensalesCancelados = comensales.filter(c => c.cancelado_ultimo_momento);
@@ -664,6 +664,8 @@ export function useDailyManagement(fecha: string) {
         }))
       });
 
+      const comensalesActivos = comensales.filter(c => !c.cancelado_ultimo_momento);
+
       const dailyData: DailyData = {
         fecha: selectedDate,
         dia_semana: diaSemana,
@@ -672,11 +674,11 @@ export function useDailyManagement(fecha: string) {
         comensales,
         comensales_recurrentes: comensalesRecurrentes,
         comensales_puntuales: comensalesPuntuales,
-        total_comensales: comensales.length,
-        total_inscritos: comensales.filter(c => c.es_inscripcion).length,
-        total_invitaciones: comensales.filter(c => c.es_invitacion).length,
+        total_comensales: comensalesActivos.length,
+        total_inscritos: comensalesActivos.filter(c => c.es_inscripcion).length,
+        total_invitaciones: comensalesActivos.filter(c => c.es_invitacion).length,
         total_bajas: bajas.length,
-        total_neto: comensales.length,
+        total_neto: comensalesActivos.length,
         bajas: bajasFormatted,
         invitados: invitadosFormatted,
         dietas_blandas: dietasBlandasFormatted,
