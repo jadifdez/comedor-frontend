@@ -41,6 +41,7 @@ export function PersonalManager() {
   const [profesorToInscribir, setProfesorToInscribir] = useState<Padre | null>(null);
   const [inscripcionesActivas, setInscripcionesActivas] = useState<Record<string, InscripcionPadreAdmin>>({});
   const { crearInscripcion, verificarInscripcionActiva } = useInscripcionesPadresAdmin();
+  const [soloSinCodigo, setSoloSinCodigo] = useState(false);
 
   useEffect(() => {
     loadPadres();
@@ -338,11 +339,15 @@ export function PersonalManager() {
     }
   };
 
-  const filteredPadres = padres.filter(padre =>
-    padre.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    padre.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (padre.codigofacturacion && padre.codigofacturacion.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const filteredPadres = padres.filter(padre => {
+    const matchesSearch = padre.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      padre.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (padre.codigofacturacion && padre.codigofacturacion.toLowerCase().includes(searchTerm.toLowerCase()));
+
+    const matchesSinCodigo = !soloSinCodigo || !padre.codigofacturacion;
+
+    return matchesSearch && matchesSinCodigo;
+  });
 
   if (loading) {
     return (
@@ -382,15 +387,30 @@ export function PersonalManager() {
         </div>
       </div>
 
-      <div className="relative">
-        <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-        <input
-          type="text"
-          placeholder="Buscar por nombre o email..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-        />
+      <div className="space-y-3">
+        <div className="relative">
+          <Search className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Buscar por nombre o email..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="soloSinCodigo"
+            checked={soloSinCodigo}
+            onChange={(e) => setSoloSinCodigo(e.target.checked)}
+            className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+          />
+          <label htmlFor="soloSinCodigo" className="text-sm font-medium text-gray-700">
+            Solo mostrar personal sin código de facturación
+          </label>
+        </div>
       </div>
 
       {showForm && (
