@@ -29,6 +29,7 @@ export function PersonalManager() {
     email: '',
     nombre: '',
     telefono: '',
+    codigofacturacion: '',
     activo: true,
     es_personal: true,
     exento_facturacion: false,
@@ -97,6 +98,7 @@ export function PersonalManager() {
         email: formData.email,
         nombre: formData.nombre,
         telefono: formData.telefono || null,
+        codigofacturacion: formData.codigofacturacion || null,
         activo: formData.activo,
         es_personal: formData.es_personal,
         exento_facturacion: formData.exento_facturacion,
@@ -128,7 +130,7 @@ export function PersonalManager() {
         }
       }
 
-      setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
+      setFormData({ email: '', nombre: '', telefono: '', codigofacturacion: '', activo: true, es_personal: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
       setShowForm(false);
       setEditingPadre(null);
       loadPadres();
@@ -143,6 +145,7 @@ export function PersonalManager() {
       email: padre.email,
       nombre: padre.nombre,
       telefono: padre.telefono || '',
+      codigofacturacion: padre.codigofacturacion || '',
       activo: padre.activo,
       es_personal: padre.es_personal,
       exento_facturacion: padre.exento_facturacion || false,
@@ -368,7 +371,7 @@ export function PersonalManager() {
             onClick={() => {
               setShowForm(true);
               setEditingPadre(null);
-              setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
+              setFormData({ email: '', nombre: '', telefono: '', codigofacturacion: '', activo: true, es_personal: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
             }}
             className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
@@ -422,6 +425,16 @@ export function PersonalManager() {
                 value={formData.telefono}
                 onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Código de Facturación</label>
+              <input
+                type="text"
+                value={formData.codigofacturacion}
+                onChange={(e) => setFormData(prev => ({ ...prev, codigofacturacion: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="UUID del código de facturación"
               />
             </div>
             <div className="flex items-center space-x-2">
