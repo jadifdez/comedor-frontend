@@ -62,13 +62,15 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
 
   facturacion.forEach(fam => {
     fam.hijos.forEach(hijoData => {
-      registros.push({
-        codigofacturacion: hijoData.hijo.codigofacturacion || '',
-        nombre: hijoData.hijo.nombre,
-        seccion: hijoData.hijo.grado?.nombre || '',
-        importe: hijoData.totalImporte,
-        estaExento: hijoData.estaExento
-      });
+      if (hijoData.totalImporte > 0 || hijoData.estaExento) {
+        registros.push({
+          codigofacturacion: hijoData.hijo.codigofacturacion || '',
+          nombre: hijoData.hijo.nombre,
+          seccion: hijoData.hijo.grado?.nombre || '',
+          importe: hijoData.totalImporte,
+          estaExento: hijoData.estaExento
+        });
+      }
     });
 
     if (fam.padreComedor && (fam.padreComedor.totalImporte > 0 || fam.padreComedor.estaExento)) {
