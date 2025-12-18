@@ -96,7 +96,7 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
       '',
       '',
       '',
-      reg.importe.toFixed(2) + ' €'
+      reg.importe.toFixed(2).replace('.', ',')
     ]);
   });
 
