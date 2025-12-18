@@ -571,7 +571,7 @@ export function PersonalManager() {
                           </span>
                         )}
                         {padre.codigofacturacion && (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0" title={`Código de facturación: ${padre.codigofacturacion}`}>
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0" title="Codigo de Facturación relleno">
                             <Hash className="h-3 w-3" />
                           </span>
                         )}
