@@ -89,7 +89,7 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
   const sheetData: any[][] = [
     ['', 'Alumnos', '', '', '', 'Totales', 'COMIDAS'],
     ['', 'Nombre', 'Secciones', 'Matrícula', 'Act. y serv.', 'Totales', 'Importe'],
-    ['', '', '', '', '', '0,00', '(0)'],
+    ['', '', '', '', '', '0', '(0)'],
     ['', '', '', '', '', '', '02a900a1-88b6-7031-1eac-22102b3ede08']
   ];
 
