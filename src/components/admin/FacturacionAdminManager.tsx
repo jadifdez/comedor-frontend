@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Euro, Calendar, User, Search, AlertCircle, Eye, ChevronDown, ChevronUp, Award, Users, XCircle, Download, FileSpreadsheet, CheckCircle, Shield } from 'lucide-react';
 import { useFacturacionAdmin, HijoFacturacionDetalle, PadreFacturacionDetalle } from '../../hooks/useFacturacionAdmin';
-import { exportarFacturacionAExcel, exportarFacturacionPorAlumnosAExcel } from '../../utils/excelExport';
+import { exportarFacturacionPorAlumnosAExcel } from '../../utils/excelExport';
 import { FacturacionCalendario } from '../FacturacionCalendario';
 
 type PersonaSeleccionada =
@@ -17,9 +17,6 @@ export function FacturacionAdminManager() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [exportando, setExportando] = useState(false);
-  const [exportSuccess, setExportSuccess] = useState(false);
   const [showExportAlumnosModal, setShowExportAlumnosModal] = useState(false);
   const [exportandoAlumnos, setExportandoAlumnos] = useState(false);
   const [exportSuccessAlumnos, setExportSuccessAlumnos] = useState(false);
@@ -77,25 +74,6 @@ export function FacturacionAdminManager() {
 
   const getTipoColor = (tipo: 'inscripcion' | 'puntual') => {
     return tipo === 'inscripcion' ? 'text-green-700 bg-green-50' : 'text-blue-700 bg-blue-50';
-  };
-
-  const handleExportarExcel = () => {
-    try {
-      setExportando(true);
-      const resultado = exportarFacturacionAExcel({
-        mesSeleccionado,
-        facturacion
-      });
-      setExportSuccess(true);
-      setTimeout(() => {
-        setShowExportModal(false);
-        setExportSuccess(false);
-      }, 2000);
-    } catch (err: any) {
-      alert(`Error al generar el archivo Excel: ${err.message}`);
-    } finally {
-      setExportando(false);
-    }
   };
 
   const handleExportarPorAlumnos = () => {
@@ -156,24 +134,14 @@ export function FacturacionAdminManager() {
           <Euro className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900">Facturación por Familias</h2>
         </div>
-        <div className="flex items-center space-x-3">
-          <button
-            onClick={() => setShowExportModal(true)}
-            disabled={facturacion.length === 0}
-            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <Download className="h-5 w-5" />
-            <span>Exportar por Familias</span>
-          </button>
-          <button
-            onClick={() => setShowExportAlumnosModal(true)}
-            disabled={facturacion.length === 0}
-            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-          >
-            <Download className="h-5 w-5" />
-            <span>Exportar por Alumnos</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowExportAlumnosModal(true)}
+          disabled={facturacion.length === 0}
+          className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+        >
+          <Download className="h-5 w-5" />
+          <span>Exportar por Alumnos</span>
+        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -696,104 +664,6 @@ export function FacturacionAdminManager() {
                   </div>
                 ))}
               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {showExportModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
-            <div className="flex items-center justify-between p-6 border-b border-gray-200">
-              <div className="flex items-center space-x-2">
-                <FileSpreadsheet className="h-6 w-6 text-green-600" />
-                <h3 className="text-xl font-semibold text-gray-900">Exportar Facturación a Excel</h3>
-              </div>
-              <button
-                onClick={() => setShowExportModal(false)}
-                disabled={exportando}
-                className="text-gray-400 hover:text-gray-600 disabled:cursor-not-allowed"
-              >
-                <XCircle className="h-6 w-6" />
-              </button>
-            </div>
-
-            <div className="p-6">
-              {exportSuccess ? (
-                <div className="text-center py-8">
-                  <CheckCircle className="h-16 w-16 text-green-600 mx-auto mb-4" />
-                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
-                    Archivo generado correctamente
-                  </h4>
-                  <p className="text-gray-600">
-                    El archivo Excel se ha descargado a su dispositivo
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <p className="text-gray-700 mb-4">
-                    Se va a generar un archivo Excel con la facturación completa del mes seleccionado:
-                  </p>
-
-                  <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Mes:</span>
-                      <span className="font-medium text-gray-900">
-                        {getMesEtiqueta(mesSeleccionado)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Familias incluidas:</span>
-                      <span className="font-medium text-gray-900">{facturacion.length}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Total a facturar:</span>
-                      <span className="font-bold text-green-600">
-                        {facturacion.reduce((sum, f) => sum + f.totalGeneral, 0).toFixed(2)}€
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
-                    <p className="text-sm text-blue-800">
-                      <strong>El archivo incluirá:</strong>
-                    </p>
-                    <ul className="text-sm text-blue-700 mt-2 space-y-1 ml-4 list-disc">
-                      <li>Hoja resumen con totales generales</li>
-                      <li>Una hoja por cada familia con detalle completo</li>
-                      <li>Desglose de días de inscripción, puntuales y bajas</li>
-                      <li>Listado detallado de cada día facturable con precio</li>
-                    </ul>
-                  </div>
-
-                  <div className="flex space-x-3">
-                    <button
-                      onClick={() => setShowExportModal(false)}
-                      disabled={exportando}
-                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      onClick={handleExportarExcel}
-                      disabled={exportando}
-                      className="flex-1 flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:bg-green-400 disabled:cursor-not-allowed"
-                    >
-                      {exportando ? (
-                        <>
-                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                          <span>Generando...</span>
-                        </>
-                      ) : (
-                        <>
-                          <Download className="h-5 w-5" />
-                          <span>Generar Excel</span>
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
