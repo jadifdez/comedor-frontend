@@ -33,6 +33,7 @@ export interface Hijo {
   motivo_exencion?: string;
   fecha_inicio_exencion?: string;
   fecha_fin_exencion?: string;
+  codigofacturacion?: string;
   created_at: string;
   grado?: Grado; // Para joins
 }

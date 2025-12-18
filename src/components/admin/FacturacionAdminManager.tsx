@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Euro, Calendar, User, Search, AlertCircle, Eye, ChevronDown, ChevronUp, Award, Users, XCircle, Download, FileSpreadsheet, CheckCircle, Shield } from 'lucide-react';
 import { useFacturacionAdmin, HijoFacturacionDetalle, PadreFacturacionDetalle } from '../../hooks/useFacturacionAdmin';
-import { exportarFacturacionAExcel } from '../../utils/excelExport';
+import { exportarFacturacionAExcel, exportarFacturacionPorAlumnosAExcel } from '../../utils/excelExport';
 import { FacturacionCalendario } from '../FacturacionCalendario';
 
 type PersonaSeleccionada =
@@ -20,6 +20,9 @@ export function FacturacionAdminManager() {
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportando, setExportando] = useState(false);
   const [exportSuccess, setExportSuccess] = useState(false);
+  const [showExportAlumnosModal, setShowExportAlumnosModal] = useState(false);
+  const [exportandoAlumnos, setExportandoAlumnos] = useState(false);
+  const [exportSuccessAlumnos, setExportSuccessAlumnos] = useState(false);
 
   const { facturacion, loading, error } = useFacturacionAdmin(mesSeleccionado);
 
@@ -95,6 +98,25 @@ export function FacturacionAdminManager() {
     }
   };
 
+  const handleExportarPorAlumnos = () => {
+    try {
+      setExportandoAlumnos(true);
+      const resultado = exportarFacturacionPorAlumnosAExcel({
+        mesSeleccionado,
+        facturacion
+      });
+      setExportSuccessAlumnos(true);
+      setTimeout(() => {
+        setShowExportAlumnosModal(false);
+        setExportSuccessAlumnos(false);
+      }, 2000);
+    } catch (err: any) {
+      alert(`Error al generar el archivo Excel: ${err.message}`);
+    } finally {
+      setExportandoAlumnos(false);
+    }
+  };
+
   const facturacionFiltrada = facturacion.filter(f =>
     f.padre.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
     f.padre.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -134,14 +156,24 @@ export function FacturacionAdminManager() {
           <Euro className="h-6 w-6 text-green-600" />
           <h2 className="text-2xl font-bold text-gray-900">Facturación por Familias</h2>
         </div>
-        <button
-          onClick={() => setShowExportModal(true)}
-          disabled={facturacion.length === 0}
-          className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
-        >
-          <Download className="h-5 w-5" />
-          <span>Exportar a Excel</span>
-        </button>
+        <div className="flex items-center space-x-3">
+          <button
+            onClick={() => setShowExportModal(true)}
+            disabled={facturacion.length === 0}
+            className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            <Download className="h-5 w-5" />
+            <span>Exportar por Familias</span>
+          </button>
+          <button
+            onClick={() => setShowExportAlumnosModal(true)}
+            disabled={facturacion.length === 0}
+            className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
+          >
+            <Download className="h-5 w-5" />
+            <span>Exportar por Alumnos</span>
+          </button>
+        </div>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
@@ -748,6 +780,112 @@ export function FacturacionAdminManager() {
                       className="flex-1 flex items-center justify-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:bg-green-400 disabled:cursor-not-allowed"
                     >
                       {exportando ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                          <span>Generando...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-5 w-5" />
+                          <span>Generar Excel</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showExportAlumnosModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-xl max-w-lg w-full">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div className="flex items-center space-x-2">
+                <FileSpreadsheet className="h-6 w-6 text-blue-600" />
+                <h3 className="text-xl font-semibold text-gray-900">Exportar por Alumnos</h3>
+              </div>
+              <button
+                onClick={() => setShowExportAlumnosModal(false)}
+                disabled={exportandoAlumnos}
+                className="text-gray-400 hover:text-gray-600 disabled:cursor-not-allowed"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="p-6">
+              {exportSuccessAlumnos ? (
+                <div className="text-center py-8">
+                  <CheckCircle className="h-16 w-16 text-blue-600 mx-auto mb-4" />
+                  <h4 className="text-lg font-semibold text-gray-900 mb-2">
+                    Archivo generado correctamente
+                  </h4>
+                  <p className="text-gray-600">
+                    El archivo Excel se ha descargado a su dispositivo
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <p className="text-gray-700 mb-4">
+                    Se va a generar un listado con una línea por alumno ordenado alfabéticamente:
+                  </p>
+
+                  <div className="bg-gray-50 rounded-lg p-4 mb-6 space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Mes:</span>
+                      <span className="font-medium text-gray-900">
+                        {getMesEtiqueta(mesSeleccionado)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Alumnos/Personal:</span>
+                      <span className="font-medium text-gray-900">
+                        {facturacion.reduce((sum, f) => {
+                          let count = f.hijos.length;
+                          if (f.padreComedor) count += 1;
+                          return sum + count;
+                        }, 0)}
+                      </span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-gray-600">Total a facturar:</span>
+                      <span className="font-bold text-blue-600">
+                        {facturacion.reduce((sum, f) => sum + f.totalGeneral, 0).toFixed(2)}€
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+                    <p className="text-sm text-blue-800">
+                      <strong>El archivo incluirá:</strong>
+                    </p>
+                    <ul className="text-sm text-blue-700 mt-2 space-y-1 ml-4 list-disc">
+                      <li>Una línea por cada alumno/personal</li>
+                      <li>Código de facturación (si existe)</li>
+                      <li>Nombre del alumno o personal</li>
+                      <li>Grado/Curso (si es alumno)</li>
+                      <li>Importe total del mes</li>
+                      <li>Ordenado alfabéticamente por nombre</li>
+                    </ul>
+                  </div>
+
+                  <div className="flex space-x-3">
+                    <button
+                      onClick={() => setShowExportAlumnosModal(false)}
+                      disabled={exportandoAlumnos}
+                      className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition-colors disabled:cursor-not-allowed"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      onClick={handleExportarPorAlumnos}
+                      disabled={exportandoAlumnos}
+                      className="flex-1 flex items-center justify-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors disabled:bg-blue-400 disabled:cursor-not-allowed"
+                    >
+                      {exportandoAlumnos ? (
                         <>
                           <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
                           <span>Generando...</span>

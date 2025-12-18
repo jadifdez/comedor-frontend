@@ -41,6 +41,108 @@ interface InscripcionesExportOptions {
   inscripcionesPadres: InscripcionPadreExport[];
 }
 
+export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturacion }: ExcelExportOptions) {
+  const workbook = XLSX.utils.book_new();
+
+  const [year, month] = mesSeleccionado.split('-');
+  const mesNombre = new Date(parseInt(year), parseInt(month) - 1, 1).toLocaleDateString('es-ES', {
+    month: 'long',
+    year: 'numeric'
+  });
+
+  interface RegistroAlumno {
+    codigofacturacion: string;
+    nombre: string;
+    seccion: string;
+    importe: number;
+    estaExento: boolean;
+  }
+
+  const registros: RegistroAlumno[] = [];
+
+  facturacion.forEach(fam => {
+    fam.hijos.forEach(hijoData => {
+      registros.push({
+        codigofacturacion: hijoData.hijo.codigofacturacion || '',
+        nombre: hijoData.hijo.nombre,
+        seccion: hijoData.hijo.grado?.nombre || '',
+        importe: hijoData.totalImporte,
+        estaExento: hijoData.estaExento
+      });
+    });
+
+    if (fam.padreComedor && (fam.padreComedor.totalImporte > 0 || fam.padreComedor.estaExento)) {
+      registros.push({
+        codigofacturacion: '',
+        nombre: fam.padre.nombre,
+        seccion: '',
+        importe: fam.padreComedor.totalImporte,
+        estaExento: fam.padreComedor.estaExento
+      });
+    }
+  });
+
+  registros.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
+
+  const sheetData: any[][] = [
+    ['', 'Nombre', 'Secciones', 'Matrícula', 'Act. y serv.', 'Totales', 'Importe']
+  ];
+
+  registros.forEach(reg => {
+    sheetData.push([
+      reg.codigofacturacion,
+      reg.nombre,
+      reg.seccion,
+      '',
+      '',
+      '',
+      reg.importe.toFixed(2) + ' €'
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(sheetData);
+
+  ws['!cols'] = [
+    { wch: 15 },
+    { wch: 35 },
+    { wch: 20 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 12 },
+    { wch: 15 }
+  ];
+
+  const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+  for (let C = 0; C <= range.e.c; C++) {
+    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (ws[cellAddress]) {
+      ws[cellAddress].s = {
+        fill: { fgColor: { rgb: "2C3E50" } },
+        font: { color: { rgb: "FFFFFF" }, bold: true, sz: 12 },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+    }
+  }
+
+  XLSX.utils.book_append_sheet(workbook, ws, 'Facturación');
+
+  const fechaActual = new Date().toISOString().split('T')[0];
+  const nombreArchivo = `Facturacion_Alumnos_${mesNombre.replace(' ', '_')}_${fechaActual}.xlsx`;
+
+  XLSX.writeFile(workbook, nombreArchivo);
+
+  return {
+    nombreArchivo,
+    totalRegistros: registros.length
+  };
+}
+
 export function exportarFacturacionAExcel({ mesSeleccionado, facturacion }: ExcelExportOptions) {
   const workbook = XLSX.utils.book_new();
 
