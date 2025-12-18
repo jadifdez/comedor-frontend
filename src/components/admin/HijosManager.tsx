@@ -33,6 +33,7 @@ export function HijosManager() {
     nombre: '',
     padre_id: '',
     grado_id: '',
+    codigofacturacion: '',
     activo: true,
     exento_facturacion: false,
     motivo_exencion: '',
@@ -197,7 +198,7 @@ export function HijosManager() {
         if (error) throw error;
       }
 
-      setFormData({ nombre: '', padre_id: '', grado_id: '', activo: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
+      setFormData({ nombre: '', padre_id: '', grado_id: '', codigofacturacion: '', activo: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
       setShowForm(false);
       setEditingHijo(null);
       loadData();
@@ -213,6 +214,7 @@ export function HijosManager() {
       nombre: hijo.nombre,
       padre_id: hijo.padre_id,
       grado_id: hijo.grado_id,
+      codigofacturacion: hijo.codigofacturacion || '',
       activo: hijo.activo,
       exento_facturacion: hijo.exento_facturacion || false,
       motivo_exencion: hijo.motivo_exencion || '',
@@ -493,7 +495,7 @@ export function HijosManager() {
             onClick={() => {
               setShowForm(true);
               setEditingHijo(null);
-              setFormData({ nombre: '', padre_id: '', grado_id: '', activo: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
+              setFormData({ nombre: '', padre_id: '', grado_id: '', codigofacturacion: '', activo: true, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
             }}
             className="flex items-center space-x-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
@@ -603,6 +605,16 @@ export function HijosManager() {
                   </option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Código de Facturación</label>
+              <input
+                type="text"
+                value={formData.codigofacturacion}
+                onChange={(e) => setFormData(prev => ({ ...prev, codigofacturacion: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                placeholder="UUID del código de facturación"
+              />
             </div>
             <div className="flex items-center space-x-2">
               <input
