@@ -446,7 +446,8 @@ export function HijosManager() {
   const filteredHijos = hijos.filter(hijo => {
     const matchesSearch = hijo.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (hijo.padre as any)?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (hijo.grado as any)?.nombre?.toLowerCase().includes(searchTerm.toLowerCase());
+      (hijo.grado as any)?.nombre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (hijo.codigofacturacion && hijo.codigofacturacion.toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesGrado = !filterGrado || hijo.grado_id === filterGrado;
 

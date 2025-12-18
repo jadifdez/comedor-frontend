@@ -340,7 +340,8 @@ export function PersonalManager() {
 
   const filteredPadres = padres.filter(padre =>
     padre.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    padre.email.toLowerCase().includes(searchTerm.toLowerCase())
+    padre.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (padre.codigofacturacion && padre.codigofacturacion.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   if (loading) {
