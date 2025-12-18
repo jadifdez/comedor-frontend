@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, Padre, Hijo } from '../../lib/supabase';
-import { Users, Plus, CreditCard as Edit, Trash2, Mail, Phone, Check, X, Search, GraduationCap, AlertTriangle, Key, Utensils, Shield, FileDown } from 'lucide-react';
+import { Users, Plus, CreditCard as Edit, Trash2, Mail, Phone, Check, X, Search, GraduationCap, AlertTriangle, Key, Utensils, Shield, FileDown, Hash } from 'lucide-react';
 import { InscribirProfesorModal } from './InscribirProfesorModal';
 import { useInscripcionesPadresAdmin, InscripcionPadreAdmin } from '../../hooks/useInscripcionesPadresAdmin';
 import { useConfiguracionPrecios } from '../../hooks/useConfiguracionPrecios';
@@ -568,6 +568,11 @@ export function PersonalManager() {
                         {(padre as any).tiene_usuario && (
                           <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 flex-shrink-0" title="Tiene usuario de acceso">
                             <Key className="h-3 w-3" />
+                          </span>
+                        )}
+                        {padre.codigofacturacion && (
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800 flex-shrink-0" title={`Código de facturación: ${padre.codigofacturacion}`}>
+                            <Hash className="h-3 w-3" />
                           </span>
                         )}
                         {padre.exento_facturacion && (
