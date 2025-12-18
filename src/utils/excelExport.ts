@@ -86,7 +86,8 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
 
   const sheetData: any[][] = [
     ['', 'Alumnos', '', '', '', 'Totales', 'COMIDAS'],
-    ['', 'Nombre', 'Secciones', 'Matrícula', 'Act. y serv.', 'Totales', 'Importe']
+    ['', 'Nombre', 'Secciones', 'Matrícula', 'Act. y serv.', 'Totales', 'Importe'],
+    ['', '', '', '', '', '', '02a900a1-88b6-7031-1eac-22102b3ede08']
   ];
 
   registros.forEach(reg => {
@@ -141,6 +142,24 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
   // Aplicar estilos a la fila 1 (cabeceras originales)
   for (let C = 0; C <= range.e.c; C++) {
     const cellAddress = XLSX.utils.encode_cell({ r: 1, c: C });
+    if (ws[cellAddress]) {
+      ws[cellAddress].s = {
+        fill: { fgColor: { rgb: "2C3E50" } },
+        font: { color: { rgb: "FFFFFF" }, bold: true, sz: 12 },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+    }
+  }
+
+  // Aplicar estilos a la fila 2 (fila con UUID)
+  for (let C = 0; C <= range.e.c; C++) {
+    const cellAddress = XLSX.utils.encode_cell({ r: 2, c: C });
     if (ws[cellAddress]) {
       ws[cellAddress].s = {
         fill: { fgColor: { rgb: "2C3E50" } },
