@@ -62,7 +62,7 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
 
   facturacion.forEach(fam => {
     fam.hijos.forEach(hijoData => {
-      if (hijoData.totalImporte > 0 || hijoData.estaExento) {
+      if (hijoData.totalImporte > 0) {
         registros.push({
           codigofacturacion: hijoData.hijo.codigofacturacion || '',
           nombre: hijoData.hijo.nombre,
@@ -73,7 +73,7 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
       }
     });
 
-    if (fam.padreComedor && (fam.padreComedor.totalImporte > 0 || fam.padreComedor.estaExento)) {
+    if (fam.padreComedor && fam.padreComedor.totalImporte > 0) {
       registros.push({
         codigofacturacion: '',
         nombre: fam.padre.nombre,
