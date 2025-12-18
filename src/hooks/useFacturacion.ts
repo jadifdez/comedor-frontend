@@ -363,6 +363,9 @@ export function useFacturacion(user: User) {
           totalImporte = totalImporteSinDescuentoAsistencia * (1 - porcentajeDescuentoAsistencia80 / 100);
         }
 
+        // Redondear a 2 decimales para evitar discrepancias
+        totalImporte = Math.round(totalImporte * 100) / 100;
+
         // Verificar exención: si está exento en CUALQUIER día del mes, queda exento TODO el mes
         const primerDiaMes = diasLaborables[0] || fechaInicioMes;
         const estaExento = estaExentoEnFecha(
@@ -555,6 +558,9 @@ export function useFacturacion(user: User) {
         if (tieneDescuentoAsistencia80) {
           totalImporte = totalImporteSinDescuentoAsistencia * (1 - porcentajeDescuentoAsistencia80 / 100);
         }
+
+        // Redondear a 2 decimales para evitar discrepancias
+        totalImporte = Math.round(totalImporte * 100) / 100;
 
         // Verificar exención del padre: si está exento en CUALQUIER día del mes, queda exento TODO el mes
         const primerDiaMesPadre = diasLaborables[0] || fechaInicioMes;
