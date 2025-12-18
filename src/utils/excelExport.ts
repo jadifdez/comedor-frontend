@@ -75,7 +75,7 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
 
     if (fam.padreComedor && fam.padreComedor.totalImporte > 0) {
       registros.push({
-        codigofacturacion: '',
+        codigofacturacion: fam.padre.codigofacturacion || '',
         nombre: fam.padre.nombre,
         seccion: '',
         importe: fam.padreComedor.totalImporte,

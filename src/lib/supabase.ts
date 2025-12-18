@@ -20,6 +20,7 @@ export interface Padre {
   motivo_exencion?: string;
   fecha_inicio_exencion?: string;
   fecha_fin_exencion?: string;
+  codigofacturacion?: string;
   created_at: string;
 }
 

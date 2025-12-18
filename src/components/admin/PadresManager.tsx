@@ -72,6 +72,7 @@ export function PadresManager() {
     email: '',
     nombre: '',
     telefono: '',
+    codigofacturacion: '',
     activo: true,
     es_personal: false,
     exento_facturacion: false,
@@ -190,6 +191,7 @@ export function PadresManager() {
         email: '',
         nombre: '',
         telefono: '',
+        codigofacturacion: '',
         activo: true,
         es_personal: false,
         exento_facturacion: false,
@@ -220,6 +222,7 @@ export function PadresManager() {
       email: padre.email,
       nombre: padre.nombre,
       telefono: padre.telefono || '',
+      codigofacturacion: padre.codigofacturacion || '',
       activo: padre.activo,
       es_personal: padre.es_personal || false,
       exento_facturacion: padre.exento_facturacion || false,
@@ -469,7 +472,7 @@ Equipo del Comedor`
             onClick={() => {
               setShowForm(true);
               setEditingPadre(null);
-              setFormData({ email: '', nombre: '', telefono: '', activo: true, es_personal: false, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
+              setFormData({ email: '', nombre: '', telefono: '', codigofacturacion: '', activo: true, es_personal: false, exento_facturacion: false, motivo_exencion: '', fecha_inicio_exencion: '', fecha_fin_exencion: '' });
             }}
             className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors"
           >
@@ -539,6 +542,17 @@ Equipo del Comedor`
                 onChange={(e) => setFormData(prev => ({ ...prev, telefono: e.target.value }))}
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Código de facturación</label>
+              <input
+                type="text"
+                value={formData.codigofacturacion}
+                onChange={(e) => setFormData(prev => ({ ...prev, codigofacturacion: e.target.value }))}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="Ej: P-001, PROF-123"
+              />
+              <p className="text-xs text-gray-500 mt-1">Código para identificar al padre en el sistema de facturación</p>
             </div>
             <div className="flex items-center space-x-2">
               <input
