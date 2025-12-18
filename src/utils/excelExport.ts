@@ -85,6 +85,7 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
   registros.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es', { sensitivity: 'base' }));
 
   const sheetData: any[][] = [
+    ['', 'Alumnos', '', '', '', 'Totales', 'COMIDAS'],
     ['', 'Nombre', 'Secciones', 'Matrícula', 'Act. y serv.', 'Totales', 'Importe']
   ];
 
@@ -102,6 +103,11 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
 
   const ws = XLSX.utils.aoa_to_sheet(sheetData);
 
+  // Combinar celdas B1:E1 (columnas 1-4, fila 0)
+  ws['!merges'] = [
+    { s: { r: 0, c: 1 }, e: { r: 0, c: 4 } }
+  ];
+
   ws['!cols'] = [
     { wch: 15 },
     { wch: 35 },
@@ -113,8 +119,28 @@ export function exportarFacturacionPorAlumnosAExcel({ mesSeleccionado, facturaci
   ];
 
   const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+
+  // Aplicar estilos a la fila 0 (nueva fila superior)
   for (let C = 0; C <= range.e.c; C++) {
     const cellAddress = XLSX.utils.encode_cell({ r: 0, c: C });
+    if (ws[cellAddress]) {
+      ws[cellAddress].s = {
+        fill: { fgColor: { rgb: "2C3E50" } },
+        font: { color: { rgb: "FFFFFF" }, bold: true, sz: 12 },
+        alignment: { horizontal: "center", vertical: "center" },
+        border: {
+          top: { style: "thin", color: { rgb: "000000" } },
+          bottom: { style: "thin", color: { rgb: "000000" } },
+          left: { style: "thin", color: { rgb: "000000" } },
+          right: { style: "thin", color: { rgb: "000000" } }
+        }
+      };
+    }
+  }
+
+  // Aplicar estilos a la fila 1 (cabeceras originales)
+  for (let C = 0; C <= range.e.c; C++) {
+    const cellAddress = XLSX.utils.encode_cell({ r: 1, c: C });
     if (ws[cellAddress]) {
       ws[cellAddress].s = {
         fill: { fgColor: { rgb: "2C3E50" } },
