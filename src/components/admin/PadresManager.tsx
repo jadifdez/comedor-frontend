@@ -29,6 +29,7 @@ interface PadreWithCounts extends Padre {
   hijos_count: number;
   tiene_inscripcion_activa: boolean;
   inscripcion_id: string | null;
+  tiene_usuario: boolean;
 }
 
 const ITEMS_PER_PAGE = 50;
@@ -703,6 +704,11 @@ Equipo del Comedor`
                           >
                             {padre.nombre}
                           </button>
+                          {padre.tiene_usuario && (
+                            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 flex-shrink-0" title="Tiene usuario de acceso">
+                              <Key className="h-3 w-3" />
+                            </span>
+                          )}
                           {padre.es_personal && (
                             <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800 flex-shrink-0">
                               Personal
