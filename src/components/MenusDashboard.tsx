@@ -12,6 +12,12 @@ interface MenuCard {
   borderColor: string;
 }
 
+// Añade un parámetro cache-busting para evitar PDFs cacheados
+function getPdfUrl(url: string) {
+  if (!url) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}cb=${Date.now()}`;
+}
+
 export function MenusDashboard() {
   const [showPreviousMonth, setShowPreviousMonth] = useState(false);
   const menus: MenuCard[] = [
@@ -110,7 +116,7 @@ export function MenusDashboard() {
         {menus.filter(m => m.url).map((menu) => (
           <a
             key={menu.title}
-            href={menu.url}
+            href={getPdfUrl(menu.url)}
             target="_blank"
             rel="noopener noreferrer"
             className={`
@@ -165,7 +171,7 @@ export function MenusDashboard() {
               {menus.map((menu) => (
                 <a
                   key={`anterior-${menu.title}`}
-                  href={menu.urlAnterior}
+                  href={getPdfUrl(menu.urlAnterior)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center justify-between px-4 py-3 bg-white border border-gray-200 rounded-lg hover:border-gray-300 hover:shadow-sm transition-all group"
