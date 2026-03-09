@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Euro, Calendar, User, Search, AlertCircle, Eye, ChevronDown, ChevronUp, Award, Users, XCircle, Download, FileSpreadsheet, CheckCircle, Shield } from 'lucide-react';
+import { Euro, Calendar, User, Search, AlertCircle, Eye, ChevronDown, ChevronUp, Award, Users, XCircle, Download, FileSpreadsheet, CheckCircle, Shield, AlertTriangle } from 'lucide-react';
 import { useFacturacionAdmin, HijoFacturacionDetalle, PadreFacturacionDetalle } from '../../hooks/useFacturacionAdmin';
-import { exportarFacturacionPorAlumnosAExcel } from '../../utils/excelExport';
+import { exportarFacturacionPorAlumnosAExcel, verificarUUIDsFaltantes, RegistroSinUUID } from '../../utils/excelExport';
 import { FacturacionCalendario } from '../FacturacionCalendario';
 
 type PersonaSeleccionada =
@@ -20,6 +20,7 @@ export function FacturacionAdminManager() {
   const [showExportAlumnosModal, setShowExportAlumnosModal] = useState(false);
   const [exportandoAlumnos, setExportandoAlumnos] = useState(false);
   const [exportSuccessAlumnos, setExportSuccessAlumnos] = useState(false);
+  const [registrosSinUUID, setRegistrosSinUUID] = useState<RegistroSinUUID[]>([]);
 
   const { facturacion, loading, error } = useFacturacionAdmin(mesSeleccionado);
 
@@ -76,6 +77,12 @@ export function FacturacionAdminManager() {
     return tipo === 'inscripcion' ? 'text-green-700 bg-green-50' : 'text-blue-700 bg-blue-50';
   };
 
+  const abrirModalExportacion = () => {
+    const registrosFaltantes = verificarUUIDsFaltantes(facturacion);
+    setRegistrosSinUUID(registrosFaltantes);
+    setShowExportAlumnosModal(true);
+  };
+
   const handleExportarPorAlumnos = () => {
     try {
       setExportandoAlumnos(true);
@@ -87,6 +94,7 @@ export function FacturacionAdminManager() {
       setTimeout(() => {
         setShowExportAlumnosModal(false);
         setExportSuccessAlumnos(false);
+        setRegistrosSinUUID([]);
       }, 2000);
     } catch (err: any) {
       alert(`Error al generar el archivo Excel: ${err.message}`);
@@ -135,7 +143,7 @@ export function FacturacionAdminManager() {
           <h2 className="text-2xl font-bold text-gray-900">Facturación por Familias</h2>
         </div>
         <button
-          onClick={() => setShowExportAlumnosModal(true)}
+          onClick={abrirModalExportacion}
           disabled={facturacion.length === 0}
           className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors"
         >
@@ -699,6 +707,49 @@ export function FacturacionAdminManager() {
                 </div>
               ) : (
                 <>
+                  {registrosSinUUID.length > 0 && (
+                    <div className="mb-6 bg-yellow-50 border border-yellow-300 rounded-lg p-4">
+                      <div className="flex items-start space-x-3">
+                        <AlertTriangle className="h-6 w-6 text-yellow-600 flex-shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-yellow-900 mb-2">
+                            Códigos de facturación faltantes ({registrosSinUUID.length})
+                          </h4>
+                          <p className="text-sm text-yellow-800 mb-3">
+                            Los siguientes registros no tienen código de facturación. Sus celdas aparecerán vacías en la columna A:
+                          </p>
+                          <div className="bg-white rounded border border-yellow-200 max-h-32 overflow-y-auto">
+                            <table className="w-full text-sm">
+                              <thead className="bg-yellow-100 sticky top-0">
+                                <tr>
+                                  <th className="text-left px-3 py-2 text-yellow-900 font-medium">Tipo</th>
+                                  <th className="text-left px-3 py-2 text-yellow-900 font-medium">Nombre</th>
+                                  <th className="text-left px-3 py-2 text-yellow-900 font-medium">Familia</th>
+                                  <th className="text-left px-3 py-2 text-yellow-900 font-medium">Grado</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {registrosSinUUID.map((reg, idx) => (
+                                  <tr key={idx} className="border-t border-yellow-100">
+                                    <td className="px-3 py-2 text-yellow-800">
+                                      {reg.tipo === 'alumno' ? 'Alumno' : 'Personal'}
+                                    </td>
+                                    <td className="px-3 py-2 text-yellow-900 font-medium">{reg.nombre}</td>
+                                    <td className="px-3 py-2 text-yellow-800">{reg.familia}</td>
+                                    <td className="px-3 py-2 text-yellow-800">{reg.grado || '-'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          <p className="text-xs text-yellow-700 mt-3">
+                            Puede asignar los códigos de facturación desde la sección de Padres o Personal antes de exportar.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   <p className="text-gray-700 mb-4">
                     Se va a generar un listado con una línea por alumno ordenado alfabéticamente:
                   </p>

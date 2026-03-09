@@ -7,6 +7,41 @@ interface ExcelExportOptions {
   facturacion: FacturacionPadre[];
 }
 
+export interface RegistroSinUUID {
+  tipo: 'alumno' | 'personal';
+  nombre: string;
+  familia: string;
+  grado?: string;
+}
+
+export function verificarUUIDsFaltantes(facturacion: FacturacionPadre[]): RegistroSinUUID[] {
+  const registrosSinUUID: RegistroSinUUID[] = [];
+
+  facturacion.forEach(fam => {
+    fam.hijos.forEach(hijoData => {
+      if (hijoData.totalImporte > 0 && !hijoData.hijo.codigofacturacion) {
+        registrosSinUUID.push({
+          tipo: 'alumno',
+          nombre: hijoData.hijo.nombre,
+          familia: fam.padre.nombre,
+          grado: hijoData.hijo.grado?.nombre
+        });
+      }
+    });
+
+    if (fam.padreComedor && fam.padreComedor.totalImporte > 0 && !fam.padre.codigofacturacion) {
+      registrosSinUUID.push({
+        tipo: 'personal',
+        nombre: fam.padre.nombre,
+        familia: fam.padre.nombre,
+        grado: undefined
+      });
+    }
+  });
+
+  return registrosSinUUID.sort((a, b) => a.nombre.localeCompare(b.nombre));
+}
+
 interface InscripcionAlumnoExport {
   id: string;
   hijo_id: string;
