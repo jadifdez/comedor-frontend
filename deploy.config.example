@@ -1,0 +1,27 @@
+# Copia este archivo a deploy.config.local (no se sube a GitHub).
+# cp deploy.config.example deploy.config.local
+
+DEPLOY_USER=root
+DEPLOY_HOST=tu-servidor.ejemplo.com
+DEPLOY_PATH=/home/usuario/ruta/de/la/web
+
+# Usuario de cPanel dueño de la web (evita 403 tras subir como root)
+DEPLOY_WEB_USER=usuario_cpanel
+
+# Opcional: puerto SSH si no es 22
+# DEPLOY_SSH_PORT=22
+
+# URLs solo informativas al terminar el deploy
+DEPLOY_URL=https://comedor.tudominio.es
+DEPLOY_ADMIN_URL=https://comedor.tudominio.es/panel.html
+
+# --- SSH sin contraseña (recomendado) ---
+# En tu Mac, una sola vez:
+#   ssh-keygen -t ed25519 -f ~/.ssh/comedor_deploy -N ""
+#   ssh-copy-id -i ~/.ssh/comedor_deploy.pub root@tu-servidor
+# Luego añade en ~/.ssh/config:
+#   Host comedor-prod
+#     HostName tu-servidor.ejemplo.com
+#     User root
+#     IdentityFile ~/.ssh/comedor_deploy
+# Y en deploy.config.local usa: DEPLOY_HOST=comedor-prod

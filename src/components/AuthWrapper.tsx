@@ -862,7 +862,7 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
               Solo los padres pre-registrados por el colegio pueden crear una cuenta.
             </p>
             <div className="pt-4 border-t border-gray-200">
-              <a href="/admin.html" className="inline-flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
+              <a href="/panel.html" className="inline-flex items-center space-x-2 text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
                 <Shield className="h-4 w-4" />
                 <span>Acceso para administradores</span>
               </a>
