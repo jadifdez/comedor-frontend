@@ -54,8 +54,8 @@ export const getNext10WorkDays = async (diasAntelacion: number = 2) => {
   
   while (addedDays < 10) {
     const dayOfWeek = currentDate.getDay(); // 0 = domingo, 6 = sábado
-    const fechaStr = currentDate.toISOString().split('T')[0];
-    
+    const fechaStr = formatDateForComparison(currentDate);
+
     // Solo agregar días laborables (lunes a viernes) que no sean festivos
     if (dayOfWeek >= 1 && dayOfWeek <= 5 && !diasFestivos.includes(fechaStr)) {
       const dayNames = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
@@ -69,7 +69,7 @@ export const getNext10WorkDays = async (diasAntelacion: number = 2) => {
       });
       
       workDays.push({
-        id: currentDate.toISOString().split('T')[0], // YYYY-MM-DD format
+        id: fechaStr,
         label: `${dayName} ${currentDate.getDate()}`,
         nombre: `${dayName} ${currentDate.getDate()} ${monthNames[currentDate.getMonth()]}`,
         fecha: dateStr,
@@ -131,3 +131,97 @@ export const getMinCancellationDate = (diasAntelacion: number): Date => {
   today.setHours(0, 0, 0, 0);
   return addDays(today, diasAntelacion + 1);
 };
+
+export interface BajaFechaFields {
+  dias?: string[];
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+}
+
+/** Convierte YYYY-MM-DD a DD/MM/YYYY usando hora local (evita desfases UTC). */
+export function formatFechaEspanolFromISO(isoDate: string): string {
+  const date = new Date(isoDate + 'T00:00:00');
+  return date.toLocaleDateString('es-ES', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+/** Indica si una baja cubre un día concreto (formato dias o fecha_inicio/fecha_fin). */
+export function bajaCubreFecha(fecha: string, baja: BajaFechaFields): boolean {
+  if (baja.dias && baja.dias.length > 0) {
+    const fechaFormateada = formatFechaEspanolFromISO(fecha);
+    if (baja.dias.includes(fechaFormateada)) {
+      return true;
+    }
+  }
+  if (baja.fecha_inicio && baja.fecha_fin) {
+    return fecha >= baja.fecha_inicio && fecha <= baja.fecha_fin;
+  }
+  return false;
+}
+
+/** Indica si una baja solapa con un rango de fechas ISO. */
+export function bajaSolapaRango(
+  baja: BajaFechaFields,
+  rangoInicio: string,
+  rangoFin: string
+): boolean {
+  if (baja.fecha_inicio && baja.fecha_fin) {
+    return baja.fecha_inicio <= rangoFin && baja.fecha_fin >= rangoInicio;
+  }
+  if (baja.dias && baja.dias.length > 0) {
+    return baja.dias.some((diaStr) => {
+      const iso = formatDateForComparison(parseBajaDate(diaStr));
+      return iso >= rangoInicio && iso <= rangoFin;
+    });
+  }
+  return false;
+}
+
+/** Devuelve las fechas ISO (YYYY-MM-DD) de una baja dentro de un rango. */
+export function getFechasISODeBaja(
+  baja: BajaFechaFields,
+  rangoInicio: string,
+  rangoFin: string
+): string[] {
+  const fechas: string[] = [];
+
+  if (baja.fecha_inicio && baja.fecha_fin) {
+    const inicio = baja.fecha_inicio > rangoInicio ? baja.fecha_inicio : rangoInicio;
+    const fin = baja.fecha_fin < rangoFin ? baja.fecha_fin : rangoFin;
+    if (inicio > fin) return fechas;
+
+    const current = new Date(inicio + 'T00:00:00');
+    const end = new Date(fin + 'T00:00:00');
+    while (current <= end) {
+      fechas.push(formatDateForComparison(current));
+      current.setDate(current.getDate() + 1);
+    }
+    return fechas;
+  }
+
+  if (baja.dias && baja.dias.length > 0) {
+    for (const diaStr of baja.dias) {
+      const iso = formatDateForComparison(parseBajaDate(diaStr));
+      if (iso >= rangoInicio && iso <= rangoFin) {
+        fechas.push(iso);
+      }
+    }
+  }
+
+  return fechas;
+}
+
+/** Añade al set todas las fechas ISO de una baja dentro del rango. */
+export function addBajaFechasToSet(
+  baja: BajaFechaFields,
+  rangoInicio: string,
+  rangoFin: string,
+  set: Set<string>
+): void {
+  for (const fecha of getFechasISODeBaja(baja, rangoInicio, rangoFin)) {
+    set.add(fecha);
+  }
+}

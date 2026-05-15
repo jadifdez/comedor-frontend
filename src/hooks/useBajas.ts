@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase, BajaComedor, Hijo, Grado, InscripcionComedor, Padre } from '../lib/supabase';
 import { InscripcionPadre } from './useInscripcionesPadres';
 import { User } from '@supabase/supabase-js';
-import { parseBajaDate, getMinCancellationDate, formatDateForComparison } from '../utils/dateUtils';
+import { parseBajaDate, getMinCancellationDate, formatDateForComparison, formatFechaEspanolFromISO } from '../utils/dateUtils';
 
 export function useBajas(user: User, padre?: Padre | null, inscripcionesPadre?: InscripcionPadre[]) {
   const [bajas, setBajas] = useState<BajaComedor[]>([]);
@@ -31,11 +31,13 @@ export function useBajas(user: User, padre?: Padre | null, inscripcionesPadre?: 
   };
 
   const canCancelBaja = (baja: BajaComedor): { canCancel: boolean; reason?: string; deadlineDate?: string } => {
-    if (!baja.dias || baja.dias.length === 0) {
+    const fechaBajaStr = (baja.dias && baja.dias.length > 0)
+      ? baja.dias[0]
+      : baja.fecha_inicio || undefined;
+
+    if (!fechaBajaStr) {
       return { canCancel: false, reason: 'Baja sin fecha válida' };
     }
-
-    const fechaBajaStr = baja.dias[0];
     const fechaBaja = parseBajaDate(fechaBajaStr);
     const minDate = getMinCancellationDate(diasAntelacion);
 
@@ -120,18 +122,15 @@ export function useBajas(user: User, padre?: Padre | null, inscripcionesPadre?: 
         }
 
         const bajasToInsert = fechas.map(fecha => {
-          const date = new Date(fecha);
-          const fechaFormateada = date.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-          });
+          const fechaFormateada = formatFechaEspanolFromISO(fecha);
 
           return {
             hijo: padre.nombre,
             padre_id: padre.id,
             curso: 'Personal del colegio',
             dias: [fechaFormateada],
+            fecha_inicio: fecha,
+            fecha_fin: fecha,
             user_id: user.id,
           };
         });
@@ -153,18 +152,15 @@ export function useBajas(user: User, padre?: Padre | null, inscripcionesPadre?: 
         }
 
         const bajasToInsert = fechas.map(fecha => {
-          const date = new Date(fecha);
-          const fechaFormateada = date.toLocaleDateString('es-ES', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-          });
+          const fechaFormateada = formatFechaEspanolFromISO(fecha);
 
           return {
             hijo: selectedHijo.nombre,
             hijo_id: personaId,
             curso: selectedHijo.grado?.nombre || '',
             dias: [fechaFormateada],
+            fecha_inicio: fecha,
+            fecha_fin: fecha,
             user_id: user.id,
           };
         });

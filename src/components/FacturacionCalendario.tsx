@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { DiaFacturable } from '../hooks/useFacturacion';
 import { supabase } from '../lib/supabase';
+import { addBajaFechasToSet } from '../utils/dateUtils';
 
 interface FacturacionCalendarioProps {
   mesSeleccionado: string;
@@ -40,7 +41,7 @@ export function FacturacionCalendario({ mesSeleccionado, diasFacturables, desglo
 
       let bajasQuery = supabase
         .from('comedor_bajas')
-        .select('dias');
+        .select('dias, fecha_inicio, fecha_fin');
 
       if (hijoId) {
         bajasQuery = bajasQuery.eq('hijo_id', hijoId);
@@ -71,26 +72,9 @@ export function FacturacionCalendario({ mesSeleccionado, diasFacturables, desglo
         invitacionesQuery
       ]);
 
-      const parseBajaFecha = (fechaStr: string): string => {
-        const parts = fechaStr.split('/');
-        if (parts.length === 3) {
-          const dia = parseInt(parts[0]);
-          const mes = parseInt(parts[1]);
-          const anio = parseInt(parts[2]);
-          return `${anio}-${String(mes).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
-        }
-        return fechaStr;
-      };
-
       const bajasSet = new Set<string>();
       bajasData.data?.forEach(baja => {
-        baja.dias.forEach((dia: string) => {
-          const fechaNormalizada = parseBajaFecha(dia);
-          // Solo agregar si la fecha está en el rango del mes seleccionado
-          if (fechaNormalizada >= fechaInicio && fechaNormalizada <= fechaFin) {
-            bajasSet.add(fechaNormalizada);
-          }
-        });
+        addBajaFechasToSet(baja, fechaInicio, fechaFin, bajasSet);
       });
 
       const festivosSet = new Set(festivosData.data?.map(f => f.fecha) || []);

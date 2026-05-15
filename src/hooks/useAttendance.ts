@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase, Hijo, InscripcionComedor, BajaComedor, SolicitudComida, DiaFestivo, Padre } from '../lib/supabase';
 import { InscripcionPadre } from './useInscripcionesPadres';
 import { User } from '@supabase/supabase-js';
+import { bajaSolapaRango, formatDateForComparison, getFechasISODeBaja } from '../utils/dateUtils';
 
 export interface PersonaConAsistencia {
   id: string;
@@ -108,13 +109,9 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
 
       if (error) throw error;
 
-      const bajasFiltered = (data || []).filter(baja => {
-        return baja.dias.some((diaStr: string) => {
-          const fechaBaja = parseBajaFecha(diaStr);
-          const fechaBajaKey = formatDateToKey(fechaBaja);
-          return fechaBajaKey >= startDate && fechaBajaKey <= endDate;
-        });
-      });
+      const bajasFiltered = (data || []).filter(baja =>
+        bajaSolapaRango(baja, startDate, endDate)
+      );
 
       setBajas(bajasFiltered);
     } catch (err: any) {
@@ -164,8 +161,8 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
       const primerDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
       const ultimoDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0);
 
-      const startDate = primerDiaMes.toISOString().split('T')[0];
-      const endDate = ultimoDiaMes.toISOString().split('T')[0];
+      const startDate = formatDateForComparison(primerDiaMes);
+      const endDate = formatDateForComparison(ultimoDiaMes);
 
       await loadHijos();
 
@@ -234,6 +231,10 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
     const resultado: PersonaConAsistencia[] = [];
 
     const festivos = new Set(diasFestivos.map(f => f.fecha));
+    const primerDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth(), 1);
+    const ultimoDiaMes = new Date(mesActual.getFullYear(), mesActual.getMonth() + 1, 0);
+    const startDate = formatDateForComparison(primerDiaMes);
+    const endDate = formatDateForComparison(ultimoDiaMes);
 
     hijos.forEach(hijo => {
       const inscripcion = inscripcionesHijos.find(i => i.hijo_id === hijo.id);
@@ -243,8 +244,7 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
       const cancelados = new Set(
         bajas
           .filter(b => b.hijo_id && b.hijo_id === hijo.id)
-          .flatMap(b => b.dias)
-          .map(d => formatDateToKey(parseBajaFecha(d)))
+          .flatMap(b => getFechasISODeBaja(b, startDate, endDate))
       );
 
       const puntuales = new Set(
@@ -282,8 +282,7 @@ export function useAttendance(user: User, padre?: Padre | null): AttendanceData 
       const cancelados = new Set(
         bajas
           .filter(b => b.padre_id && b.padre_id === padre.id)
-          .flatMap(b => b.dias)
-          .map(d => formatDateToKey(parseBajaFecha(d)))
+          .flatMap(b => getFechasISODeBaja(b, startDate, endDate))
       );
 
       const puntuales = new Set(

@@ -46,6 +46,9 @@ export interface BajaComedor {
   padre_id?: string | null;
   curso: string;
   dias: string[];
+  fecha_inicio?: string | null;
+  fecha_fin?: string | null;
+  motivo?: string | null;
   fecha_creacion: string;
   user_id: string;
   hijo_details?: Hijo; // Para joins

@@ -1,5 +1,6 @@
 import { supabase, InscripcionComedor, BajaComedor, SolicitudComida, Hijo, Padre } from '../lib/supabase';
 import type { Invitacion } from '../hooks/useInvitaciones';
+import { bajaCubreFecha, formatFechaEspanolFromISO } from './dateUtils';
 
 export interface InscripcionComedorPadre {
   id: string;
@@ -97,21 +98,11 @@ export function estaEnRangoInscripcion(
 }
 
 export function tieneBaja(fecha: string, bajas: BajaComedor[]): boolean {
-  const fechaFormateada = new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
-
-  return bajas.some(baja => baja.dias.includes(fechaFormateada));
+  return bajas.some(baja => bajaCubreFecha(fecha, baja));
 }
 
 export function tieneSolicitudPuntual(fecha: string, solicitudes: SolicitudComida[]): SolicitudComida | null {
-  const fechaFormateada = new Date(fecha + 'T00:00:00').toLocaleDateString('es-ES', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric'
-  });
+  const fechaFormateada = formatFechaEspanolFromISO(fecha);
 
   return solicitudes.find(solicitud =>
     solicitud.fecha === fechaFormateada && solicitud.estado === 'aprobada'
