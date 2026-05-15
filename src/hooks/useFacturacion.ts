@@ -5,6 +5,8 @@ import {
   getDiasLaborablesMes,
   estaEnRangoInscripcion,
   tieneBaja,
+  obtenerBajasParaHijo,
+  obtenerBajasParaPadre,
   tieneSolicitudPuntual,
   tieneInvitacion,
   obtenerConfiguracionPrecios,
@@ -234,7 +236,7 @@ export function useFacturacion(user: User) {
         const infoDescuento = await obtenerInfoDescuentoHijo(hijo.id, hijo.padre_id, inscripciones);
         const { esHijoDePersonal, tieneDescuentoFamiliaNumerosa, posicionHijo, totalInscripcionesPadre } = infoDescuento;
 
-        const bajasHijo = bajas.filter(b => b.hijo_id === hijo.id);
+        const bajasHijo = obtenerBajasParaHijo(bajas, hijo);
         const solicitudesHijo = solicitudes.filter(s => s.hijo_id === hijo.id);
 
         const diasFacturables: DiaFacturable[] = [];
@@ -414,7 +416,7 @@ export function useFacturacion(user: User) {
       // Procesar facturación para el padre (si es personal del colegio)
       if (padre && padre.es_personal && inscripcionesPadre.length > 0) {
         // Obtener TODAS las inscripciones del padre (activas O desactivadas durante el mes)
-        const bajasPadre = bajas.filter(b => b.padre_id === padre.id);
+        const bajasPadre = obtenerBajasParaPadre(bajas, padre);
         const solicitudesPadre = solicitudes.filter(s => s.padre_id === padre.id);
 
         const diasFacturables: DiaFacturable[] = [];

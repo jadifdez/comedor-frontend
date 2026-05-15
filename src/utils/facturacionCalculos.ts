@@ -1,6 +1,6 @@
 import { supabase, InscripcionComedor, BajaComedor, SolicitudComida, Hijo, Padre } from '../lib/supabase';
 import type { Invitacion } from '../hooks/useInvitaciones';
-import { bajaCubreFecha, formatFechaEspanolFromISO } from './dateUtils';
+import { bajaCubreFecha, bajaSolapaRango, formatFechaEspanolFromISO, nombresCoinciden } from './dateUtils';
 
 export interface InscripcionComedorPadre {
   id: string;
@@ -86,7 +86,7 @@ export function estaEnRangoInscripcion(
   // Permitir que inscripciones desactivadas se facturen hasta su fecha_fin
   // Esto permite facturación proporcional cuando se desactiva una inscripción a mitad de mes
 
-  const fechaDate = new Date(fecha);
+  const fechaDate = new Date(fecha + 'T00:00:00');
   const diaSemana = fechaDate.getDay();
 
   if (!inscripcion.dias_semana.includes(diaSemana)) return false;
@@ -95,6 +95,68 @@ export function estaEnRangoInscripcion(
   const fechaFin = inscripcion.fecha_fin ? new Date(inscripcion.fecha_fin) : null;
 
   return fechaDate >= fechaInicio && (!fechaFin || fechaDate <= fechaFin);
+}
+
+/** Bajas de un hijo: por hijo_id o por nombre (registros antiguos sin hijo_id). */
+/**
+ * Carga bajas relevantes para un mes (evita el límite de 1000 filas de Supabase).
+ * Incluye bajas por hijo_id, padre_id y rangos fecha_inicio/fecha_fin.
+ */
+export async function cargarBajasParaFacturacion(
+  fechaInicioMes: string,
+  fechaFinMes: string,
+  hijoIds: string[],
+  padreIds: string[]
+): Promise<BajaComedor[]> {
+  const byId = new Map<string, BajaComedor>();
+
+  const addBajas = (list: BajaComedor[] | null) => {
+    list?.forEach(b => byId.set(b.id, b));
+  };
+
+  const { data: bajasRango } = await supabase
+    .from('comedor_bajas')
+    .select('*')
+    .not('fecha_inicio', 'is', null)
+    .lte('fecha_inicio', fechaFinMes)
+    .gte('fecha_fin', fechaInicioMes);
+  addBajas(bajasRango);
+
+  const batchSize = 150;
+  for (let i = 0; i < hijoIds.length; i += batchSize) {
+    const batch = hijoIds.slice(i, i + batchSize);
+    if (batch.length === 0) continue;
+    const { data, error } = await supabase.from('comedor_bajas').select('*').in('hijo_id', batch);
+    if (error) throw error;
+    addBajas(data);
+  }
+
+  for (let i = 0; i < padreIds.length; i += batchSize) {
+    const batch = padreIds.slice(i, i + batchSize);
+    if (batch.length === 0) continue;
+    const { data, error } = await supabase.from('comedor_bajas').select('*').in('padre_id', batch);
+    if (error) throw error;
+    addBajas(data);
+  }
+
+  return Array.from(byId.values()).filter(b =>
+    bajaSolapaRango(b, fechaInicioMes, fechaFinMes)
+  );
+}
+
+export function obtenerBajasParaHijo(bajas: BajaComedor[], hijo: Pick<Hijo, 'id' | 'nombre'>): BajaComedor[] {
+  return bajas.filter(b => {
+    if (b.hijo_id) return b.hijo_id === hijo.id;
+    return Boolean(b.hijo && nombresCoinciden(b.hijo, hijo.nombre));
+  });
+}
+
+/** Bajas de personal (padre comedor). */
+export function obtenerBajasParaPadre(bajas: BajaComedor[], padre: Pick<Padre, 'id' | 'nombre'>): BajaComedor[] {
+  return bajas.filter(b => {
+    if (b.padre_id) return b.padre_id === padre.id;
+    return Boolean(b.hijo && nombresCoinciden(b.hijo, padre.nombre));
+  });
 }
 
 export function tieneBaja(fecha: string, bajas: BajaComedor[]): boolean {

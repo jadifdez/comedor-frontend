@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { tieneBaja } from './facturacionCalculos';
-import { bajaCubreFecha } from './dateUtils';
+import { tieneBaja, obtenerBajasParaHijo } from './facturacionCalculos';
+import { bajaCubreFecha, nombresCoinciden } from './dateUtils';
 import type { BajaComedor } from '../lib/supabase';
 
 const bajaSoloDias = (dias: string[]): BajaComedor => ({
@@ -61,5 +61,41 @@ describe('tieneBaja', () => {
     expect(tieneBaja('2025-10-01', bajas)).toBe(true);
     expect(tieneBaja('2025-10-15', bajas)).toBe(true);
     expect(tieneBaja('2025-10-20', bajas)).toBe(false);
+  });
+});
+
+describe('bajaCubreFecha formatos de fecha', () => {
+  it('acepta dias en formato ISO dentro del array', () => {
+    expect(bajaCubreFecha('2026-04-07', bajaSoloDias(['2026-04-07']))).toBe(true);
+  });
+
+  it('acepta fecha_inicio sin fecha_fin', () => {
+    const baja = { ...bajaSoloRango('2026-04-10', '2026-04-10'), fecha_fin: null };
+    expect(bajaCubreFecha('2026-04-10', baja)).toBe(true);
+    expect(bajaCubreFecha('2026-04-11', baja)).toBe(false);
+  });
+});
+
+describe('obtenerBajasParaHijo', () => {
+  it('empareja bajas antiguas sin hijo_id por nombre', () => {
+    const hijo = { id: 'hijo-abc', nombre: 'Sanmartín Marín, Dylan' };
+    const bajas: BajaComedor[] = [
+      {
+        ...bajaSoloDias(['07/04/2026']),
+        id: 'b1',
+        hijo_id: null,
+        hijo: 'Dylan Sanmartín Marín',
+        curso: '1º',
+        fecha_creacion: '',
+        user_id: '',
+      },
+    ];
+    const matched = obtenerBajasParaHijo(bajas, hijo);
+    expect(matched).toHaveLength(1);
+    expect(tieneBaja('2026-04-07', matched)).toBe(true);
+  });
+
+  it('nombresCoinciden con distinto orden', () => {
+    expect(nombresCoinciden('Sanmartín Marín, Dylan', 'Dylan Sanmartín Marín')).toBe(true);
   });
 });

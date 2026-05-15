@@ -148,16 +148,73 @@ export function formatFechaEspanolFromISO(isoDate: string): string {
   });
 }
 
+/** Normaliza nombres para emparejar bajas antiguas sin hijo_id. */
+export function normalizarNombre(nombre: string): string {
+  return nombre
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, '');
+}
+
+/** Extrae tokens de nombre/apellidos (ignora orden y puntuación). */
+export function obtenerTokensNombre(nombre: string): string[] {
+  return nombre
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .split(/[\s,]+/)
+    .map(t => t.replace(/[^a-z0-9]/g, ''))
+    .filter(t => t.length > 1);
+}
+
+/** Comprueba si dos nombres de alumno/personal se refieren a la misma persona. */
+export function nombresCoinciden(nombreA: string, nombreB: string): boolean {
+  const a = normalizarNombre(nombreA);
+  const b = normalizarNombre(nombreB);
+  if (!a || !b) return false;
+  if (a === b) return true;
+  if (a.includes(b) || b.includes(a)) return true;
+
+  const tokensA = obtenerTokensNombre(nombreA);
+  const tokensB = obtenerTokensNombre(nombreB);
+  if (tokensA.length === 0 || tokensB.length === 0) return false;
+
+  const setA = new Set(tokensA);
+  const setB = new Set(tokensB);
+  const mismosTokens =
+    tokensA.length === tokensB.length &&
+    tokensA.every(t => setB.has(t)) &&
+    tokensB.every(t => setA.has(t));
+
+  if (mismosTokens) return true;
+
+  const shorter = tokensA.length <= tokensB.length ? tokensA : tokensB;
+  const longerSet = new Set(tokensA.length <= tokensB.length ? tokensB : tokensA);
+  return shorter.length >= 2 && shorter.every(t => longerSet.has(t));
+}
+
+/** Convierte un valor del array dias (DD/MM/YYYY o YYYY-MM-DD) a ISO. */
+export function diaBajaToISO(diaStr: string): string {
+  const trimmed = diaStr?.trim();
+  if (!trimmed) return '';
+  return formatDateForComparison(parseBajaDate(trimmed));
+}
+
 /** Indica si una baja cubre un día concreto (formato dias o fecha_inicio/fecha_fin). */
 export function bajaCubreFecha(fecha: string, baja: BajaFechaFields): boolean {
   if (baja.dias && baja.dias.length > 0) {
     const fechaFormateada = formatFechaEspanolFromISO(fecha);
-    if (baja.dias.includes(fechaFormateada)) {
-      return true;
+    for (const dia of baja.dias) {
+      if (!dia?.trim()) continue;
+      if (diaBajaToISO(dia) === fecha) return true;
+      if (dia.trim() === fechaFormateada) return true;
+      if (dia.trim() === fecha) return true;
     }
   }
-  if (baja.fecha_inicio && baja.fecha_fin) {
-    return fecha >= baja.fecha_inicio && fecha <= baja.fecha_fin;
+  if (baja.fecha_inicio) {
+    const fin = baja.fecha_fin || baja.fecha_inicio;
+    return fecha >= baja.fecha_inicio && fecha <= fin;
   }
   return false;
 }

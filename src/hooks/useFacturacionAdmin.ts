@@ -4,11 +4,14 @@ import {
   getDiasLaborablesMes,
   estaEnRangoInscripcion,
   tieneBaja,
+  obtenerBajasParaHijo,
+  obtenerBajasParaPadre,
   tieneSolicitudPuntual,
   tieneInvitacion,
   obtenerConfiguracionPrecios,
   calcularPrecioPuntual,
   calcularDiasEsperadosInscripcion,
+  cargarBajasParaFacturacion,
   InscripcionComedorPadre,
   estaExentoEnFecha
 } from '../utils/facturacionCalculos';
@@ -88,7 +91,7 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
       const fechaInicioMes = `${year}-${String(month).padStart(2, '0')}-01`;
       const fechaFinMes = `${year}-${String(month).padStart(2, '0')}-${String(ultimoDiaMes).padStart(2, '0')}`;
 
-      const [padresResult, hijosResult, inscripcionesResult, bajasResult, solicitudesResult, inscripcionesPadreResult, invitacionesResult] = await Promise.all([
+      const [padresResult, hijosResult, inscripcionesResult, solicitudesResult, inscripcionesPadreResult, invitacionesResult] = await Promise.all([
         supabase
           .from('padres')
           .select(`
@@ -122,11 +125,6 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
           .or(`and(activo.eq.true,fecha_inicio.lte.${fechaFinMes}),and(activo.eq.false,fecha_fin.gte.${fechaInicioMes},fecha_fin.lte.${fechaFinMes})`),
 
         supabase
-          .from('comedor_bajas')
-          .select('*')
-          .order('fecha_creacion'),
-
-        supabase
           .from('comedor_altaspuntuales')
           .select('*')
           .eq('estado', 'aprobada')
@@ -148,7 +146,6 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
       if (padresResult.error) throw padresResult.error;
       if (hijosResult.error) throw hijosResult.error;
       if (inscripcionesResult.error) throw inscripcionesResult.error;
-      if (bajasResult.error) throw bajasResult.error;
       if (solicitudesResult.error) throw solicitudesResult.error;
       if (inscripcionesPadreResult.error) throw inscripcionesPadreResult.error;
       if (invitacionesResult.error) throw invitacionesResult.error;
@@ -156,8 +153,14 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
       const padres = padresResult.data || [];
       const hijos = hijosResult.data || [];
       const inscripciones = inscripcionesResult.data || [];
-      const bajas = bajasResult.data || [];
       const solicitudes = solicitudesResult.data || [];
+
+      const bajas = await cargarBajasParaFacturacion(
+        fechaInicioMes,
+        fechaFinMes,
+        hijos.map(h => h.id),
+        padres.map(p => p.id)
+      );
       const invitaciones = invitacionesResult.data || [];
 
       // Filtrar inscripciones de padres que aplican al mes seleccionado
@@ -222,7 +225,7 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
           const posicionHijo = infoPadre.inscripcionesOrdenadas.findIndex(i => i.hijo_id === hijo.id) + 1;
           const tieneDescuentoFamiliaNumerosa = posicionHijo >= 3 && infoPadre.totalInscripcionesActivas >= 3;
 
-          const bajasHijo = bajas.filter(b => b.hijo_id === hijo.id);
+          const bajasHijo = obtenerBajasParaHijo(bajas, hijo);
           const solicitudesHijo = solicitudes.filter(s => s.hijo_id === hijo.id);
 
           const diasFacturables: DiaFacturable[] = [];
@@ -345,7 +348,7 @@ export function useFacturacionAdmin(mesSeleccionado: string) {
         if (padre.es_personal) {
           // Obtener TODAS las inscripciones del padre (activas O desactivadas durante el mes)
           const inscripcionesPadreDelPadre = inscripcionesPadre.filter(i => i.padre_id === padre.id);
-          const bajasPadre = bajas.filter(b => b.padre_id === padre.id);
+          const bajasPadre = obtenerBajasParaPadre(bajas, padre);
           const solicitudesPadre = solicitudes.filter(s => s.padre_id === padre.id);
 
           const diasFacturables: DiaFacturable[] = [];
